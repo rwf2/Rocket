@@ -13,7 +13,7 @@ use rocket::response::{Flash, Redirect};
 use rocket::serde::Serialize;
 use rocket::form::Form;
 use rocket::fs::{FileServer, relative};
-use rocket::either::Either;
+use rocket::either::{Either, Left, Right};
 
 use rocket_dyn_templates::Template;
 
@@ -67,12 +67,10 @@ async fn new(todo_form: Form<Todo>, conn: DbConn) -> Flash<Redirect> {
 #[put("/<id>")]
 async fn toggle(id: i32, conn: DbConn) -> Either<Redirect, Template> {
     match Task::toggle_with_id(id, &conn).await {
-        Ok(_) => Either::Left(Redirect::to("/")),
+        Ok(_) => Left(Redirect::to("/")),
         Err(e) => {
             error!("DB toggle({id}) error: {e}");
-            Either::Right(
-                Template::render("index", Context::err(&conn, "Failed to toggle task.").await)
-            )
+            Right(Template::render("index", Context::err(&conn, "Failed to toggle task.").await))
         }
     }
 }
@@ -80,12 +78,10 @@ async fn toggle(id: i32, conn: DbConn) -> Either<Redirect, Template> {
 #[delete("/<id>")]
 async fn delete(id: i32, conn: DbConn) -> Either<Flash<Redirect>, Template> {
     match Task::delete_with_id(id, &conn).await {
-        Ok(_) => Either::Left(Flash::success(Redirect::to("/"), "Todo was deleted.")),
+        Ok(_) => Left(Flash::success(Redirect::to("/"), "Todo was deleted.")),
         Err(e) => {
             error!("DB deletion({id}) error: {e}");
-            Either::Right(
-                Template::render("index", Context::err(&conn, "Failed to delete task.").await)
-            )
+            Right(Template::render("index", Context::err(&conn, "Failed to delete task.").await))
         }
     }
 }
