@@ -3,9 +3,8 @@ use devise::{Diagnostic, FromMeta, MetaItem, Result, SpanWrapped, Spanned};
 use proc_macro2::TokenStream;
 
 use crate::attribute::param::{Dynamic, Guard};
-use crate::name::Name;
+use crate::attribute::Arguments;
 use crate::proc_macro_ext::Diagnostics;
-use crate::syn_ext::FnArgExt;
 use crate::{http, http_codegen};
 
 /// This structure represents the parsed `catch` attribute and associated items.
@@ -71,42 +70,34 @@ impl Attribute {
         let meta = Meta::from_meta(&attr)?;
 
         let mut diags = Diagnostics::new();
-        let mut guards = Vec::new();
-        let mut error = None;
-        for (index, arg) in function.sig.inputs.iter().enumerate() {
-            if let Some((ident, ty)) = arg.typed() {
-                match meta.error.as_ref() {
-                    Some(err) if Name::from(ident) == err.name => {
-                        error = Some(Guard {
-                            source: meta.error.clone().unwrap().value,
-                            fn_ident: ident.clone(),
-                            ty: ty.clone(),
-                        });
-                    }
-                    _ => {
-                        guards.push(Guard {
-                            source: Dynamic { name: Name::from(ident), index, trailing: false },
-                            fn_ident: ident.clone(),
-                            ty: ty.clone(),
-                        })
-                    }
-                }
-            } else {
-                let span = arg.span();
-                let diag = if arg.wild().is_some() {
-                    span.error("handler arguments must be named")
-                        .help("to name an ignored handler argument, use `_name`")
-                } else {
-                    span.error("handler arguments must be of the form `ident: Type`")
-                };
+        let arguments = Arguments::from_signature(&function.sig, &mut diags);
 
-                diags.push(diag);
-            }
-        }
-        if meta.error.is_some() != error.is_some() {
-            let span = meta.error.unwrap().span();
-            diags.push(span.error("Error parameter not found on function"));
-        }
+        let error = meta
+            .error
+            .as_ref()
+            .map(|e| arguments.map.get(&e.name).ok_or(e))
+            .and_then(|e| e.map_err(|s| {
+                let note = format!("expected argument named `{}` here", s.name);
+                let diag = s.span()
+                    .error("unused parameter")
+                    .span_note(function.sig.inputs.span(), note);
+                diags.push(diag)
+            }).ok())
+            .map(|(i, ty)| Guard {
+                source: meta.error.clone().unwrap().value,
+                fn_ident: i.clone(),
+                ty: ty.clone(),
+            });
+        let guards = arguments.map
+            .iter()
+            .filter(|(name, _)| Some(*name) != meta.error.as_ref().map(|e| &e.name))
+            .enumerate()
+            .map(|(index, (name, (ident, ty)))| Guard {
+                source: Dynamic { name: name.clone(), index, trailing: false },
+                fn_ident: ident.clone(),
+                ty: ty.clone(),
+            })
+            .collect();
 
         diags.head_err_or(Attribute { status: meta.code.0, error, guards, function })
     }

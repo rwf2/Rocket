@@ -1,14 +1,13 @@
 use devise::{Spanned, SpanWrapped, Result, FromMeta};
-use devise::ext::{SpanDiagnosticExt, TypeExt};
-use indexmap::{IndexSet, IndexMap};
+use devise::ext::SpanDiagnosticExt;
+use indexmap::IndexSet;
 use proc_macro2::Span;
 
 use crate::attribute::suppress::Lint;
+use crate::attribute::Arguments;
 use crate::proc_macro_ext::Diagnostics;
 use crate::http_codegen::{Method, MediaType};
 use crate::attribute::param::{Parameter, Dynamic, Guard};
-use crate::syn_ext::FnArgExt;
-use crate::name::Name;
 use crate::http::ext::IntoOwned;
 use crate::http::uri::{Origin, fmt};
 
@@ -29,14 +28,6 @@ pub struct Route {
     pub handler: syn::ItemFn,
     /// The parsed arguments to the user's function.
     pub arguments: Arguments,
-}
-
-type ArgumentMap = IndexMap<Name, (syn::Ident, syn::Type)>;
-
-#[derive(Debug)]
-pub struct Arguments {
-    pub span: Span,
-    pub map: ArgumentMap
 }
 
 /// The parsed `#[route(..)]` attribute.
@@ -152,24 +143,7 @@ impl Route {
         }
 
         // Check the validity of function arguments.
-        let span = handler.sig.paren_token.span.join();
-        let mut arguments = Arguments { map: ArgumentMap::new(), span };
-        for arg in &handler.sig.inputs {
-            if let Some((ident, ty)) = arg.typed() {
-                let value = (ident.clone(), ty.with_stripped_lifetimes());
-                arguments.map.insert(Name::from(ident), value);
-            } else {
-                let span = arg.span();
-                let diag = if arg.wild().is_some() {
-                    span.error("handler arguments must be named")
-                        .help("to name an ignored handler argument, use `_name`")
-                } else {
-                    span.error("handler arguments must be of the form `ident: Type`")
-                };
-
-                diags.push(diag);
-            }
-        }
+        let arguments = Arguments::from_signature(&handler.sig, &mut diags);
 
         // Parse and collect the path parameters.
         let (source, span) = (attr.uri.path(), attr.uri.path_span);
