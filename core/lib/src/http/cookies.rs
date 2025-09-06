@@ -98,7 +98,7 @@ pub use cookie::{Cookie, SameSite, Iter};
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
-/// # #[cfg(feature = "secrets")] {
+/// # #[cfg(feature = "secrets")] mod secrets {
 /// use rocket::http::Status;
 /// use rocket::request::{self, Request, FromRequest};
 /// use rocket::outcome::IntoOutcome;
