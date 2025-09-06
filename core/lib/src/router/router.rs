@@ -595,7 +595,7 @@ mod test {
         for (status, base, ty) in catchers {
             let mut catcher = Catcher::new(status.map(|s| s.code), catcher::dummy_handler)
                 .rebase(Origin::parse(base).unwrap());
-            catcher.type_id = ty;
+            catcher.type_info = ty.map(|t| ("", t));
             router.catchers.push(catcher);
         }
 
@@ -663,9 +663,14 @@ mod test {
             (None, "/", Some(TypeId::of::<()>()))
         ]).unwrap();
 
-        assert!(catches_any(&router, Status::BadRequest, "/", |_| None).unwrap().type_id.is_none());
         assert!(
-            catches_any(&router, Status::BadRequest, "/", |_| Some(&())).unwrap().type_id.is_some()
+            catches_any(&router, Status::BadRequest, "/", |_| None).unwrap().type_id().is_none()
+        );
+        assert!(
+            catches_any(&router, Status::BadRequest, "/", |_| Some(&()))
+                .unwrap()
+                .type_id()
+                .is_some()
         );
     }
 }

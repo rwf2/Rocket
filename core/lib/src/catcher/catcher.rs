@@ -133,7 +133,7 @@ pub struct Catcher {
     pub(crate) rank: isize,
 
     /// TypeId to match against
-    type_info: Option<(&'static str, TypeId)>,
+    pub(crate) type_info: Option<(&'static str, TypeId)>,
 
     /// The catcher's file, line, and column location.
     pub(crate) location: Option<(&'static str, u32, u32)>,
