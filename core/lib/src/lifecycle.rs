@@ -298,7 +298,7 @@ impl Rocket<Orbit> {
         error: &'r dyn TypedError<'r>,
         req: &'r Request<'s>,
         depth: usize,
-    ) -> Option<(&'s Catcher, &'r dyn TypedError<'r>)> {
+    ) -> Option<(&'s Catcher, &'r (dyn TypedError<'r> + 'r))> {
         const MAX_CALLS_TO_SOURCE: usize = 5;
         if depth > MAX_CALLS_TO_SOURCE {
             return None;

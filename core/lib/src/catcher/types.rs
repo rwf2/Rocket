@@ -2,7 +2,7 @@ use std::fmt;
 
 use either::Either;
 use transient::{Any, CanRecoverFrom, Downcast, Transience};
-use crate::{http::{Status, AsStatus}, response::status::Custom, Request, Response};
+use crate::{http::Status, response::status::Custom, Request, Response};
 #[doc(inline)]
 pub use transient::{Static, Transient, TypeId, Inv, CanTranscendTo};
 
@@ -40,6 +40,9 @@ pub trait TypedError<'r>: AsAny<Inv<'r>> + Send + Sync + 'r {
     /// Generates a default response for this type (or forwards to a default catcher)
     #[allow(unused_variables)]
     fn respond_to(&self, request: &'r Request<'_>) -> Result<Response<'r>, Status> {
+        Err(self.status())
+    }
+    fn respond_to2(self: Box<Self>, request: &'r Request<'_>) -> Result<Response<'r>, Status> {
         Err(self.status())
     }
 
@@ -83,9 +86,9 @@ impl<'r> From<Status> for Box<dyn TypedError<'r> + 'r> {
     }
 }
 
-impl AsStatus for Box<dyn TypedError<'_> + '_> {
-    fn as_status(&self) -> Status {
-        self.status()
+impl From<Box<dyn TypedError<'_> + '_>> for Status {
+    fn from(value: Box<dyn TypedError<'_> + '_>) -> Self {
+        value.status()
     }
 }
 
