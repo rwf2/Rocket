@@ -1,4 +1,5 @@
 use std::any::type_name;
+use std::convert::Infallible;
 use std::sync::Arc;
 use std::marker::PhantomData;
 
@@ -235,10 +236,11 @@ impl<'r> TypedError<'r> for ConnectionMissing {
 
 #[rocket::async_trait]
 impl<'r, K: 'static, C: Poolable> FromRequest<'r> for Connection<K, C> {
+    type Forward = Infallible;
     type Error = ConnectionMissing;
 
     #[inline]
-    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error, Infallible> {
         match request.rocket().state::<ConnectionPool<K, C>>() {
             Some(c) => c.get().await.or_error(ConnectionMissing(type_name::<K>())),
             None => {

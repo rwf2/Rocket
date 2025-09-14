@@ -42,9 +42,6 @@ pub trait TypedError<'r>: AsAny<Inv<'r>> + Send + Sync + 'r {
     fn respond_to(&self, request: &'r Request<'_>) -> Result<Response<'r>, Status> {
         Err(self.status())
     }
-    fn respond_to2(self: Box<Self>, request: &'r Request<'_>) -> Result<Response<'r>, Status> {
-        Err(self.status())
-    }
 
     /// A descriptive name of this error type. Defaults to the type name.
     fn name(&self) -> &'static str { std::any::type_name::<Self>() }

@@ -182,9 +182,10 @@ impl PartialEq for SecretKey {
 
 #[crate::async_trait]
 impl<'r> FromRequest<'r> for &'r SecretKey {
+    type Forward = std::convert::Infallible;
     type Error = std::convert::Infallible;
 
-    async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+    async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error, Self::Forward> {
         Outcome::Success(&req.rocket().config().secret_key)
     }
 }

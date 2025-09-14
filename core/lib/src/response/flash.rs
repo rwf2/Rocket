@@ -255,8 +255,9 @@ impl<'r> TypedError<'r> for FlashCookieMissing {
 #[crate::async_trait]
 impl<'r> FromRequest<'r> for FlashMessage<'r> {
     type Error = FlashCookieMissing;
+    type Forward = std::convert::Infallible;
 
-    async fn from_request(req: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
+    async fn from_request(req: &'r Request<'_>) -> request::Outcome<Self, Self::Error, Self::Forward> {
         req.cookies().get(FLASH_COOKIE_NAME).ok_or(FlashCookieMissing).and_then(|cookie| {
             // Parse the flash message.
             let content = cookie.value();

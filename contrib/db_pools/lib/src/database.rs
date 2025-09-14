@@ -1,3 +1,4 @@
+use std::convert::Infallible;
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 
@@ -301,9 +302,10 @@ impl<'r, E: Send + Sync + 'static> TypedError<'r> for DbError<E> {
 impl<'r, D: Database> FromRequest<'r> for Connection<D>
     where <D::Pool as Pool>::Error: Send + Sync + 'static
 {
+    type Forward = Infallible;
     type Error = DbError<<D::Pool as Pool>::Error>;
 
-    async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+    async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error, Infallible> {
         match D::fetch(req.rocket()) {
             Some(db) => match db.get().await {
                 Ok(conn) => Outcome::Success(Connection(conn)),

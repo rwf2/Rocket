@@ -430,9 +430,10 @@ impl Provider for Config {
 
 #[crate::async_trait]
 impl<'r> FromRequest<'r> for &'r Config {
+    type Forward = std::convert::Infallible;
     type Error = std::convert::Infallible;
 
-    async fn from_request(req: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
+    async fn from_request(req: &'r Request<'_>) -> request::Outcome<Self, Self::Error, Self::Forward> {
         request::Outcome::Success(req.rocket().config())
     }
 }

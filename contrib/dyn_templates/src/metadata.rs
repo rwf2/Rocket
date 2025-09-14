@@ -1,3 +1,4 @@
+use std::convert::Infallible;
 use std::fmt;
 use std::borrow::Cow;
 
@@ -153,9 +154,10 @@ impl Sentinel for Metadata<'_> {
 /// (`500`) is returned.
 #[rocket::async_trait]
 impl<'r> FromRequest<'r> for Metadata<'r> {
+    type Forward = Infallible;
     type Error = StateError;
 
-    async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
+    async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, Self::Error, Infallible> {
         match request.rocket().state::<ContextManager>() {
             Some(cm) => Outcome::Success(Metadata(cm)),
             None => {

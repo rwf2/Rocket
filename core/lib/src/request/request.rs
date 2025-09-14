@@ -819,7 +819,7 @@ impl<'r> Request<'r> {
     /// # })
     /// ```
     #[inline(always)]
-    pub fn guard<'z, 'a, T>(&'a self) -> BoxFuture<'z, Outcome<T, T::Error>>
+    pub fn guard<'z, 'a, T>(&'a self) -> BoxFuture<'z, Outcome<T, T::Error, T::Forward>>
         where T: FromRequest<'a> + 'z, 'a: 'z, 'r: 'z
     {
         T::from_request(self)

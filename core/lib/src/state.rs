@@ -1,3 +1,4 @@
+use std::convert::Infallible;
 use std::fmt;
 use std::ops::Deref;
 use std::any::type_name;
@@ -205,10 +206,11 @@ impl<'r> TypedError<'r> for StateError {
 
 #[crate::async_trait]
 impl<'r, T: Send + Sync + 'static> FromRequest<'r> for &'r State<T> {
+    type Forward = Infallible;
     type Error = StateError;
 
     #[inline(always)]
-    async fn from_request(req: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
+    async fn from_request(req: &'r Request<'_>) -> request::Outcome<Self, Self::Error, Infallible> {
         match State::get(req.rocket()) {
             Some(state) => Outcome::Success(state),
             None => {

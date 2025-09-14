@@ -108,12 +108,13 @@ pub use rustls::pki_types::CertificateDer;
 
 #[crate::async_trait]
 impl<'r> FromRequest<'r> for Certificate<'r> {
+    type Forward = Error;
     type Error = Error;
 
-    async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+    async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Error, Error> {
         use crate::outcome::{try_outcome, IntoOutcome};
 
-        let certs: Outcome<_, Error> = req.connection
+        let certs: Outcome<_, Error, Error> = req.connection
             .peer_certs
             .as_ref()
             .or_forward(Error::Empty);
