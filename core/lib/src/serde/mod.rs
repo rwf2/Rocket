@@ -46,6 +46,10 @@ pub use serde::*;
 #[cfg_attr(nightly, doc(cfg(feature = "json")))]
 pub mod json;
 
+#[cfg(feature = "xml")]
+#[cfg_attr(nightly, doc(cfg(feature = "xml")))]
+pub mod xml;
+
 #[cfg(feature = "msgpack")]
 #[cfg_attr(nightly, doc(cfg(feature = "msgpack")))]
 pub mod msgpack;

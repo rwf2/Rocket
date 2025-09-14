@@ -28,6 +28,7 @@ http2 = ["hyper/http2", "hyper-util/http2"]
 http3-preview = ["s2n-quic", "s2n-quic-h3", "tls"]
 secrets = ["cookie/private", "cookie/key-expansion"]
 json = ["serde_json"]
+xml = ["quick-xml"]
 msgpack = ["rmp-serde"]
 uuid = ["uuid_", "rocket_http/uuid"]
 tls = ["rustls", "tokio-rustls", "rustls-pemfile"]
@@ -38,6 +39,7 @@ trace = ["tracing-subscriber", "tinyvec", "thread_local", "rustls?/logging", "to
 [dependencies]
 # Optional serialization dependencies.
 serde_json = { version = "1.0.26", optional = true }
+quick-xml = { version = "0.42", optional = true, features = ["serialize"] }
 rmp-serde = { version = "1", optional = true }
 uuid_ = { package = "uuid", version = "1", optional = true, features = ["serde"] }
 

@@ -134,6 +134,7 @@ function test_core() {
     tls
     mtls
     json
+    xml
     msgpack
     uuid
     trace

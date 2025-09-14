@@ -136,6 +136,7 @@ impl Default for Limits {
             .limit("string", Limits::STRING)
             .limit("bytes", Limits::BYTES)
             .limit("json", Limits::JSON)
+            .limit("xml", Limits::XML)
             .limit("msgpack", Limits::MESSAGE_PACK)
     }
 }
@@ -158,6 +159,9 @@ impl Limits {
 
     /// Default limit for JSON payloads.
     pub const JSON: ByteUnit = ByteUnit::Mebibyte(1);
+
+    /// Default limit for XML payloads.
+    pub const XML: ByteUnit = ByteUnit::Mebibyte(1);
 
     /// Default limit for MessagePack payloads.
     pub const MESSAGE_PACK: ByteUnit = ByteUnit::Mebibyte(1);
