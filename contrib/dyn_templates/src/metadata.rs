@@ -157,7 +157,9 @@ impl<'r> FromRequest<'r> for Metadata<'r> {
     type Forward = Infallible;
     type Error = StateError;
 
-    async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, Self::Error, Infallible> {
+    async fn from_request(request: &'r Request<'_>) ->
+        request::Outcome<Self, Self::Error, Infallible>
+    {
         match request.rocket().state::<ContextManager>() {
             Some(cm) => Outcome::Success(Metadata(cm)),
             None => {

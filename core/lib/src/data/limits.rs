@@ -316,7 +316,7 @@ impl Limits {
 impl<'r> FromRequest<'r> for &'r Limits {
     type Forward = std::convert::Infallible;
     type Error = std::convert::Infallible;
-    
+
     async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error, Self::Forward> {
         Outcome::Success(req.limits())
     }

@@ -73,9 +73,10 @@ use crate::http::Status;
 ///
 /// #[rocket::async_trait]
 /// impl<'r> FromRequest<'r> for Item<'r> {
+///     type Forward = Status;
 ///     type Error = Status;
 ///
-///     async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
+///     async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, Self::Error, Self::Forward> {
 ///         // Using `State` as a request guard. Use `inner()` to get an `'r`.
 ///         let outcome = request.guard::<&State<MyConfig>>().await
 ///             .map(|my_config| Item(&my_config.user_val));

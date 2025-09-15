@@ -18,9 +18,12 @@ struct User(usize);
 
 #[rocket::async_trait]
 impl<'r> FromRequest<'r> for User {
+    type Forward = Status;
     type Error = Status;
 
-    async fn from_request(request: &'r Request<'_>) -> request::Outcome<User, Self::Error> {
+    async fn from_request(request: &'r Request<'_>) ->
+        request::Outcome<User, Self::Error, Self::Forward>
+    {
         request.cookies()
             .get_private("user_id")
             .and_then(|cookie| cookie.value().parse().ok())

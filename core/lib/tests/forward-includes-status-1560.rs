@@ -7,9 +7,10 @@ struct Authenticated;
 
 #[rocket::async_trait]
 impl<'r> FromRequest<'r> for Authenticated {
+    type Forward = Status;
     type Error = Status;
 
-    async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
+    async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, Status, Status> {
         if request.headers().contains("Authenticated") {
             request::Outcome::Success(Authenticated)
         } else {
@@ -22,9 +23,10 @@ struct TeapotForward;
 
 #[rocket::async_trait]
 impl<'r> FromRequest<'r> for TeapotForward {
+    type Forward = Status;
     type Error = Status;
 
-    async fn from_request(_: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
+    async fn from_request(_: &'r Request<'_>) -> request::Outcome<Self, Status, Status> {
         request::Outcome::Forward(Status::ImATeapot)
     }
 }

@@ -41,9 +41,10 @@ pub type Outcome<T, E, F> = crate::outcome::Outcome<T, E, F>;
 ///
 /// #[rocket::async_trait]
 /// impl<'r> FromRequest<'r> for MyType {
+///     type Forward = MyError;
 ///     type Error = MyError;
 ///
-///     async fn from_request(req: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
+///     async fn from_request(req: &'r Request<'_>) -> request::Outcome<Self, Self::Error, Self::Forward> {
 ///         /* .. */
 ///         # unimplemented!()
 ///     }
@@ -220,9 +221,10 @@ pub type Outcome<T, E, F> = crate::outcome::Outcome<T, E, F>;
 ///
 /// #[rocket::async_trait]
 /// impl<'r> FromRequest<'r> for ApiKey<'r> {
+///     type Forward = std::convert::Infallible;
 ///     type Error = ApiKeyError;
 ///
-///     async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+///     async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error, Self::Forward> {
 ///         /// Returns true if `key` is a valid API key string.
 ///         fn is_valid(key: &str) -> bool {
 ///             key == "valid_api_key"
@@ -293,8 +295,9 @@ pub type Outcome<T, E, F> = crate::outcome::Outcome<T, E, F>;
 /// # }
 /// # #[rocket::async_trait]
 /// # impl<'r> FromRequest<'r> for Database {
+/// #     type Forward = Status;
 /// #     type Error = Status;
-/// #     async fn from_request(request: &'r Request<'_>) -> Outcome<Database, Self::Error> {
+/// #     async fn from_request(request: &'r Request<'_>) -> Outcome<Database, Self::Error, Self::Forward> {
 /// #         Outcome::Success(Database)
 /// #     }
 /// # }
@@ -303,9 +306,10 @@ pub type Outcome<T, E, F> = crate::outcome::Outcome<T, E, F>;
 /// #
 /// #[rocket::async_trait]
 /// impl<'r> FromRequest<'r> for User {
+///     type Forward = Status;
 ///     type Error = Status;
 ///
-///     async fn from_request(request: &'r Request<'_>) -> Outcome<User, Status> {
+///     async fn from_request(request: &'r Request<'_>) -> Outcome<User, Self::Error, Self::Forward> {
 ///         let db = try_outcome!(request.guard::<Database>().await);
 ///         request.cookies()
 ///             .get_private("user_id")
@@ -317,9 +321,10 @@ pub type Outcome<T, E, F> = crate::outcome::Outcome<T, E, F>;
 ///
 /// #[rocket::async_trait]
 /// impl<'r> FromRequest<'r> for Admin {
+///     type Forward = Status;
 ///     type Error = Status;
 ///
-///     async fn from_request(request: &'r Request<'_>) -> Outcome<Admin, Status> {
+///     async fn from_request(request: &'r Request<'_>) -> Outcome<Admin, Self::Error, Self::Forward> {
 ///         // This will unconditionally query the database!
 ///         let user = try_outcome!(request.guard::<User>().await);
 ///         if user.is_admin {
@@ -358,8 +363,9 @@ pub type Outcome<T, E, F> = crate::outcome::Outcome<T, E, F>;
 /// # }
 /// # #[rocket::async_trait]
 /// # impl<'r> FromRequest<'r> for Database {
+/// #     type Forward = ();
 /// #     type Error = ();
-/// #     async fn from_request(request: &'r Request<'_>) -> Outcome<Database, ()> {
+/// #     async fn from_request(request: &'r Request<'_>) -> Outcome<Database, (), ()> {
 /// #         Outcome::Success(Database)
 /// #     }
 /// # }
@@ -368,9 +374,10 @@ pub type Outcome<T, E, F> = crate::outcome::Outcome<T, E, F>;
 /// #
 /// #[rocket::async_trait]
 /// impl<'r> FromRequest<'r> for &'r User {
+///     type Forward = Status;
 ///     type Error = Status;
 ///
-///     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+///     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error, Self::Forward> {
 ///         // This closure will execute at most once per request, regardless of
 ///         // the number of times the `User` guard is executed.
 ///         let user_result = request.local_cache_async(async {
@@ -387,9 +394,10 @@ pub type Outcome<T, E, F> = crate::outcome::Outcome<T, E, F>;
 ///
 /// #[rocket::async_trait]
 /// impl<'r> FromRequest<'r> for Admin<'r> {
+///     type Forward = Status;
 ///     type Error = Status;
 ///
-///     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+///     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error, Self::Forward> {
 ///         let user = try_outcome!(request.guard::<&User>().await);
 ///         if user.is_admin {
 ///             Outcome::Success(Admin { user })

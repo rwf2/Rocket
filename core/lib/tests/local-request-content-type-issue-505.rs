@@ -9,9 +9,10 @@ struct HasContentType;
 
 #[rocket::async_trait]
 impl<'r> FromRequest<'r> for HasContentType {
+    type Forward = Status;
     type Error = Status;
 
-    async fn from_request(req: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
+    async fn from_request(req: &'r Request<'_>) -> request::Outcome<Self, Status, Status> {
         req.content_type().map(|_| HasContentType).or_forward(Status::NotFound)
     }
 }

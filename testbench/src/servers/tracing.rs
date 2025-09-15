@@ -33,16 +33,22 @@ impl FromParam<'_> for UseDebug {
 
 #[rocket::async_trait]
 impl<'r> FromRequest<'r> for UseDisplay {
+    type Forward = Self;
     type Error = Self;
-    async fn from_request(_: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
+    async fn from_request(_: &'r Request<'_>) ->
+        request::Outcome<Self, Self::Error, Self::Forward>
+    {
         request::Outcome::Error(Self("req"))
     }
 }
 
 #[rocket::async_trait]
 impl<'r> FromRequest<'r> for UseDebug {
+    type Forward = Self;
     type Error = Self;
-    async fn from_request(_: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
+    async fn from_request(_: &'r Request<'_>) ->
+        request::Outcome<Self, Self::Error, Self::Forward>
+    {
         request::Outcome::Error(Self)
     }
 }

@@ -60,11 +60,12 @@ pub fn derive_database(input: TokenStream) -> TokenStream {
 
                     #[rocket::async_trait]
                     impl<'r> rocket::request::FromRequest<'r> for &'r #decorated_type {
+                        type Forward = ::std::convert::Infallible;
                         type Error = rocket::http::Status;
 
                         async fn from_request(
                             req: &'r rocket::request::Request<'_>
-                        ) -> rocket::request::Outcome<Self, Self::Error> {
+                        ) -> rocket::request::Outcome<Self, Self::Error, Self::Forward> {
                             match #db_ty::fetch(req.rocket()) {
                                 Some(db) => rocket::outcome::Outcome::Success(db),
                                 None => rocket::outcome::Outcome::Error(

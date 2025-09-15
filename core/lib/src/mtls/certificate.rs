@@ -48,9 +48,10 @@ use crate::request::{Request, FromRequest, Outcome};
 ///
 /// #[rocket::async_trait]
 /// impl<'r> FromRequest<'r> for CertifiedAdmin<'r> {
+///     type Forward = mtls::Error;
 ///     type Error = mtls::Error;
 ///
-///     async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+///     async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error, Self::Forward> {
 ///         let cert = try_outcome!(req.guard::<Certificate<'r>>().await);
 ///         if let Some(true) = cert.has_serial(ADMIN_SERIAL) {
 ///             Outcome::Success(CertifiedAdmin(cert))

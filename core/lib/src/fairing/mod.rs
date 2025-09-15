@@ -440,9 +440,10 @@ pub type FilterResult<'r> = std::result::Result<(), Box<dyn TypedError<'r> + 'r>
 /// // Allows a route to access the time a request was initiated.
 /// #[rocket::async_trait]
 /// impl<'r> FromRequest<'r> for StartTime {
+///     type Forward = std::convert::Infallible;
 ///     type Error = Status;
 ///
-///     async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
+///     async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, Self::Error, Self::Forward> {
 ///         match *request.local_cache(|| TimerStart(None)) {
 ///             TimerStart(Some(time)) => request::Outcome::Success(StartTime(time)),
 ///             TimerStart(None) => request::Outcome::Error(Status::InternalServerError),
