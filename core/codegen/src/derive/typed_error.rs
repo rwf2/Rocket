@@ -109,7 +109,16 @@ pub fn derive_typed_error(input: proc_macro::TokenStream) -> TokenStream {
             .try_fields_map(|_, fields| {
                 let item = ItemAttr::one_from_attrs("error", fields.parent.attrs())?
                     .unwrap_or(Default::default());
-                let status = item.status.map_or(
+                let status = item.status
+                    .or_else(|| {
+                        if let FieldParent::Variant(v) = &fields.parent {
+                            ItemAttr::one_from_attrs("error", &v.parent.attrs).ok()?
+                                .unwrap_or(Default::default()).status
+                        } else {
+                            None
+                        }
+                    })
+                    .map_or(
                     quote!(#_Status::InternalServerError),
                     |m| quote!(#m)
                 );

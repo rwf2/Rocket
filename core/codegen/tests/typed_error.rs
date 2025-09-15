@@ -78,3 +78,18 @@ pub struct GenericWithLifetime<'r, E> {
     s: &'r str,
     inner: E,
 }
+
+#[derive(TypedError)]
+#[error(status = 404)]
+enum EnumStatusOverride {
+  #[error(status = 400)]
+  BadRequest,
+  NotFound,
+}
+
+#[test]
+fn validate_enum_status_override() {
+    assert_eq!(EnumStatusOverride::BadRequest.status(), Status::BadRequest);
+    assert_eq!(EnumStatusOverride::NotFound.status(), Status::NotFound);
+    boxed_error(Box::new(EnumStatusOverride::BadRequest));
+}
