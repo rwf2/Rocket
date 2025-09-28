@@ -1,0 +1,43 @@
+[package]
+name = "rocket_grpc"
+version = "0.1.0"
+authors = ["Sergio Benitez <sb@sergio.bz>", "David Cruz <david.cruz@davthecoder.com>"]
+description = "gRPC support for Rocket."
+documentation = "https://api.rocket.rs/master/rocket_grpc/"
+homepage = "https://rocket.rs"
+repository = "https://github.com/rwf2/Rocket/tree/master/contrib/grpc"
+readme = "README.md"
+keywords = ["rocket", "web", "framework", "grpc", "tonic"]
+license = "MIT OR Apache-2.0"
+edition = "2021"
+rust-version = "1.75"
+
+[lints]
+workspace = true
+
+[features]
+default = ["tonic"]
+tonic = ["dep:tonic", "dep:prost", "dep:tokio-stream", "dep:tower-service", "dep:http", "dep:tokio", "dep:axum"]
+
+[dependencies]
+tonic = { version = "0.14.2", optional = true }
+prost = { version = "0.14.1", optional = true }
+tokio-stream = { version = "0.1", optional = true }
+tower-service = { version = "0.3", optional = true }
+http = { version = "1.0", optional = true }
+tokio = { version = "1.0", optional = true }
+axum = { version = "0.8.5", optional = true }
+
+[dependencies.rocket]
+version = "0.6.0-dev"
+path = "../../core/lib"
+default-features = false
+
+[build-dependencies]
+
+[dev-dependencies]
+tokio = { version = "1.0", features = ["rt-multi-thread", "macros"] }
+rocket = { version = "0.6.0-dev", path = "../../core/lib" }
+
+[package.metadata.docs.rs]
+all-features = true

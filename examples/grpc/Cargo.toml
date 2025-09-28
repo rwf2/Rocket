@@ -1,0 +1,22 @@
+[package]
+name = "grpc-example"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "server"
+path = "src/main.rs"
+
+[dependencies]
+rocket = { path = "../../core/lib", features = ["json"] }
+rocket_grpc = { path = "../../contrib/grpc" }
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+tonic = "0.14.2"
+prost = "0.14.1"
+tonic-prost = "0.14.2"
+tokio-stream = "0.1"
+serde = { version = "1.0", features = ["derive"] }
+protoc-rust = "2.28.0"
+
+[build-dependencies]
+tonic-prost-build = "0.14.2"
