@@ -35,6 +35,9 @@ use rocket::{Rocket, Build, fairing::{Fairing, Info, Kind}};
 #[cfg(feature = "tonic")]
 use tonic::transport::Server;
 
+#[cfg(feature = "tonic")]
+use std::error::Error;
+
 pub use self::service::*;
 
 mod service;
@@ -86,12 +89,21 @@ where
             let addr = format!("0.0.0.0:{}", port).parse().unwrap();
             rocket::info!("Starting gRPC server on {}", addr);
             
-            if let Err(e) = Server::builder()
+            match Server::builder()
                 .add_service(service)
                 .serve(addr)
                 .await
             {
-                rocket::error!("gRPC server failed: {}", e);
+                Ok(()) => {
+                    rocket::info!("gRPC server has shut down gracefully");
+                }
+                Err(e) => {
+                    rocket::error!("gRPC server failed with detailed error: {:?}", e);
+                    rocket::error!("Error kind: {}", e);
+                    if let Some(source) = e.source() {
+                        rocket::error!("Error source: {:?}", source);
+                    }
+                }
             }
         });
         
