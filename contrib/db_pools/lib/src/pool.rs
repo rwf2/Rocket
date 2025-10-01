@@ -114,7 +114,7 @@ use {std::time::Duration, crate::{Error, Config}};
 /// }
 /// ```
 #[rocket::async_trait]
-pub trait Pool: Sized + Send + Sync + 'static {
+pub trait Pool: Sized + Send + 'static {
     /// The connection type managed by this pool, returned by [`Self::get()`].
     type Connection;
 
@@ -160,7 +160,7 @@ mod deadpool_postgres {
     #[cfg(feature = "diesel")]
     use diesel_async::pooled_connection::AsyncDieselConnectionManager;
 
-    pub trait DeadManager: Manager + Sized + Send + Sync + 'static {
+    pub trait DeadManager: Manager + Sized + Send + 'static {
         fn new(config: &Config) -> Result<Self, Self::Error>;
     }
 
@@ -194,7 +194,7 @@ mod deadpool_postgres {
 
     #[rocket::async_trait]
     impl<M: DeadManager, C: From<Object<M>>> crate::Pool for Pool<M, C>
-        where M::Type: Send, C: Send + Sync + 'static, M::Error: std::error::Error
+        where M::Type: Send, C: Send + 'static, M::Error: std::error::Error
     {
         type Error = Error<PoolError<M::Error>>;
 

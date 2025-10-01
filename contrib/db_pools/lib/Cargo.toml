@@ -64,7 +64,7 @@ features = ["compat-3-0-0", "rustls-tls"]
 optional = true
 
 [dependencies.diesel-async]
-version = "0.5.0"
+version = "0.6.0"
 default-features = false
 features = ["async-connection-wrapper"]
 optional = true
