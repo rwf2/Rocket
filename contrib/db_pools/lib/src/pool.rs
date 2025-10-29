@@ -276,14 +276,12 @@ mod sqlx {
                 }
             }
 
-            sqlx::pool::PoolOptions::new()
+            Ok(sqlx::pool::PoolOptions::new()
                 .max_connections(config.max_connections as u32)
                 .acquire_timeout(Duration::from_secs(config.connect_timeout))
                 .idle_timeout(config.idle_timeout.map(Duration::from_secs))
                 .min_connections(config.min_connections.unwrap_or_default())
-                .connect_with(opts)
-                .await
-                .map_err(Error::Init)
+                .connect_lazy_with(opts))
         }
 
         async fn get(&self) -> Result<Self::Connection, Self::Error> {

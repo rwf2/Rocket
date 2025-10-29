@@ -1,10 +1,12 @@
 #[macro_use]
 extern crate rocket;
+extern crate self as tracing;
 
 #[cfg(test)]
 mod tests;
 mod redirector;
 
+use rocket::tracing::*;
 use rocket::mtls::Certificate;
 use rocket::listener::Endpoint;
 

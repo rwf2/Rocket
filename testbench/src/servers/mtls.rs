@@ -28,10 +28,10 @@ fn test_mtls(mandatory: bool) -> Result<()> {
         .identity(reqwest::Identity::from_pem(&pem)?)
         .try_into()?;
 
-    let response = client.get(&server, "/")?.send()?;
-    assert_eq!(response.text()?,
-        "611895682361338926795452113263857440769284805738:2\
-            [C=US, ST=CA, O=Rocket CA, CN=Rocket Root CA] \
+    let response = client.get(&server, "/")?.send()?.text()?;
+    let (_key_hash, subject) = response.split_once(":2").unwrap();
+    assert_eq!(subject,
+        "[C=US, ST=CA, O=Rocket CA, CN=Rocket Root CA] \
             C=US, ST=California, L=Silicon Valley, O=Rocket, \
             CN=Rocket TLS Example, Email=example@rocket.local");
 

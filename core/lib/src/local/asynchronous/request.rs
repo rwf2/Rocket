@@ -1,5 +1,7 @@
 use std::fmt;
 
+use rocket_http::HttpVersion;
+
 use crate::{Request, Data};
 use crate::http::{Status, Method};
 use crate::http::uri::Origin;
@@ -48,7 +50,7 @@ impl<'c> LocalRequest<'c> {
 
         // Create a request. We'll handle bad URIs later, in `_dispatch`.
         let origin = try_origin.clone().unwrap_or_else(|bad| bad);
-        let mut request = Request::new(client.rocket(), method, origin);
+        let mut request = Request::new(client.rocket(), method, origin, None);
 
         // Add any cookies we know about.
         if client.tracked {
@@ -60,6 +62,11 @@ impl<'c> LocalRequest<'c> {
         }
 
         LocalRequest { client, request, uri: try_origin, data: vec![] }
+    }
+
+    #[inline]
+    pub fn override_version(&mut self, version: HttpVersion) {
+        self.version = Some(version);
     }
 
     pub(crate) fn _request(&self) -> &Request<'c> {

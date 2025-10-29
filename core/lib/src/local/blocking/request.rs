@@ -1,5 +1,7 @@
 use std::fmt;
 
+use rocket_http::HttpVersion;
+
 use crate::{Request, http::Method, local::asynchronous};
 use crate::http::uri::Origin;
 
@@ -40,6 +42,11 @@ impl<'c> LocalRequest<'c> {
     {
         let inner = asynchronous::LocalRequest::new(client.inner(), method, uri);
         Self { inner, client }
+    }
+
+    #[inline]
+    pub fn override_version(&mut self, version: HttpVersion) {
+        self.inner.override_version(version);
     }
 
     #[inline]

@@ -2,9 +2,9 @@
 
 use std::net::SocketAddr;
 
-use rocket::http::uri::{Origin, Host};
-use rocket::tracing::{self, Instrument};
 use rocket::{Rocket, Ignite, Orbit, State, Error};
+use rocket::http::uri::{Origin, Host};
+use rocket::tracing::Instrument;
 use rocket::fairing::{Fairing, Info, Kind};
 use rocket::response::Redirect;
 use rocket::listener::tcp::TcpListener;
@@ -39,7 +39,7 @@ impl Redirector {
     // Launch an instance of Rocket than handles redirection on `self.port`.
     pub async fn try_launch(self, config: Config) -> Result<Rocket<Ignite>, Error> {
         rocket::span_info!("HTTP -> HTTPS Redirector" => {
-            info!(from =  self.0, to = config.tls_addr.port(),  "redirecting");
+            info!(from = self.0, to = config.tls_addr.port(),  "redirecting");
         });
 
         let addr = SocketAddr::new(config.tls_addr.ip(), self.0);

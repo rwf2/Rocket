@@ -39,3 +39,19 @@ pub use crate::method::Method;
 pub use crate::status::{Status, StatusClass};
 pub use crate::raw_str::{RawStr, RawStrBuf};
 pub use crate::header::*;
+
+/// HTTP Protocol version
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum HttpVersion {
+    /// `HTTP/0.9`
+    Http09,
+    /// `HTTP/1.0`
+    Http10,
+    /// `HTTP/1.1`
+    Http11,
+    /// `HTTP/2`
+    Http2,
+    /// `HTTP/3`
+    Http3,
+}

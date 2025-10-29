@@ -6,6 +6,8 @@ use std::str::FromStr;
 use std::future::Future;
 use std::net::IpAddr;
 
+use http::Version;
+use rocket_http::HttpVersion;
 use state::{TypeMap, InitCell};
 use futures::future::BoxFuture;
 use ref_swap::OptionRefSwap;
@@ -31,6 +33,7 @@ pub struct Request<'r> {
     method: AtomicMethod,
     uri: Origin<'r>,
     headers: HeaderMap<'r>,
+    pub(crate) version: Option<HttpVersion>,
     pub(crate) errors: Vec<RequestError>,
     pub(crate) connection: ConnectionMeta,
     pub(crate) state: RequestState<'r>,
@@ -84,12 +87,14 @@ impl<'r> Request<'r> {
     pub(crate) fn new<'s: 'r>(
         rocket: &'r Rocket<Orbit>,
         method: Method,
-        uri: Origin<'s>
+        uri: Origin<'s>,
+        version: Option<HttpVersion>,
     ) -> Request<'r> {
         Request {
             uri,
             method: AtomicMethod::new(method),
             headers: HeaderMap::new(),
+            version,
             errors: Vec::new(),
             connection: ConnectionMeta::default(),
             state: RequestState {
@@ -102,6 +107,22 @@ impl<'r> Request<'r> {
                 host: None,
             }
         }
+    }
+
+    /// Retrieve http protocol version, when applicable.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::http::HttpVersion;
+    ///
+    /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
+    /// # let mut req = c.get("/");
+    /// # req.override_version(HttpVersion::Http11);
+    /// assert_eq!(req.version(), Some(HttpVersion::Http11));
+    /// ```
+    pub fn version(&self) -> Option<HttpVersion> {
+        self.version
     }
 
     /// Retrieve the method from `self`.
@@ -1130,7 +1151,14 @@ impl<'r> Request<'r> {
             });
 
         // Construct the request object; fill in metadata and headers next.
-        let mut request = Request::new(rocket, method, uri);
+        let mut request = Request::new(rocket, method, uri, match hyper.version {
+            Version::HTTP_09 => Some(HttpVersion::Http09),
+            Version::HTTP_10 => Some(HttpVersion::Http10),
+            Version::HTTP_11 => Some(HttpVersion::Http11),
+            Version::HTTP_2 => Some(HttpVersion::Http2),
+            Version::HTTP_3 => Some(HttpVersion::Http3),
+            _ => None,
+        });
         request.errors = errors;
 
         // Set the passed in connection metadata.
