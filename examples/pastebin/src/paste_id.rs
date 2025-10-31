@@ -19,7 +19,7 @@ impl PasteId<'_> {
         let mut id = String::with_capacity(size);
         let mut rng = rand::thread_rng();
         for _ in 0..size {
-            id.push(BASE62[rng.gen::<usize>() % 62] as char);
+            id.push(BASE62[rng.gen_range(0..62)] as char);
         }
 
         PasteId(Cow::Owned(id))

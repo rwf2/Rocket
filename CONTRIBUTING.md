@@ -30,7 +30,7 @@ code you contribute must be:
 
   * **Commented:** Complex or subtle functionality must be properly commented.
   * **Documented:** Public items must have doc comments with examples.
-  * **Styled:** Your code must folow the [Code Style Conventions].
+  * **Styled:** Your code must follow the [Code Style Conventions].
   * **Simple:** Your code should accomplish its task as simply and
     idiomatically as possible.
   * **Tested:** You must write (and pass) convincing [tests](#testing) for all
@@ -68,7 +68,7 @@ If you spot an open issue that you'd like to resolve:
   4. **Wait for a review, iterate, and polish.**
 
      If a review doesn't come in a few days, feel free to ping a maintainer.
-     Once somene reviews your PR, integrate their feedback. If the PR solves the
+     Once someone reviews your PR, integrate their feedback. If the PR solves the
      issue (which it should because you have passing tests) and fits the project
      (which it should since you sought feedback _before_ submitting), it will be
      _conditionally_ approved pending final polish: documentation (rustdocs,
