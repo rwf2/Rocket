@@ -1,0 +1,16 @@
+name: CVE Scanning for Rust
+
+on: [push, pull_request]
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        BUILD_TARGET: [release] # refers to a cargo profile
+    outputs:
+      release_built: ${{ steps.set-output.outputs.release_built }}
+    steps:
+      - uses: actions/checkout@v5
+      - run: cargo install --force cargo-audit
+      - run: cargo audit 
