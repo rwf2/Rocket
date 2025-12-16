@@ -1,29 +1,33 @@
 [package]
-name = "rocket_docs_tests"
-version = "0.6.0-dev"
+name = "rocket_docs_tests-community"
+version = "0.6.0-rc1"
 workspace = "../../"
 edition = "2021"
 publish = false
 
-[lints]
-workspace = true
+[lints.rust]
+missing_docs = "allow"
+missing_abi = "allow"
 
 [dependencies]
-rocket = { path = "../../core/lib", features = ["secrets"] }
+rocket = { package = "rocket-community", path = "../../core/lib", features = ["secrets"] }
 
 [dev-dependencies]
-rocket = { path = "../../core/lib", features = ["secrets", "json", "mtls"] }
+rocket = { package = "rocket-community", path = "../../core/lib", features = ["secrets", "json", "mtls"] }
 figment = { version = "0.10.17", features = ["toml", "env"] }
 tokio = { version = "1", features = ["macros", "io-std"] }
 rand = "0.8"
 
 [dev-dependencies.rocket_dyn_templates]
+package = "rocket_dyn_templates-community"
 path = "../../contrib/dyn_templates"
 features = ["tera"]
 
 [dev-dependencies.rocket_db_pools]
+package = "rocket_db_pools-community"
 path = "../../contrib/db_pools/lib"
 features = ["sqlx_sqlite"]
 
 [dev-dependencies.rocket_ws]
+package = "rocket_ws-community"
 path = "../../contrib/ws"

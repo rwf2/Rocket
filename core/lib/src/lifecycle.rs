@@ -1,22 +1,25 @@
-use futures::future::{FutureExt, Future};
+use futures::future::{Future, FutureExt};
 
+use crate::data::IoHandler;
+use crate::form::Form;
+use crate::http::{Header, Method, Status};
+use crate::outcome::Outcome;
 use crate::trace::Trace;
 use crate::util::Formatter;
-use crate::data::IoHandler;
-use crate::http::{Method, Status, Header};
-use crate::outcome::Outcome;
-use crate::form::Form;
-use crate::{route, catcher, Rocket, Orbit, Request, Response, Data};
+use crate::{catcher, route, Data, Orbit, Request, Response, Rocket};
 
 // A token returned to force the execution of one method before another.
 pub(crate) struct RequestToken;
 
 async fn catch_handle<Fut, T, F>(name: Option<&str>, run: F) -> Option<T>
-    where F: FnOnce() -> Fut, Fut: Future<Output = T>,
+where
+    F: FnOnce() -> Fut,
+    Fut: Future<Output = T>,
 {
     macro_rules! panic_info {
         ($name:expr, $e:expr) => {{
-            error!(handler = name.as_ref().map(display),
+            error!(
+                handler = name.as_ref().map(display),
                 "handler panicked\n\
                 This is an application bug.\n\
                 A panic in Rust must be treated as an exceptional event.\n\
@@ -25,17 +28,20 @@ async fn catch_handle<Fut, T, F>(name: Option<&str>, run: F) -> Option<T>
                 Panics will degrade application performance.\n\
                 Instead of panicking, return `Option` and/or `Result`.\n\
                 Values of either type can be returned directly from handlers.\n\
-                A panic is treated as an internal server error.");
+                A panic is treated as an internal server error."
+            );
 
             $e
-        }}
+        }};
     }
 
     let run = std::panic::AssertUnwindSafe(run);
+    #[allow(clippy::manual_inspect)]
     let fut = std::panic::catch_unwind(run)
         .map_err(|e| panic_info!(name, e))
         .ok()?;
 
+    #[allow(clippy::manual_inspect)]
     std::panic::AssertUnwindSafe(fut)
         .catch_unwind()
         .await
@@ -54,13 +60,14 @@ impl Rocket<Orbit> {
     pub(crate) async fn preprocess(
         &self,
         req: &mut Request<'_>,
-        data: &mut Data<'_>
+        data: &mut Data<'_>,
     ) -> RequestToken {
         // Check if this is a form and if the form contains the special _method
         // field which we use to reinterpret the request's method.
-        if req.method() == Method::Post && req.content_type().map_or(false, |v| v.is_form()) {
+        if req.method() == Method::Post && req.content_type().is_some_and(|v| v.is_form()) {
             let peek_buffer = data.peek(32).await;
-            let method = std::str::from_utf8(peek_buffer).ok()
+            let method = std::str::from_utf8(peek_buffer)
+                .ok()
                 .and_then(|raw_form| Form::values(raw_form).next())
                 .filter(|field| field.name == "_method")
                 .and_then(|field| field.value.parse().ok());
@@ -208,14 +215,15 @@ impl Rocket<Orbit> {
             request.set_route(route);
 
             let name = route.name.as_deref();
-            let outcome = catch_handle(name, || route.handler.handle(request, data)).await
+            let outcome = catch_handle(name, || route.handler.handle(request, data))
+                .await
                 .unwrap_or(Outcome::Error(Status::InternalServerError));
 
             // Check if the request processing completed (Some) or if the
             // request needs to be forwarded. If it does, continue the loop
             outcome.trace_info();
             match outcome {
-                o@Outcome::Success(_) | o@Outcome::Error(_) => return o,
+                o @ Outcome::Success(_) | o @ Outcome::Error(_) => return o,
                 Outcome::Forward(forwarded) => (data, status) = forwarded,
             }
         }
@@ -234,7 +242,7 @@ impl Rocket<Orbit> {
     pub(crate) async fn dispatch_error<'r, 's: 'r>(
         &'s self,
         mut status: Status,
-        req: &'r Request<'s>
+        req: &'r Request<'s>,
     ) -> Response<'r> {
         // We may wish to relax this in the future.
         req.cookies().reset_delta();
@@ -245,7 +253,10 @@ impl Rocket<Orbit> {
                 Ok(r) => return r,
                 // If the catcher failed, try `500` catcher, unless this is it.
                 Err(e) if status.code != 500 => {
-                    warn!(status = e.map(|r| r.code), "catcher failed: trying 500 catcher");
+                    warn!(
+                        status = e.map(|r| r.code),
+                        "catcher failed: trying 500 catcher"
+                    );
                     status = Status::InternalServerError;
                 }
                 // The 500 catcher failed. There's no recourse. Use default.
@@ -270,13 +281,16 @@ impl Rocket<Orbit> {
     async fn invoke_catcher<'s, 'r: 's>(
         &'s self,
         status: Status,
-        req: &'r Request<'s>
+        req: &'r Request<'s>,
     ) -> Result<Response<'r>, Option<Status>> {
         if let Some(catcher) = self.router.catch(status, req) {
             catcher.trace_info();
-            catch_handle(catcher.name.as_deref(), || catcher.handler.handle(status, req)).await
-                .map(|result| result.map_err(Some))
-                .unwrap_or_else(|| Err(None))
+            catch_handle(catcher.name.as_deref(), || {
+                catcher.handler.handle(status, req)
+            })
+            .await
+            .map(|result| result.map_err(Some))
+            .unwrap_or_else(|| Err(None))
         } else {
             info!(name: "catcher", name = "rocket::default", "uri.base" = "/", code = status.code,
                 "no registered catcher: using Rocket default");

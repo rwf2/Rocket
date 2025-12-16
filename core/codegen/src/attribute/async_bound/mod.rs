@@ -1,13 +1,13 @@
-use proc_macro2::{TokenStream, Span};
-use devise::{Spanned, Result, ext::SpanDiagnosticExt};
-use syn::{Token, parse_quote, parse_quote_spanned};
-use syn::{TraitItemFn, TypeParamBound, ReturnType, Attribute};
-use syn::punctuated::Punctuated;
+use devise::{ext::SpanDiagnosticExt, Result, Spanned};
+use proc_macro2::{Span, TokenStream};
 use syn::parse::Parser;
+use syn::punctuated::Punctuated;
+use syn::{parse_quote, parse_quote_spanned, Token};
+use syn::{Attribute, ReturnType, TraitItemFn, TypeParamBound};
 
 fn _async_bound(
     args: proc_macro::TokenStream,
-    input: proc_macro::TokenStream
+    input: proc_macro::TokenStream,
 ) -> Result<TokenStream> {
     let bounds = <Punctuated<TypeParamBound, Token![+]>>::parse_terminated.parse(args)?;
     if bounds.is_empty() {
@@ -37,7 +37,7 @@ fn _async_bound(
         ReturnType::Type(arrow, ty) => parse_quote_spanned!(ty.span() =>
             #arrow impl ::core::future::Future<Output = #ty> + #bounds
         ),
-        default@ReturnType::Default => parse_quote_spanned!(default.span() =>
+        default @ ReturnType::Default => parse_quote_spanned!(default.span() =>
             -> impl ::core::future::Future<Output = ()> + #bounds
         ),
     };
@@ -55,9 +55,6 @@ fn _async_bound(
     })
 }
 
-pub fn async_bound(
-    args: proc_macro::TokenStream,
-    input: proc_macro::TokenStream
-) -> TokenStream {
+pub fn async_bound(args: proc_macro::TokenStream, input: proc_macro::TokenStream) -> TokenStream {
     _async_bound(args, input).unwrap_or_else(|d| d.emit_as_item_tokens())
 }

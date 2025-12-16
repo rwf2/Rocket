@@ -24,17 +24,17 @@
 //! [`json()`]: crate::local::blocking::LocalRequest::json()
 //! [`into_json()`]: crate::local::blocking::LocalResponse::into_json()
 
-use std::{io, fmt, error};
 use std::ops::{Deref, DerefMut};
+use std::{error, fmt, io};
 
-use crate::request::{Request, local_cache};
-use crate::data::{Limits, Data, FromData, Outcome};
-use crate::response::{self, Responder, content};
+use crate::data::{Data, FromData, Limits, Outcome};
 use crate::form::prelude as form;
-use crate::http::uri::fmt::{UriDisplay, FromUriParam, Query, Formatter as UriFormatter};
+use crate::http::uri::fmt::{Formatter as UriFormatter, FromUriParam, Query, UriDisplay};
 use crate::http::Status;
+use crate::request::{local_cache, Request};
+use crate::response::{self, content, Responder};
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[doc(hidden)]
 pub use serde_json;
@@ -48,7 +48,7 @@ pub use serde_json;
 /// set to `application/json` automatically.
 ///
 /// ```rust
-/// # #[macro_use] extern crate rocket;
+/// # #[macro_use] extern crate rocket_community as rocket;
 /// # type User = usize;
 /// use rocket::serde::json::Json;
 ///
@@ -71,7 +71,7 @@ pub use serde_json;
 /// JSON. `T` must implement [`serde::Deserialize`].
 ///
 /// ```rust
-/// # #[macro_use] extern crate rocket;
+/// # #[macro_use] extern crate rocket_community as rocket;
 /// # type User = usize;
 /// use rocket::serde::json::Json;
 ///
@@ -92,7 +92,7 @@ pub use serde_json;
 /// data as a `T`. Simple use `Json<T>`:
 ///
 /// ```rust
-/// # #[macro_use] extern crate rocket;
+/// # #[macro_use] extern crate rocket_community as rocket;
 /// # type Metadata = usize;
 /// use rocket::form::{Form, FromForm};
 /// use rocket::serde::json::Json;
@@ -162,6 +162,7 @@ impl<T> Json<T> {
     ///
     /// # Example
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// # use rocket::serde::json::Json;
     /// let string = "Hello".to_string();
     /// let my_json = Json(string);
@@ -175,7 +176,9 @@ impl<T> Json<T> {
 
 impl<'r, T: Deserialize<'r>> Json<T> {
     fn from_str(s: &'r str) -> Result<Self, Error<'r>> {
-        serde_json::from_str(s).map(Json).map_err(|e| Error::Parse(s, e))
+        serde_json::from_str(s)
+            .map(Json)
+            .map_err(|e| Error::Parse(s, e))
     }
 
     async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> Result<Self, Error<'r>> {
@@ -185,7 +188,7 @@ impl<'r, T: Deserialize<'r>> Json<T> {
             Ok(_) => {
                 let eof = io::ErrorKind::UnexpectedEof;
                 return Err(Error::Io(io::Error::new(eof, "data limit exceeded")));
-            },
+            }
             Err(e) => return Err(Error::Io(e)),
         };
 
@@ -202,12 +205,11 @@ impl<'r, T: Deserialize<'r>> FromData<'r> for Json<T> {
             Ok(value) => Outcome::Success(value),
             Err(Error::Io(e)) if e.kind() == io::ErrorKind::UnexpectedEof => {
                 Outcome::Error((Status::PayloadTooLarge, Error::Io(e)))
-            },
+            }
             Err(Error::Parse(s, e)) if e.classify() == serde_json::error::Category::Data => {
                 Outcome::Error((Status::UnprocessableEntity, Error::Parse(s, e)))
-            },
+            }
             Err(e) => Outcome::Error((Status::BadRequest, e)),
-
         }
     }
 }
@@ -217,11 +219,10 @@ impl<'r, T: Deserialize<'r>> FromData<'r> for Json<T> {
 /// fails, an `Err` of `Status::InternalServerError` is returned.
 impl<'r, T: Serialize> Responder<'r, 'static> for Json<T> {
     fn respond_to(self, req: &'r Request<'_>) -> response::Result<'static> {
-        let string = serde_json::to_string(&self.0)
-            .map_err(|e| {
-                error!("JSON serialize failure: {}", e);
-                Status::InternalServerError
-            })?;
+        let string = serde_json::to_string(&self.0).map_err(|e| {
+            error!("JSON serialize failure: {}", e);
+            Status::InternalServerError
+        })?;
 
         content::RawJson(string).respond_to(req)
     }
@@ -279,7 +280,7 @@ impl From<Error<'_>> for form::Error<'_> {
     fn from(e: Error<'_>) -> Self {
         match e {
             Error::Io(e) => e.into(),
-            Error::Parse(_, e) => form::Error::custom(e)
+            Error::Parse(_, e) => form::Error::custom(e),
         }
     }
 }
@@ -310,7 +311,7 @@ crate::export! {
     /// created with this macro can be returned from a handler as follows:
     ///
     /// ```rust
-    /// # #[macro_use] extern crate rocket;
+    /// # #[macro_use] extern crate rocket_community as rocket;
     /// use rocket::serde::json::{json, Value};
     ///
     /// #[get("/json")]
@@ -331,6 +332,7 @@ crate::export! {
     /// Create a simple JSON object with two keys: `"username"` and `"id"`:
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::serde::json::json;
     ///
     /// let value = json!({
@@ -342,6 +344,7 @@ crate::export! {
     /// Create a more complex object with a nested object and array:
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// # use rocket::serde::json::json;
     /// let value = json!({
     ///     "code": 200,
@@ -359,6 +362,7 @@ crate::export! {
     /// implement `Into<String>`.
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// # use rocket::serde::json::json;
     /// let code = 200;
     /// let features = vec!["serde", "json"];
@@ -375,6 +379,7 @@ crate::export! {
     /// Trailing commas are allowed inside both arrays and objects.
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// # use rocket::serde::json::json;
     /// let value = json!([
     ///     "notice",
@@ -403,7 +408,7 @@ crate::export! {
 /// handling. This looks something like:
 ///
 /// ```rust
-/// # #[macro_use] extern crate rocket;
+/// # #[macro_use] extern crate rocket_community as rocket;
 /// use rocket::serde::json::{json, Value};
 ///
 /// #[get("/json")]
@@ -424,6 +429,7 @@ pub use serde_json::Value;
 /// # Example
 ///
 /// ```
+/// # extern crate rocket_community as rocket;
 /// use rocket::serde::{Deserialize, json};
 ///
 /// #[derive(Debug, PartialEq, Deserialize)]
@@ -455,7 +461,8 @@ pub use serde_json::Value;
 /// type.
 #[inline(always)]
 pub fn from_slice<'a, T>(slice: &'a [u8]) -> Result<T, serde_json::error::Error>
-    where T: Deserialize<'a>,
+where
+    T: Deserialize<'a>,
 {
     serde_json::from_slice(slice)
 }
@@ -467,6 +474,7 @@ pub fn from_slice<'a, T>(slice: &'a [u8]) -> Result<T, serde_json::error::Error>
 /// # Example
 ///
 /// ```
+/// # extern crate rocket_community as rocket;
 /// use rocket::serde::{Deserialize, json};
 ///
 /// #[derive(Debug, PartialEq, Deserialize)]
@@ -498,7 +506,8 @@ pub fn from_slice<'a, T>(slice: &'a [u8]) -> Result<T, serde_json::error::Error>
 /// type.
 #[inline(always)]
 pub fn from_str<'a, T>(string: &'a str) -> Result<T, serde_json::error::Error>
-    where T: Deserialize<'a>,
+where
+    T: Deserialize<'a>,
 {
     serde_json::from_str(string)
 }
@@ -510,6 +519,7 @@ pub fn from_str<'a, T>(string: &'a str) -> Result<T, serde_json::error::Error>
 /// # Example
 ///
 /// ```
+/// # extern crate rocket_community as rocket;
 /// use rocket::serde::{Deserialize, Serialize, json};
 ///
 /// #[derive(Debug, PartialEq, Deserialize, Serialize)]
@@ -535,7 +545,8 @@ pub fn from_str<'a, T>(string: &'a str) -> Result<T, serde_json::error::Error>
 /// contains a map with non-string keys.
 #[inline(always)]
 pub fn to_string<T>(value: &T) -> Result<String, serde_json::error::Error>
-    where T: Serialize
+where
+    T: Serialize,
 {
     serde_json::to_string(value)
 }
@@ -547,6 +558,7 @@ pub fn to_string<T>(value: &T) -> Result<String, serde_json::error::Error>
 /// # Example
 ///
 /// ```
+/// # extern crate rocket_community as rocket;
 /// use rocket::serde::{Deserialize, Serialize, json};
 ///
 /// #[derive(Debug, PartialEq, Deserialize, Serialize)]
@@ -574,7 +586,8 @@ pub fn to_string<T>(value: &T) -> Result<String, serde_json::error::Error>
 /// contains a map with non-string keys.
 #[inline(always)]
 pub fn to_pretty_string<T>(value: &T) -> Result<String, serde_json::error::Error>
-    where T: Serialize
+where
+    T: Serialize,
 {
     serde_json::to_string_pretty(value)
 }
@@ -584,6 +597,7 @@ pub fn to_pretty_string<T>(value: &T) -> Result<String, serde_json::error::Error
 /// # Example
 ///
 /// ```
+/// # extern crate rocket_community as rocket;
 /// use rocket::serde::{Deserialize, json};
 ///
 /// #[derive(Debug, PartialEq, Deserialize)]
@@ -613,7 +627,8 @@ pub fn to_pretty_string<T>(value: &T) -> Result<String, serde_json::error::Error
 /// type.
 #[inline(always)]
 pub fn from_value<T>(value: Value) -> Result<T, serde_json::error::Error>
-    where T: crate::serde::DeserializeOwned
+where
+    T: crate::serde::DeserializeOwned,
 {
     serde_json::from_value(value)
 }
@@ -623,6 +638,7 @@ pub fn from_value<T>(value: Value) -> Result<T, serde_json::error::Error>
 /// # Example
 ///
 /// ```
+/// # extern crate rocket_community as rocket;
 /// use rocket::serde::{Deserialize, Serialize, json};
 ///
 /// #[derive(Deserialize, Serialize)]
@@ -648,7 +664,8 @@ pub fn from_value<T>(value: Value) -> Result<T, serde_json::error::Error>
 /// or if `T` contains a map with non-string keys.
 #[inline(always)]
 pub fn to_value<T>(item: T) -> Result<Value, serde_json::error::Error>
-    where T: Serialize
+where
+    T: Serialize,
 {
     serde_json::to_value(item)
 }

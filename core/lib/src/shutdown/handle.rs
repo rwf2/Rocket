@@ -1,11 +1,11 @@
 use std::future::Future;
-use std::task::{Context, Poll};
 use std::pin::Pin;
+use std::task::{Context, Poll};
 
 use futures::{FutureExt, StreamExt};
 
-use crate::shutdown::{ShutdownConfig, TripWire};
 use crate::request::{FromRequest, Outcome, Request};
+use crate::shutdown::{ShutdownConfig, TripWire};
 
 /// A request guard and future for graceful shutdown.
 ///
@@ -25,6 +25,8 @@ use crate::request::{FromRequest, Outcome, Request};
 /// called. This can be used to detect shutdown in any part of the application:
 ///
 /// ```rust
+/// # extern crate rocket_community as rocket;
+///
 /// # use rocket::*;
 /// use rocket::Shutdown;
 ///
@@ -42,7 +44,7 @@ use crate::request::{FromRequest, Outcome, Request};
 /// [`Rocket::launch()`](crate::Rocket::launch()):
 ///
 /// ```rust,no_run
-/// # #[macro_use] extern crate rocket;
+/// # #[macro_use] extern crate rocket_community as rocket;
 /// #
 /// use rocket::Shutdown;
 ///
@@ -91,6 +93,8 @@ impl Shutdown {
     /// configured via [`ShutdownConfig`]'s `grace` field.
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
+    ///
     /// # use rocket::*;
     /// use rocket::Shutdown;
     ///
@@ -110,6 +114,8 @@ impl Shutdown {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
+    ///
     /// # use rocket::*;
     /// use rocket::Shutdown;
     ///
@@ -154,17 +160,17 @@ impl Stages {
     }
 
     pub(crate) fn spawn_listener(&self, config: &ShutdownConfig) {
-        use futures::stream;
         use futures::future::{select, Either};
+        use futures::stream;
 
         let mut signal = match config.signal_stream() {
             Some(stream) => Either::Left(stream.chain(stream::pending())),
             None => Either::Right(stream::pending()),
         };
 
-        let start  = self.start.clone();
-        let (grace, grace_duration)  = (self.grace.clone(), config.grace());
-        let (mercy, mercy_duration)  = (self.mercy.clone(), config.mercy());
+        let start = self.start.clone();
+        let (grace, grace_duration) = (self.grace.clone(), config.grace());
+        let (mercy, mercy_duration) = (self.mercy.clone(), config.mercy());
         tokio::spawn(async move {
             if let Either::Left((sig, start)) = select(signal.next(), start).await {
                 warn!("Received {}. Shutdown started.", sig.unwrap());

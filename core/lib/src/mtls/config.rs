@@ -1,9 +1,9 @@
 use std::io;
 
-use figment::value::magic::{RelativePathBuf, Either};
-use serde::{Serialize, Deserialize};
+use figment::value::magic::{Either, RelativePathBuf};
+use serde::{Deserialize, Serialize};
 
-use crate::tls::{Result, Error};
+use crate::tls::{Error, Result};
 
 /// Mutual TLS configuration.
 ///
@@ -45,7 +45,7 @@ use crate::tls::{Result, Error};
 /// Programmatically, configuration might look like:
 ///
 /// ```rust
-/// # #[macro_use] extern crate rocket;
+/// # #[macro_use] extern crate rocket_community as rocket;
 /// use rocket::mtls::MtlsConfig;
 /// use rocket::figment::providers::Serialized;
 ///
@@ -88,6 +88,7 @@ impl MtlsConfig {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::mtls::MtlsConfig;
     ///
     /// let tls_config = MtlsConfig::from_path("/ssl/ca_certs.pem");
@@ -95,7 +96,7 @@ impl MtlsConfig {
     pub fn from_path<C: AsRef<std::path::Path>>(ca_certs: C) -> Self {
         MtlsConfig {
             ca_certs: Either::Left(ca_certs.as_ref().to_path_buf().into()),
-            mandatory: Default::default()
+            mandatory: Default::default(),
         }
     }
 
@@ -109,6 +110,7 @@ impl MtlsConfig {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::mtls::MtlsConfig;
     ///
     /// # let ca_certs_buf = &[];
@@ -117,7 +119,7 @@ impl MtlsConfig {
     pub fn from_bytes(ca_certs: &[u8]) -> Self {
         MtlsConfig {
             ca_certs: Either::Right(ca_certs.to_vec()),
-            mandatory: Default::default()
+            mandatory: Default::default(),
         }
     }
 
@@ -132,6 +134,7 @@ impl MtlsConfig {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::mtls::MtlsConfig;
     ///
     /// # let ca_certs_buf = &[];
@@ -147,6 +150,7 @@ impl MtlsConfig {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::mtls::MtlsConfig;
     ///
     /// # let ca_certs_buf = &[];
@@ -178,45 +182,63 @@ impl MtlsConfig {
 
 #[cfg(test)]
 mod tests {
+    use figment::{
+        providers::{Format, Toml},
+        Figment,
+    };
     use std::path::Path;
-    use figment::{Figment, providers::{Toml, Format}};
 
     use crate::mtls::MtlsConfig;
 
     #[test]
     fn test_mtls_config() {
         figment::Jail::expect_with(|jail| {
-            jail.create_file("MTLS.toml", r#"
+            jail.create_file(
+                "MTLS.toml",
+                r#"
                 certs = "/ssl/cert.pem"
                 key = "/ssl/key.pem"
-            "#)?;
+            "#,
+            )?;
 
             let figment = || Figment::from(Toml::file("MTLS.toml"));
             figment().extract::<MtlsConfig>().expect_err("no ca");
 
-            jail.create_file("MTLS.toml", r#"
+            jail.create_file(
+                "MTLS.toml",
+                r#"
                 ca_certs = "/ssl/ca.pem"
-            "#)?;
+            "#,
+            )?;
 
             let mtls: MtlsConfig = figment().extract()?;
             assert_eq!(mtls.ca_certs().unwrap_left(), Path::new("/ssl/ca.pem"));
             assert!(!mtls.mandatory);
 
-            jail.create_file("MTLS.toml", r#"
+            jail.create_file(
+                "MTLS.toml",
+                r#"
                 ca_certs = "/ssl/ca.pem"
                 mandatory = true
-            "#)?;
+            "#,
+            )?;
 
             let mtls: MtlsConfig = figment().extract()?;
             assert_eq!(mtls.ca_certs().unwrap_left(), Path::new("/ssl/ca.pem"));
             assert!(mtls.mandatory);
 
-            jail.create_file("MTLS.toml", r#"
+            jail.create_file(
+                "MTLS.toml",
+                r#"
                 ca_certs = "relative/ca.pem"
-            "#)?;
+            "#,
+            )?;
 
             let mtls: MtlsConfig = figment().extract()?;
-            assert_eq!(mtls.ca_certs().unwrap_left(), jail.directory().join("relative/ca.pem"));
+            assert_eq!(
+                mtls.ca_certs().unwrap_left(),
+                jail.directory().join("relative/ca.pem")
+            );
 
             Ok(())
         });

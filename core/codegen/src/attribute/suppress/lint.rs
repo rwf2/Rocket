@@ -52,12 +52,17 @@ fn span_to_range(span: Span) -> Option<Range<usize>> {
     let i = string.find('(')?;
     let j = string[i..].find(')')?;
     let (start, end) = string[(i + 1)..(i + j)].split_once("..")?;
-    Some(Range { start: start.parse().ok()?, end: end.parse().ok()? })
+    Some(Range {
+        start: start.parse().ok()?,
+        end: end.parse().ok()?,
+    })
 }
 
 impl Lint {
     pub fn suppress_attrs(attrs: &[syn::Attribute], ctxt: Span) {
-        let _ = attrs.iter().try_for_each(|attr| Lint::suppress_attr(attr, ctxt));
+        let _ = attrs
+            .iter()
+            .try_for_each(|attr| Lint::suppress_attr(attr, ctxt));
     }
 
     pub fn suppress_attr(attr: &syn::Attribute, ctxt: Span) -> Result<(), syn::Error> {
@@ -65,7 +70,7 @@ impl Lint {
             return Ok(());
         };
 
-        if !list.path.last_ident().map_or(false, |i| i == "suppress") {
+        if list.path.last_ident().is_none_or(|i| i != "suppress") {
             return Ok(());
         }
 
@@ -88,8 +93,9 @@ impl Lint {
     pub fn is_suppressed(self, ctxt: Span) -> bool {
         SUPPRESSIONS.with_borrow(|s| {
             let this = span_to_range(ctxt).unwrap_or_default();
-            s.get(&self).map_or(false, |set| {
-                set.iter().any(|r| this.start >= r.start && this.end <= r.end)
+            s.get(&self).is_some_and(|set| {
+                set.iter()
+                    .any(|r| this.start >= r.start && this.end <= r.end)
             })
         })
     }
@@ -99,7 +105,10 @@ impl Lint {
     }
 
     pub fn how_to_suppress(self) -> String {
-        format!("apply `#[suppress({})]` before the item to suppress this lint", self.as_str())
+        format!(
+            "apply `#[suppress({})]` before the item to suppress this lint",
+            self.as_str()
+        )
     }
 }
 

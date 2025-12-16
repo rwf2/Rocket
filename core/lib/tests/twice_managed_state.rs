@@ -1,3 +1,5 @@
+extern crate rocket_community as rocket;
+
 struct A;
 
 #[test]

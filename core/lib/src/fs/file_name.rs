@@ -34,6 +34,7 @@ impl FileName {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::fs::FileName;
     ///
     /// let name = FileName::new("some-file.txt");
@@ -73,6 +74,7 @@ impl FileName {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::fs::FileName;
     ///
     /// let name = FileName::new("some-file.txt");
@@ -115,19 +117,16 @@ impl FileName {
             static BAD_CHARS: &[char] = &[
                 // Microsoft says these are invalid.
                 '.', '<', '>', ':', '"', '/', '\\', '|', '?', '*',
-
                 // `cmd.exe` treats these specially.
-                ',', ';', '=',
-
-                // These are treated specially by unix-like shells.
+                ',', ';', '=', // These are treated specially by unix-like shells.
                 '(', ')', '&', '#',
             ];
 
             // Microsoft says these are reserved.
             static BAD_NAMES: &[&str] = &[
-                "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4",
-                "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2",
-                "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
+                "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7",
+                "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8",
+                "LPT9",
             ];
 
             let bad_char = |c| BAD_CHARS.contains(&c) || c.is_control();
@@ -139,9 +138,7 @@ impl FileName {
         let (bad_char, bad_name) = {
             static BAD_CHARS: &[char] = &[
                 // These have special meaning in a file name.
-                '.', '/', '\\',
-
-                // These are treated specially by shells.
+                '.', '/', '\\', // These are treated specially by shells.
                 '<', '>', '|', ':', '(', ')', '&', ';', '#', '?', '*',
             ];
 
@@ -178,6 +175,7 @@ impl FileName {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::fs::FileName;
     ///
     /// let name = FileName::new("some-file.txt");
@@ -189,7 +187,7 @@ impl FileName {
     /// assert!(name.is_safe());
     /// ```
     pub fn is_safe(&self) -> bool {
-        self.as_str().map_or(false, |s| s == &self.0)
+        self.as_str() == Some(&self.0)
     }
 
     /// The raw, unsanitized, potentially unsafe file name. Prefer to use
@@ -217,6 +215,7 @@ impl FileName {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::fs::FileName;
     ///
     /// let name = FileName::new("some-file.txt");

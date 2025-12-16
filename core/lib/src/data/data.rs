@@ -1,10 +1,10 @@
 use std::io;
 use std::pin::Pin;
 
-use crate::data::ByteUnit;
 use crate::data::data_stream::{DataStream, RawReader, RawStream};
 use crate::data::peekable::Peekable;
-use crate::data::transform::{Transform, TransformBuf, Inspect, InPlaceMap};
+use crate::data::transform::{InPlaceMap, Inspect, Transform, TransformBuf};
+use crate::data::ByteUnit;
 
 /// Type representing the body data of a request.
 ///
@@ -15,7 +15,7 @@ use crate::data::transform::{Transform, TransformBuf, Inspect, InPlaceMap};
 /// follows:
 ///
 /// ```rust
-/// # #[macro_use] extern crate rocket;
+/// # #[macro_use] extern crate rocket_community as rocket;
 /// # type DataGuard = String;
 /// #[post("/submit", data = "<var>")]
 /// fn submit(var: DataGuard) { /* ... */ }
@@ -48,7 +48,10 @@ pub struct Data<'r> {
 impl<'r> Data<'r> {
     #[inline]
     pub(crate) fn new(stream: Peekable<512, RawReader<'r>>) -> Self {
-        Self { stream, transforms: Vec::new() }
+        Self {
+            stream,
+            transforms: Vec::new(),
+        }
     }
 
     #[inline]
@@ -59,7 +62,11 @@ impl<'r> Data<'r> {
     /// This creates a `data` object from a local data source `data`.
     #[inline]
     pub(crate) fn local(data: Vec<u8>) -> Data<'r> {
-        Data::new(Peekable::with_buffer(data, true, RawReader::new(RawStream::Empty)))
+        Data::new(Peekable::with_buffer(
+            data,
+            true,
+            RawReader::new(RawStream::Empty),
+        ))
     }
 
     /// Returns the raw data stream, limited to `limit` bytes.
@@ -72,6 +79,7 @@ impl<'r> Data<'r> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::data::{Data, ToByteUnit};
     ///
     /// # const SIZE_LIMIT: u64 = 2 << 20; // 2MiB
@@ -110,6 +118,7 @@ impl<'r> Data<'r> {
     /// In a data guard:
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::request::{self, Request, FromRequest};
     /// use rocket::data::{Data, FromData, Outcome};
     /// use rocket::http::Status;
@@ -133,7 +142,8 @@ impl<'r> Data<'r> {
     ///
     /// In a fairing:
     ///
-    /// ```
+    /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::{Rocket, Request, Data, Response};
     /// use rocket::fairing::{Fairing, Info, Kind};
     /// # struct MyType;
@@ -168,6 +178,7 @@ impl<'r> Data<'r> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::data::Data;
     ///
     /// async fn handler(mut data: Data<'_>) {
@@ -187,7 +198,8 @@ impl<'r> Data<'r> {
     /// [`open()`ed](Data::open()) and read.
     #[inline(always)]
     pub fn chain_transform<T>(&mut self, transform: T) -> &mut Self
-        where T: Transform + Send + Sync + 'static
+    where
+        T: Transform + Send + Sync + 'static,
     {
         self.transforms.push(Box::pin(transform));
         self
@@ -195,7 +207,8 @@ impl<'r> Data<'r> {
 
     /// Chain a [`Transform`] that can inspect the data as it streams.
     pub fn chain_inspect<F>(&mut self, f: F) -> &mut Self
-        where F: FnMut(&[u8]) + Send + Sync + 'static
+    where
+        F: FnMut(&[u8]) + Send + Sync + 'static,
     {
         self.chain_transform(Inspect(Box::new(f)))
     }
@@ -204,16 +217,21 @@ impl<'r> Data<'r> {
     /// Unlike [`Data::chain_try_inplace_map()`], this version assumes the
     /// mapper is infallible.
     pub fn chain_inplace_map<F>(&mut self, mut f: F) -> &mut Self
-        where F: FnMut(&mut TransformBuf<'_, '_>) + Send + Sync + 'static
+    where
+        F: FnMut(&mut TransformBuf<'_, '_>) + Send + Sync + 'static,
     {
-        self.chain_transform(InPlaceMap(Box::new(move |buf| Ok(f(buf)))))
+        self.chain_transform(InPlaceMap(Box::new(move |buf| {
+            f(buf);
+            Ok(())
+        })))
     }
 
     /// Chain a [`Transform`] that can in-place map the data as it streams.
     /// Unlike [`Data::chain_inplace_map()`], this version allows the mapper to
     /// be infallible.
     pub fn chain_try_inplace_map<F>(&mut self, f: F) -> &mut Self
-        where F: FnMut(&mut TransformBuf<'_, '_>) -> io::Result<()> + Send + Sync + 'static
+    where
+        F: FnMut(&mut TransformBuf<'_, '_>) -> io::Result<()> + Send + Sync + 'static,
     {
         self.chain_transform(InPlaceMap(Box::new(f)))
     }

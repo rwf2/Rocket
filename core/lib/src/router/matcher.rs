@@ -1,7 +1,7 @@
-use crate::{Route, Request, Catcher};
-use crate::router::Collide;
 use crate::http::Status;
 use crate::route::Color;
+use crate::router::Collide;
+use crate::{Catcher, Request, Route};
 
 impl Route {
     /// Returns `true` if `self` matches `request`.
@@ -37,6 +37,8 @@ impl Route {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
+    ///
     /// use rocket::Route;
     /// use rocket::http::Method;
     /// # use rocket::local::blocking::Client;
@@ -103,6 +105,8 @@ impl Catcher {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
+    ///
     /// use rocket::Catcher;
     /// use rocket::http::Status;
     /// # use rocket::local::blocking::Client;
@@ -134,14 +138,17 @@ impl Catcher {
     /// assert!(b_count > a_count);
     /// ```
     pub fn matches(&self, status: Status, request: &Request<'_>) -> bool {
-        self.code.map_or(true, |code| code == status.code)
-            && self.base().segments().prefix_of(request.uri().path().segments())
+        self.code.is_none_or(|code| code == status.code)
+            && self
+                .base()
+                .segments()
+                .prefix_of(request.uri().path().segments())
     }
 }
 
 fn methods_match(route: &Route, req: &Request<'_>) -> bool {
     trace!(?route.method, request.method = %req.method());
-    route.method.map_or(true, |method| method == req.method())
+    route.method.is_none_or(|method| method == req.method())
 }
 
 fn paths_match(route: &Route, req: &Request<'_>) -> bool {
@@ -215,20 +222,20 @@ fn formats_match(route: &Route, req: &Request<'_>) -> bool {
     match route.method.and_then(|m| m.allows_request_body()) {
         Some(true) => match req.format() {
             Some(f) if f.specificity() == 2 => route_format.collides_with(f),
-            _ => false
+            _ => false,
         },
         _ => match req.format() {
             Some(f) => route_format.collides_with(f),
-            None => true
-        }
+            None => true,
+        },
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::http::{Accept, ContentType, MediaType, Method, Method::*};
     use crate::local::blocking::Client;
-    use crate::route::{Route, dummy_handler};
-    use crate::http::{Method, Method::*, MediaType, ContentType, Accept};
+    use crate::route::{dummy_handler, Route};
 
     fn req_matches_route(a: &'static str, b: &'static str) -> bool {
         let client = Client::debug_with(vec![]).expect("client");
@@ -294,7 +301,9 @@ mod tests {
     }
 
     fn req_matches_format<S1, S2>(m: Method, mt1: S1, mt2: S2) -> bool
-        where S1: Into<Option<&'static str>>, S2: Into<Option<&'static str>>
+    where
+        S1: Into<Option<&'static str>>,
+        S2: Into<Option<&'static str>>,
     {
         let client = Client::debug_with(vec![]).expect("client");
         let mut req = client.req(m, "/");
@@ -316,12 +325,24 @@ mod tests {
 
     #[test]
     fn test_req_route_mt_collisions() {
-        assert!(req_matches_format(Post, "application/json", "application/json"));
-        assert!(req_matches_format(Post, "application/json", "application/*"));
+        assert!(req_matches_format(
+            Post,
+            "application/json",
+            "application/json"
+        ));
+        assert!(req_matches_format(
+            Post,
+            "application/json",
+            "application/*"
+        ));
         assert!(req_matches_format(Post, "application/json", "*/json"));
         assert!(req_matches_format(Post, "text/html", "*/*"));
 
-        assert!(req_matches_format(Get, "application/json", "application/json"));
+        assert!(req_matches_format(
+            Get,
+            "application/json",
+            "application/json"
+        ));
         assert!(req_matches_format(Get, "text/html", "text/html"));
         assert!(req_matches_format(Get, "text/html", "*/*"));
         assert!(req_matches_format(Get, None, "*/*"));
@@ -341,8 +362,16 @@ mod tests {
         assert!(req_matches_format(Get, None, "text/html"));
         assert!(req_matches_format(Get, None, "application/json"));
 
-        assert!(req_matches_format(Get, "text/html, text/plain", "text/html"));
-        assert!(req_matches_format(Get, "text/html; q=0.5, text/xml", "text/xml"));
+        assert!(req_matches_format(
+            Get,
+            "text/html, text/plain",
+            "text/html"
+        ));
+        assert!(req_matches_format(
+            Get,
+            "text/html; q=0.5, text/xml",
+            "text/xml"
+        ));
 
         assert!(!req_matches_format(Post, None, "text/html"));
         assert!(!req_matches_format(Post, None, "text/*"));

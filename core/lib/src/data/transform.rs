@@ -1,7 +1,7 @@
 use std::io;
 use std::ops::{Deref, DerefMut};
 use std::pin::Pin;
-use std::task::{Poll, Context};
+use std::task::{Context, Poll};
 
 use tokio::io::ReadBuf;
 
@@ -43,10 +43,7 @@ pub trait Transform {
     /// While this method is not _async_ (it does not return [`Poll`]), it is
     /// nevertheless executed in an async context and should respect all such
     /// restrictions including not blocking.
-    fn transform(
-        self: Pin<&mut Self>,
-        buf: &mut TransformBuf<'_, '_>,
-    ) -> io::Result<()>;
+    fn transform(self: Pin<&mut Self>, buf: &mut TransformBuf<'_, '_>) -> io::Result<()>;
 
     /// Called when the upstream is finished, that is, it has no more data to
     /// fill. At this point, the transform becomes an async reader. This method
@@ -144,11 +141,11 @@ impl Transform for Inspect {
 }
 
 pub struct InPlaceMap(
-    pub(crate) Box<dyn FnMut(&mut TransformBuf<'_, '_>) -> io::Result<()> + Send + Sync + 'static>
+    pub(crate) Box<dyn FnMut(&mut TransformBuf<'_, '_>) -> io::Result<()> + Send + Sync + 'static>,
 );
 
 impl Transform for InPlaceMap {
-    fn transform(mut self: Pin<&mut Self>, buf: &mut TransformBuf<'_, '_>,) -> io::Result<()> {
+    fn transform(mut self: Pin<&mut Self>, buf: &mut TransformBuf<'_, '_>) -> io::Result<()> {
         (self.0)(buf)
     }
 }
@@ -178,19 +175,22 @@ impl<'a, 'b> DerefMut for TransformBuf<'a, 'b> {
 #[allow(deprecated)]
 mod tests {
     use std::hash::SipHasher;
-    use std::sync::{Arc, atomic::{AtomicU8, AtomicU64, Ordering}};
+    use std::sync::{
+        atomic::{AtomicU64, AtomicU8, Ordering},
+        Arc,
+    };
 
     use parking_lot::Mutex;
     use ubyte::ToByteUnit;
 
+    use crate::fairing::AdHoc;
     use crate::http::Method;
     use crate::local::blocking::Client;
-    use crate::fairing::AdHoc;
-    use crate::{route, Route, Data, Response, Request};
+    use crate::{route, Data, Request, Response, Route};
 
     mod hash_transform {
-        use std::io::Cursor;
         use std::hash::Hasher;
+        use std::io::Cursor;
 
         use tokio::io::AsyncRead;
 
@@ -198,7 +198,7 @@ mod tests {
 
         pub struct HashTransform<H: Hasher> {
             pub(crate) hasher: H,
-            pub(crate) hash: Option<Cursor<[u8; 8]>>
+            pub(crate) hash: Option<Cursor<[u8; 8]>>,
         }
 
         impl<H: Hasher + Unpin> Transform for HashTransform<H> {
@@ -229,7 +229,8 @@ mod tests {
         impl crate::Data<'_> {
             /// Chain an in-place hash [`Transform`] to `self`.
             pub fn chain_hash_transform<H: std::hash::Hasher>(&mut self, hasher: H) -> &mut Self
-                where H: Unpin + Send + Sync + 'static
+            where
+                H: Unpin + Send + Sync + 'static,
             {
                 self.chain_transform(HashTransform { hasher, hash: None })
             }
@@ -240,7 +241,10 @@ mod tests {
     fn test_transform_series() {
         fn handler<'r>(_: &'r Request<'_>, data: Data<'r>) -> route::BoxFuture<'r> {
             Box::pin(async move {
-                data.open(128.bytes()).stream_to(tokio::io::sink()).await.expect("read ok");
+                data.open(128.bytes())
+                    .stream_to(tokio::io::sink())
+                    .await
+                    .expect("read ok");
                 route::Outcome::Success(Response::new())
             })
         }
@@ -253,12 +257,19 @@ mod tests {
             .manage(raw_data.clone())
             .manage(inspect2.clone())
             .mount("/", vec![Route::new(Method::Post, "/", handler)])
-            .attach(AdHoc::on_request("transforms", |req, data| Box::pin(async {
-                let hash1 = req.rocket().state::<Arc<AtomicU64>>().cloned().unwrap();
-                let hash2 = req.rocket().state::<Arc<AtomicU64>>().cloned().unwrap();
-                let raw_data = req.rocket().state::<Arc<Mutex<Vec<u8>>>>().cloned().unwrap();
-                let inspect2 = req.rocket().state::<Arc<AtomicU8>>().cloned().unwrap();
-                data.chain_inspect(move |bytes| { *raw_data.lock() = bytes.to_vec(); })
+            .attach(AdHoc::on_request("transforms", |req, data| {
+                Box::pin(async {
+                    let hash1 = req.rocket().state::<Arc<AtomicU64>>().cloned().unwrap();
+                    let hash2 = req.rocket().state::<Arc<AtomicU64>>().cloned().unwrap();
+                    let raw_data = req
+                        .rocket()
+                        .state::<Arc<Mutex<Vec<u8>>>>()
+                        .cloned()
+                        .unwrap();
+                    let inspect2 = req.rocket().state::<Arc<AtomicU8>>().cloned().unwrap();
+                    data.chain_inspect(move |bytes| {
+                        *raw_data.lock() = bytes.to_vec();
+                    })
                     .chain_hash_transform(SipHasher::new())
                     .chain_inspect(move |bytes| {
                         assert_eq!(bytes.len(), 8);
@@ -274,7 +285,8 @@ mod tests {
                         assert_eq!(prev, value);
                         inspect2.fetch_add(1, Ordering::Release);
                     });
-            })));
+                })
+            }));
 
         // Make sure nothing has happened yet.
         assert!(raw_data.lock().is_empty());

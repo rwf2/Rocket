@@ -1,7 +1,7 @@
-use std::ops::{Index, RangeFrom, RangeTo};
 use std::cell::UnsafeCell;
+use std::ops::{Index, RangeFrom, RangeTo};
 
-use parking_lot::{RawMutex, lock_api::RawMutex as _};
+use parking_lot::{lock_api::RawMutex as _, RawMutex};
 
 mod private {
     /// Sealed trait for types that can be shared in a `SharedStack`.
@@ -20,11 +20,15 @@ mod private {
     }
 
     unsafe impl Shareable for String {
-        fn size(&self) -> usize { self.len() }
+        fn size(&self) -> usize {
+            self.len()
+        }
     }
 
     unsafe impl<T: Send + Sync + 'static> Shareable for Vec<T> {
-        fn size(&self) -> usize { self.len() }
+        fn size(&self) -> usize {
+            self.len()
+        }
     }
 }
 
@@ -39,8 +43,9 @@ pub struct SharedStack<T: Shareable> {
 }
 
 impl<T: Shareable> SharedStack<T>
-    where T::Target: Index<RangeFrom<usize>, Output = T::Target>
-                     + Index<RangeTo<usize>, Output = T::Target>
+where
+    T::Target:
+        Index<RangeFrom<usize>, Output = T::Target> + Index<RangeTo<usize>, Output = T::Target>,
 {
     /// Creates a new stack.
     pub fn new() -> Self {
@@ -105,12 +110,23 @@ impl<T: Shareable> SharedStack<T>
     /// Pushes the strings `a` and `b` onto the stack without allocating for
     /// both strings. Returns references to the two strings on the stack.
     pub(crate) fn push_two<V>(&self, a: V, b: V) -> (&T::Target, &T::Target)
-        where T: From<V> + Extend<V>,
+    where
+        T: From<V> + Extend<V>,
     {
         let mut value = T::from(a);
         let split_len = value.size();
         value.extend(Some(b));
         self.push_split(value, split_len)
+    }
+}
+
+impl<T: Shareable> Default for SharedStack<T>
+where
+    T::Target:
+        Index<RangeFrom<usize>, Output = T::Target> + Index<RangeTo<usize>, Output = T::Target>,
+{
+    fn default() -> Self {
+        Self::new()
     }
 }
 

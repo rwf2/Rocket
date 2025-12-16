@@ -1,20 +1,20 @@
 [package]
-name = "rocket"
-version = "0.6.0-dev"
+name = "rocket-community"
+version = "0.6.0-rc1"
 authors = ["Sergio Benitez <sb@sergio.bz>"]
 description = """
-Web framework with a focus on usability, security, extensibility, and speed.
+Web framework with a focus on usability, security, extensibility, and speed. (Community Fork)
 """
 documentation = "https://api.rocket.rs/master/rocket/"
 homepage = "https://rocket.rs"
-repository = "https://github.com/rwf2/Rocket"
+repository = "https://github.com/rocket-rs-community/Rocket"
 readme = "../../README.md"
 keywords = ["rocket", "web", "framework", "server"]
 license = "MIT OR Apache-2.0"
 build = "build.rs"
 categories = ["web-programming::http-server"]
 edition = "2021"
-rust-version = "1.75"
+rust-version = "1.82.0"
 
 [package.metadata.docs.rs]
 all-features = true
@@ -87,11 +87,13 @@ default-features = false
 features = ["fmt", "tracing-log", "parking_lot"]
 
 [dependencies.rocket_codegen]
-version = "0.6.0-dev"
+package = "rocket_codegen-community"
+version = "0.6.0-rc1"
 path = "../codegen"
 
 [dependencies.rocket_http]
-version = "0.6.0-dev"
+package = "rocket_http-community"
+version = "0.6.0-rc1"
 path = "../http"
 features = ["serde"]
 
@@ -127,8 +129,8 @@ features = ["provider-address-token-default", "provider-tls-rustls"]
 optional = true
 
 [dependencies.s2n-quic-h3]
-git = "https://github.com/SergioBenitez/s2n-quic-h3.git"
-rev = "f832471"
+version = "0.1.0"
+package = "s2n-quic-h3-community"
 optional = true
 
 [target.'cfg(unix)'.dependencies]

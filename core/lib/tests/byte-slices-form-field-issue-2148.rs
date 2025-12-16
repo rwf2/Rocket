@@ -1,4 +1,5 @@
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket_community as rocket;
 
 use std::str::from_utf8;
 
@@ -37,11 +38,17 @@ fn test_from_form_fields_of_multipart_files_into_byte_slices() {
         "<finish",
         "--X-BOUNDARY--",
         "",
-    ].join("\r\n");
+    ]
+    .join("\r\n");
 
     let client = Client::debug_with(routes![form]).unwrap();
-    let response = client.post("/")
-        .header("multipart/form-data; boundary=X-BOUNDARY".parse::<ContentType>().unwrap())
+    let response = client
+        .post("/")
+        .header(
+            "multipart/form-data; boundary=X-BOUNDARY"
+                .parse::<ContentType>()
+                .unwrap(),
+        )
         .body(body)
         .dispatch();
 
@@ -52,7 +59,8 @@ fn test_from_form_fields_of_multipart_files_into_byte_slices() {
 #[test]
 fn test_from_form_fields_of_values_into_byte_slices() {
     let client = Client::debug_with(routes![form]).unwrap();
-    let response = client.post("/")
+    let response = client
+        .post("/")
         .header(ContentType::Form)
         .body(format!("bar={}&foo={}", "...finish", "start..."))
         .dispatch();

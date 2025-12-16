@@ -1,6 +1,6 @@
 use std::fmt;
 
-use serde::{de, Serialize, Deserializer, Serializer};
+use serde::{de, Deserializer, Serialize, Serializer};
 use tracing::{level_filters::LevelFilter, Level};
 
 pub fn serialize<S: Serializer>(level: &Option<Level>, s: S) -> Result<S::Ok, S::Error> {

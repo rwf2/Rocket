@@ -40,7 +40,7 @@ impl std::ops::Deref for N {
 /// locations and limits.
 ///
 /// ```rust
-/// # #[macro_use] extern crate rocket;
+/// # #[macro_use] extern crate rocket_community as rocket;
 /// use rocket::data::Capped;
 /// use rocket::fs::TempFile;
 ///
@@ -66,7 +66,7 @@ pub struct Capped<T> {
     /// The capped value itself.
     pub value: T,
     /// The number of bytes written and whether `value` is complete.
-    pub n: N
+    pub n: N,
 }
 
 impl<T> Capped<T> {
@@ -76,6 +76,7 @@ impl<T> Capped<T> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::data::{Capped, N};
     ///
     /// let n = N { written: 2, complete: true };
@@ -83,7 +84,7 @@ impl<T> Capped<T> {
     /// ```
     #[inline(always)]
     pub fn new(value: T, n: N) -> Self {
-        Capped { value, n, }
+        Capped { value, n }
     }
 
     /// Creates a new `Capped` from a `value` and the length of `value` `n`,
@@ -93,6 +94,7 @@ impl<T> Capped<T> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::data::{Capped, N};
     ///
     /// let string = "hi";
@@ -100,7 +102,13 @@ impl<T> Capped<T> {
     /// ```
     #[inline(always)]
     pub fn complete(value: T, len: usize) -> Self {
-        Capped { value, n: N { written: len as u64, complete: true } }
+        Capped {
+            value,
+            n: N {
+                written: len as u64,
+                complete: true,
+            },
+        }
     }
 
     /// Converts a `Capped<T>` to `Capped<U>` by applying `f` to the contained
@@ -109,6 +117,7 @@ impl<T> Capped<T> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::data::{Capped, N};
     ///
     /// let n = N { written: 2, complete: true };
@@ -117,7 +126,10 @@ impl<T> Capped<T> {
     /// ```
     #[inline(always)]
     pub fn map<U, F: FnOnce(T) -> U>(self, f: F) -> Capped<U> {
-        Capped { value: f(self.value), n: self.n }
+        Capped {
+            value: f(self.value),
+            n: self.n,
+        }
     }
 
     /// Returns `true` if `self.n.written` is `0`, that is, no bytes were
@@ -126,6 +138,7 @@ impl<T> Capped<T> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::data::{Capped, N};
     ///
     /// let n = N { written: 2, complete: true };
@@ -147,6 +160,7 @@ impl<T> Capped<T> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::data::{Capped, N};
     ///
     /// let n = N { written: 2, complete: true };
@@ -167,6 +181,7 @@ impl<T> Capped<T> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::data::{Capped, N};
     ///
     /// let n = N { written: 2, complete: true };
@@ -201,8 +216,8 @@ impl<T: AsRef<[u8]>> From<T> for Capped<T> {
     }
 }
 
-use crate::response::{self, Responder};
 use crate::request::Request;
+use crate::response::{self, Responder};
 
 impl<'r, 'o: 'r, T: Responder<'r, 'o>> Responder<'r, 'o> for Capped<T> {
     fn respond_to(self, request: &'r Request<'_>) -> response::Result<'o> {
@@ -211,61 +226,63 @@ impl<'r, 'o: 'r, T: Responder<'r, 'o>> Responder<'r, 'o> for Capped<T> {
 }
 
 macro_rules! impl_strict_from_form_field_from_capped {
-    ($T:ty) => (const _: () = {
-        use $crate::form::{FromFormField, ValueField, DataField, Result};
-        use $crate::data::Capped;
+    ($T:ty) => {
+        const _: () = {
+            use $crate::data::Capped;
+            use $crate::form::{DataField, FromFormField, Result, ValueField};
 
-        #[crate::async_trait]
-        impl<'v> FromFormField<'v> for $T {
-            fn default() -> Option<Self> {
-                <Capped<$T> as FromFormField<'v>>::default().map(|c| c.value)
-            }
-
-            fn from_value(f: ValueField<'v>) -> Result<'v, Self> {
-                let capped = <Capped<$T> as FromFormField<'v>>::from_value(f)?;
-                if !capped.is_complete() {
-                    Err((None, Some(capped.n.written)))?;
+            #[crate::async_trait]
+            impl<'v> FromFormField<'v> for $T {
+                fn default() -> Option<Self> {
+                    <Capped<$T> as FromFormField<'v>>::default().map(|c| c.value)
                 }
 
-                Ok(capped.value)
-            }
+                fn from_value(f: ValueField<'v>) -> Result<'v, Self> {
+                    let capped = <Capped<$T> as FromFormField<'v>>::from_value(f)?;
+                    if !capped.is_complete() {
+                        Err((None, Some(capped.n.written)))?;
+                    }
 
-            async fn from_data(field: DataField<'v, '_>) -> Result<'v, Self> {
-                let capped = <Capped<$T> as FromFormField<'v>>::from_data(field);
-                let capped = capped.await?;
-                if !capped.is_complete() {
-                    Err((None, Some(capped.n.written)))?;
+                    Ok(capped.value)
                 }
 
-                Ok(capped.value)
+                async fn from_data(field: DataField<'v, '_>) -> Result<'v, Self> {
+                    let capped = <Capped<$T> as FromFormField<'v>>::from_data(field);
+                    let capped = capped.await?;
+                    if !capped.is_complete() {
+                        Err((None, Some(capped.n.written)))?;
+                    }
+
+                    Ok(capped.value)
+                }
             }
-        }
-    };)
+        };
+    };
 }
 
 macro_rules! impl_strict_from_data_from_capped {
-    ($T:ty) => (
+    ($T:ty) => {
         #[crate::async_trait]
         impl<'r> $crate::data::FromData<'r> for $T {
             type Error = <$crate::data::Capped<Self> as $crate::data::FromData<'r>>::Error;
 
             async fn from_data(
                 r: &'r $crate::Request<'_>,
-                d: $crate::Data<'r>
+                d: $crate::Data<'r>,
             ) -> $crate::data::Outcome<'r, Self> {
-                use $crate::outcome::Outcome::*;
                 use std::io::{Error, ErrorKind::UnexpectedEof};
+                use $crate::outcome::Outcome::*;
 
                 match <$crate::data::Capped<$T> as FromData>::from_data(r, d).await {
                     Success(p) if p.is_complete() => Success(p.into_inner()),
                     Success(_) => {
                         let e = Error::new(UnexpectedEof, "data limit exceeded");
                         Error((Status::BadRequest, e.into()))
-                    },
+                    }
                     Forward(d) => Forward(d),
                     Error((s, e)) => Error((s, e)),
                 }
             }
         }
-    )
+    };
 }

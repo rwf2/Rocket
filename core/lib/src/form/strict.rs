@@ -1,7 +1,7 @@
 use std::ops::{Deref, DerefMut};
 
 use crate::form::prelude::*;
-use crate::http::uri::fmt::{Query, FromUriParam};
+use crate::http::uri::fmt::{FromUriParam, Query};
 
 /// A form guard for parsing form types strictly.
 ///
@@ -26,7 +26,7 @@ use crate::http::uri::fmt::{Query, FromUriParam};
 /// such, `Form<Strict<T>>` is a data guard:
 ///
 /// ```rust
-/// # #[macro_use] extern crate rocket;
+/// # #[macro_use] extern crate rocket_community as rocket;
 /// use rocket::form::{Form, Strict};
 ///
 /// #[derive(FromForm)]
@@ -44,7 +44,7 @@ use crate::http::uri::fmt::{Query, FromUriParam};
 /// overall structure and remaining fields lenient:
 ///
 /// ```rust
-/// # #[macro_use] extern crate rocket;
+/// # #[macro_use] extern crate rocket_community as rocket;
 /// use rocket::form::{Form, Strict};
 ///
 /// #[derive(FromForm)]
@@ -66,7 +66,7 @@ impl<T> Strict<T> {
     /// # Example
     ///
     /// ```rust
-    /// # #[macro_use] extern crate rocket;
+    /// # #[macro_use] extern crate rocket_community as rocket;
     /// use rocket::form::{Form, Strict};
     ///
     /// #[derive(FromForm)]

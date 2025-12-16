@@ -3,8 +3,8 @@ use std::ops::Deref;
 
 use ref_cast::RefCast;
 
-use crate::mtls::x509::X509Name;
 use crate::mtls::oid;
+use crate::mtls::x509::X509Name;
 
 /// An X.509 Distinguished Name (DN) found in a
 /// [`Certificate`](crate::mtls::Certificate).
@@ -25,7 +25,7 @@ impl<'a> Name<'a> {
     /// # Example
     ///
     /// ```rust
-    /// # #[macro_use] extern crate rocket;
+    /// # #[macro_use] extern crate rocket_community as rocket;
     /// use rocket::mtls::Certificate;
     ///
     /// #[get("/auth")]
@@ -50,7 +50,7 @@ impl<'a> Name<'a> {
     /// # Example
     ///
     /// ```rust
-    /// # #[macro_use] extern crate rocket;
+    /// # #[macro_use] extern crate rocket_community as rocket;
     /// use rocket::mtls::Certificate;
     ///
     /// #[get("/auth")]
@@ -61,7 +61,8 @@ impl<'a> Name<'a> {
     /// }
     /// ```
     pub fn common_names(&self) -> impl Iterator<Item = &'a str> + '_ {
-        self.iter_by_oid(&oid::OID_X509_COMMON_NAME).filter_map(|n| n.as_str().ok())
+        self.iter_by_oid(&oid::OID_X509_COMMON_NAME)
+            .filter_map(|n| n.as_str().ok())
     }
 
     /// Returns the _first_ UTF-8 _string_ email address, if any.
@@ -72,7 +73,7 @@ impl<'a> Name<'a> {
     /// # Example
     ///
     /// ```rust
-    /// # #[macro_use] extern crate rocket;
+    /// # #[macro_use] extern crate rocket_community as rocket;
     /// use rocket::mtls::Certificate;
     ///
     /// #[get("/auth")]
@@ -97,7 +98,7 @@ impl<'a> Name<'a> {
     /// # Example
     ///
     /// ```rust
-    /// # #[macro_use] extern crate rocket;
+    /// # #[macro_use] extern crate rocket_community as rocket;
     /// use rocket::mtls::Certificate;
     ///
     /// #[get("/auth")]
@@ -108,7 +109,8 @@ impl<'a> Name<'a> {
     /// }
     /// ```
     pub fn emails(&self) -> impl Iterator<Item = &'a str> + '_ {
-        self.iter_by_oid(&oid::OID_PKCS9_EMAIL_ADDRESS).filter_map(|n| n.as_str().ok())
+        self.iter_by_oid(&oid::OID_PKCS9_EMAIL_ADDRESS)
+            .filter_map(|n| n.as_str().ok())
     }
 
     /// Returns `true` if `self` has no data.
@@ -121,7 +123,7 @@ impl<'a> Name<'a> {
     /// # Example
     ///
     /// ```rust
-    /// # #[macro_use] extern crate rocket;
+    /// # #[macro_use] extern crate rocket_community as rocket;
     /// use rocket::mtls::Certificate;
     ///
     /// #[get("/auth")]

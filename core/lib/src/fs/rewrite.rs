@@ -1,9 +1,9 @@
 use std::borrow::Cow;
 use std::path::{Path, PathBuf};
 
-use crate::Request;
 use crate::http::{ext::IntoOwned, HeaderMap};
 use crate::response::Redirect;
+use crate::Request;
 
 /// A file server [`Rewrite`] rewriter.
 ///
@@ -47,7 +47,10 @@ pub struct File<'r> {
 impl<'r> File<'r> {
     /// A new `File`, with not additional headers.
     pub fn new(path: impl Into<Cow<'r, Path>>) -> Self {
-        Self { path: path.into(), headers: HeaderMap::new() }
+        Self {
+            path: path.into(),
+            headers: HeaderMap::new(),
+        }
     }
 
     /// A new `File`, with not additional headers.
@@ -69,7 +72,9 @@ impl<'r> File<'r> {
 
     /// Replace the path in `self` with the result of applying `f` to the path.
     pub fn map_path<F, P>(self, f: F) -> Self
-        where F: FnOnce(Cow<'r, Path>) -> P, P: Into<Cow<'r, Path>>,
+    where
+        F: FnOnce(Cow<'r, Path>) -> P,
+        P: Into<Cow<'r, Path>>,
     {
         Self {
             path: f(self.path).into(),
@@ -86,7 +91,9 @@ impl<'r> File<'r> {
     /// This does *not* check the file metadata on any platform, so hidden files
     /// on Windows will not be detected by this method.
     pub fn is_hidden(&self) -> bool {
-        self.path.iter().any(|s| s.as_encoded_bytes().starts_with(b"."))
+        self.path
+            .iter()
+            .any(|s| s.as_encoded_bytes().starts_with(b"."))
     }
 
     /// Returns `true` if the file is not hidden. This is the inverse of
@@ -101,6 +108,7 @@ impl<'r> File<'r> {
 /// # Example
 ///
 /// ```rust,no_run
+/// # extern crate rocket_community as rocket;
 /// use rocket::fs::FileServer;
 /// use rocket::fs::rewrite::Prefix;
 ///
@@ -152,6 +160,7 @@ impl Rewriter for PathBuf {
 /// # Example
 ///
 /// ```rust,no_run
+/// # extern crate rocket_community as rocket;
 /// use rocket::fs::FileServer;
 /// use rocket::fs::rewrite::{Prefix, TrailingDirs};
 ///
@@ -182,6 +191,7 @@ impl Rewriter for TrailingDirs {
 /// Rewrites all directory requests to `directory/index.html`.
 ///
 /// ```rust,no_run
+/// # extern crate rocket_community as rocket;
 /// use rocket::fs::FileServer;
 /// use rocket::fs::rewrite::DirIndex;
 ///
@@ -197,12 +207,18 @@ pub struct DirIndex {
 impl DirIndex {
     /// Appends `path` to every request for a directory.
     pub fn unconditional(path: impl AsRef<Path>) -> Self {
-        Self { path: path.as_ref().to_path_buf(), check: false }
+        Self {
+            path: path.as_ref().to_path_buf(),
+            check: false,
+        }
     }
 
     /// Only appends `path` to a request for a directory if the file exists.
     pub fn if_exists(path: impl AsRef<Path>) -> Self {
-        Self { path: path.as_ref().to_path_buf(), check: true }
+        Self {
+            path: path.as_ref().to_path_buf(),
+            check: true,
+        }
     }
 }
 
@@ -235,7 +251,8 @@ impl<'r> From<Redirect> for Rewrite<'r> {
 }
 
 impl<F: Send + Sync + 'static> Rewriter for F
-    where F: for<'r> Fn(Option<Rewrite<'r>>, &Request<'_>) -> Option<Rewrite<'r>>
+where
+    F: for<'r> Fn(Option<Rewrite<'r>>, &Request<'_>) -> Option<Rewrite<'r>>,
 {
     fn rewrite<'r>(&self, f: Option<Rewrite<'r>>, r: &Request<'_>) -> Option<Rewrite<'r>> {
         self(f, r)

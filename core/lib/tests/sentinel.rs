@@ -1,17 +1,22 @@
-use rocket::{*, either::Either, error::ErrorKind::SentinelAborts};
+extern crate rocket_community as rocket;
+
+use rocket::{either::Either, error::ErrorKind::SentinelAborts, *};
 
 #[get("/two")]
 fn two_states(_one: &State<u32>, _two: &State<String>) {}
 
 #[post("/one", data = "<s>")]
-fn one_state<'r>(_three: &'r State<u8>, s: &'r str) -> &'r str { s }
+fn one_state<'r>(_three: &'r State<u8>, s: &'r str) -> &'r str {
+    s
+}
 
 #[async_test]
 async fn state_sentinel_works() {
     let err = rocket::build()
         .reconfigure(Config::debug_default())
         .mount("/", routes![two_states])
-        .ignite().await
+        .ignite()
+        .await
         .unwrap_err();
 
     assert!(matches!(err.kind(), SentinelAborts(vec) if vec.len() == 2));
@@ -20,7 +25,8 @@ async fn state_sentinel_works() {
         .reconfigure(Config::debug_default())
         .mount("/", routes![two_states])
         .manage(String::new())
-        .ignite().await
+        .ignite()
+        .await
         .unwrap_err();
 
     assert!(matches!(err.kind(), SentinelAborts(vec) if vec.len() == 1));
@@ -28,8 +34,9 @@ async fn state_sentinel_works() {
     let err = rocket::build()
         .reconfigure(Config::debug_default())
         .mount("/", routes![two_states])
-        .manage(1 as u32)
-        .ignite().await
+        .manage(1_u32)
+        .ignite()
+        .await
         .unwrap_err();
 
     assert!(matches!(err.kind(), SentinelAborts(vec) if vec.len() == 1));
@@ -38,15 +45,17 @@ async fn state_sentinel_works() {
         .reconfigure(Config::debug_default())
         .mount("/", routes![two_states])
         .manage(String::new())
-        .manage(1 as u32)
-        .ignite().await;
+        .manage(1_u32)
+        .ignite()
+        .await;
 
     assert!(result.is_ok());
 
     let err = rocket::build()
         .reconfigure(Config::debug_default())
         .mount("/", routes![one_state])
-        .ignite().await
+        .ignite()
+        .await
         .unwrap_err();
 
     assert!(matches!(err.kind(), SentinelAborts(vec) if vec.len() == 1));
@@ -54,15 +63,17 @@ async fn state_sentinel_works() {
     let result = rocket::build()
         .reconfigure(Config::debug_default())
         .mount("/", routes![one_state])
-        .manage(1 as u8)
-        .ignite().await;
+        .manage(1_u8)
+        .ignite()
+        .await;
 
     assert!(result.is_ok());
 
     let err = rocket::build()
         .reconfigure(Config::debug_default())
         .mount("/", routes![one_state, two_states])
-        .ignite().await
+        .ignite()
+        .await
         .unwrap_err();
 
     assert!(matches!(err.kind(), SentinelAborts(vec) if vec.len() == 3));
@@ -70,8 +81,9 @@ async fn state_sentinel_works() {
     let err = rocket::build()
         .reconfigure(Config::debug_default())
         .mount("/", routes![one_state, two_states])
-        .manage(1 as u32)
-        .ignite().await
+        .manage(1_u32)
+        .ignite()
+        .await
         .unwrap_err();
 
     assert!(matches!(err.kind(), SentinelAborts(vec) if vec.len() == 2));
@@ -79,8 +91,9 @@ async fn state_sentinel_works() {
     let err = rocket::build()
         .reconfigure(Config::debug_default())
         .mount("/", routes![one_state, two_states])
-        .manage(1 as u8)
-        .ignite().await
+        .manage(1_u8)
+        .ignite()
+        .await
         .unwrap_err();
 
     assert!(matches!(err.kind(), SentinelAborts(vec) if vec.len() == 2));
@@ -88,9 +101,10 @@ async fn state_sentinel_works() {
     let err = rocket::build()
         .reconfigure(Config::debug_default())
         .mount("/", routes![one_state, two_states])
-        .manage(1 as u32)
-        .manage(1 as u8)
-        .ignite().await
+        .manage(1_u32)
+        .manage(1_u8)
+        .ignite()
+        .await
         .unwrap_err();
 
     assert!(matches!(err.kind(), SentinelAborts(vec) if vec.len() == 1));
@@ -98,10 +112,11 @@ async fn state_sentinel_works() {
     let result = rocket::build()
         .reconfigure(Config::debug_default())
         .mount("/", routes![one_state, two_states])
-        .manage(1 as u32)
-        .manage(1 as u8)
+        .manage(1_u32)
+        .manage(1_u8)
         .manage(String::new())
-        .ignite().await;
+        .ignite()
+        .await;
 
     assert!(result.is_ok());
 }
@@ -130,7 +145,8 @@ async fn data_sentinel_works() {
     let err = rocket::build()
         .reconfigure(Config::debug_default())
         .mount("/", routes![with_data])
-        .ignite().await
+        .ignite()
+        .await
         .unwrap_err();
 
     assert!(matches!(err.kind(), SentinelAborts(vec) if vec.len() == 1));
@@ -139,7 +155,8 @@ async fn data_sentinel_works() {
         .reconfigure(Config::debug_default())
         .mount("/", routes![with_data])
         .manage(Data)
-        .ignite().await;
+        .ignite()
+        .await;
 
     assert!(result.is_ok());
 }
@@ -166,7 +183,9 @@ fn inner_sentinels_detected() {
     }
 
     #[get("/")]
-    fn route() -> MyThing<ResponderSentinel> { todo!() }
+    fn route() -> MyThing<ResponderSentinel> {
+        todo!()
+    }
 
     let err = Client::debug_with(routes![route]).unwrap_err();
     assert!(matches!(err.kind(), SentinelAborts(vec) if vec.len() == 1));
@@ -175,13 +194,17 @@ fn inner_sentinels_detected() {
     struct Inner<T>(T);
 
     #[get("/")]
-    fn inner() -> MyThing<Inner<ResponderSentinel>> { todo!() }
+    fn inner() -> MyThing<Inner<ResponderSentinel>> {
+        todo!()
+    }
 
     let err = Client::debug_with(routes![inner]).unwrap_err();
     assert!(matches!(err.kind(), SentinelAborts(vec) if vec.len() == 1));
 
     #[get("/")]
-    fn inner_either() -> Either<Inner<ResponderSentinel>, ResponderSentinel> { todo!() }
+    fn inner_either() -> Either<Inner<ResponderSentinel>, ResponderSentinel> {
+        todo!()
+    }
 
     let err = Client::debug_with(routes![inner_either]).unwrap_err();
     assert!(matches!(err.kind(), SentinelAborts(vec) if vec.len() == 2));
@@ -196,7 +219,9 @@ fn inner_sentinels_detected() {
     }
 
     #[get("/")]
-    fn blocked() -> Block<ResponderSentinel> { todo!() }
+    fn blocked() -> Block<ResponderSentinel> {
+        todo!()
+    }
 
     Client::debug_with(routes![blocked]).expect("no sentinel errors");
 
@@ -225,7 +250,7 @@ fn inner_sentinels_detected() {
     #[get("/")]
     fn half_c<'r>() -> Either<
         Inner<impl Responder<'r, 'static>>,
-        Result<ResponderSentinel, Inner<ResponderSentinel>>
+        Result<ResponderSentinel, Inner<ResponderSentinel>>,
     > {
         Either::Left(Inner(()))
     }
@@ -236,7 +261,7 @@ fn inner_sentinels_detected() {
     #[get("/")]
     fn half_d<'r>() -> Either<
         Inner<impl Responder<'r, 'static>>,
-        Result<Block<ResponderSentinel>, Inner<ResponderSentinel>>
+        Result<Block<ResponderSentinel>, Inner<ResponderSentinel>>,
     > {
         Either::Left(Inner(()))
     }
@@ -257,26 +282,38 @@ fn inner_sentinels_detected() {
 
     // Another specialized sentinel.
 
-    #[get("/")] fn either_route() -> Either<ResponderSentinel, ResponderSentinel> { todo!() }
+    #[get("/")]
+    fn either_route() -> Either<ResponderSentinel, ResponderSentinel> {
+        todo!()
+    }
     let err = Client::debug_with(routes![either_route]).unwrap_err();
     assert!(matches!(err.kind(), SentinelAborts(vec) if vec.len() == 1));
 
-    #[get("/")] fn either_route2() -> Either<ResponderSentinel, ()> { todo!() }
+    #[get("/")]
+    fn either_route2() -> Either<ResponderSentinel, ()> {
+        todo!()
+    }
     let err = Client::debug_with(routes![either_route2]).unwrap_err();
     assert!(matches!(err.kind(), SentinelAborts(vec) if vec.len() == 1));
 
-    #[get("/")] fn either_route3() -> Either<(), ResponderSentinel> { todo!() }
+    #[get("/")]
+    fn either_route3() -> Either<(), ResponderSentinel> {
+        todo!()
+    }
     let err = Client::debug_with(routes![either_route3]).unwrap_err();
     assert!(matches!(err.kind(), SentinelAborts(vec) if vec.len() == 1));
 
-    #[get("/")] fn either_route4() -> Either<(), ()> { todo!() }
+    #[get("/")]
+    fn either_route4() -> Either<(), ()> {
+        todo!()
+    }
     Client::debug_with(routes![either_route4]).expect("no sentinel error");
 }
 
 #[async_test]
 async fn known_macro_sentinel_works() {
-    use rocket::response::stream::{TextStream, ByteStream, ReaderStream};
     use rocket::local::asynchronous::Client;
+    use rocket::response::stream::{ByteStream, ReaderStream, TextStream};
     use rocket::tokio::io::AsyncRead;
 
     #[derive(Responder)]
@@ -326,7 +363,9 @@ async fn known_macro_sentinel_works() {
     }
 
     macro_rules! UnknownStream {
-        ($t:ty) => (ReaderStream![$t])
+        ($t:ty) => {
+            ReaderStream![$t]
+        };
     }
 
     #[get("/ignore")]
@@ -334,6 +373,8 @@ async fn known_macro_sentinel_works() {
         ReaderStream!(yield TextSentinel("hi");)
     }
 
-    let err = Client::debug_with(routes![text, byte, reader, ignore]).await.unwrap_err();
+    let err = Client::debug_with(routes![text, byte, reader, ignore])
+        .await
+        .unwrap_err();
     assert!(matches!(err.kind(), SentinelAborts(vec) if vec.len() == 3));
 }

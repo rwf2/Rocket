@@ -1,8 +1,8 @@
-use std::fmt;
 use std::borrow::Cow;
+use std::fmt;
 
-use crate::http::{uri, Method, MediaType};
-use crate::route::{Handler, RouteUri, BoxFuture};
+use crate::http::{uri, MediaType, Method};
+use crate::route::{BoxFuture, Handler, RouteUri};
 use crate::sentinel::Sentry;
 
 /// A request handling route.
@@ -13,7 +13,7 @@ use crate::sentinel::Sentry;
 /// [`#[route]`](macro@crate::route) series of attributes to generate a `Route`.
 ///
 /// ```rust
-/// # #[macro_use] extern crate rocket;
+/// # #[macro_use] extern crate rocket_community as rocket;
 /// # use std::path::PathBuf;
 /// #[get("/route/<path..>?query", rank = 2, format = "json")]
 /// fn route_name(path: PathBuf) { /* handler procedure */ }
@@ -102,6 +102,7 @@ use crate::sentinel::Sentry;
 /// ### Example
 ///
 /// ```rust
+/// # extern crate rocket_community as rocket;
 /// use rocket::Route;
 /// use rocket::http::Method;
 ///
@@ -196,6 +197,7 @@ impl Route {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::Route;
     /// use rocket::http::Method;
     /// # use rocket::route::dummy_handler as handler;
@@ -227,6 +229,7 @@ impl Route {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::Route;
     /// use rocket::http::Method;
     /// # use rocket::route::dummy_handler as handler;
@@ -243,9 +246,10 @@ impl Route {
     /// ```
     #[track_caller]
     pub fn ranked<M, H, R>(rank: R, method: M, uri: &str, handler: H) -> Route
-        where M: Into<Option<Method>>,
-              H: Handler + 'static,
-              R: Into<Option<isize>>,
+    where
+        M: Into<Option<Method>>,
+        H: Handler + 'static,
+        R: Into<Option<isize>>,
     {
         let uri = RouteUri::new("/", uri);
         let rank = rank.into().unwrap_or_else(|| uri.default_rank());
@@ -267,6 +271,7 @@ impl Route {
     /// `base`. Otherwise, `base` is prefixed to the existing `base`.
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::Route;
     /// use rocket::http::Method;
     /// # use rocket::route::dummy_handler as handler;
@@ -315,6 +320,7 @@ impl Route {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::Route;
     /// use rocket::http::Method;
     /// # use rocket::route::dummy_handler as handler;
@@ -340,7 +346,8 @@ impl Route {
     /// assert_eq!(rebased.uri.path(), "/boo/foo/bar");
     /// ```
     pub fn map_base<'a, F>(mut self, mapper: F) -> Result<Self, uri::Error<'static>>
-        where F: FnOnce(uri::Origin<'a>) -> String
+    where
+        F: FnOnce(uri::Origin<'a>) -> String,
     {
         let base = mapper(self.uri.base);
         self.uri = RouteUri::try_new(&base, &self.uri.unmounted_origin.to_string())?;

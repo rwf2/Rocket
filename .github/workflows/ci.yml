@@ -1,9 +1,12 @@
 name: CI
 
-on: [push, pull_request]
+on: [pull_request]
 
 env:
   CARGO_TERM_COLOR: always
+
+
+# [self-hosted, linux, X64] / blacksmith-4vcpu-ubuntu-2404
 
 jobs:
   test:
@@ -14,86 +17,30 @@ jobs:
       fail-fast: false
       matrix:
         platform:
-          - { name: Linux, distro: ubuntu-latest, toolchain: stable }
-          - { name: Windows, distro: windows-latest, toolchain: stable }
-          - { name: macOS, distro: macOS-latest, toolchain: stable }
-          - { name: Linux, distro: ubuntu-latest, toolchain: nightly }
+          - { name: Linux, distro: blacksmith-4vcpu-ubuntu-2404, toolchain: stable }
+          - { name: Linux, distro: blacksmith-4vcpu-ubuntu-2404, toolchain: nightly }
         test:
           - { name: Debug }
           - { name: Examples, flag: "--examples" }
           - { name: Contrib, flag: "--contrib" }
         include:
           # Additional tests on Linux/stable.
-          - platform: { name: Linux, distro: ubuntu-latest, toolchain: stable }
+          - platform: { name: Linux, distro: blacksmith-4vcpu-ubuntu-2404, toolchain: stable }
             test: { name: Core, flag: "--core" }
-          - platform: { name: Linux, distro: ubuntu-latest, toolchain: stable }
+          - platform: { name: Linux, distro: blacksmith-4vcpu-ubuntu-2404, toolchain: stable }
             test: { name: Release, flag: "--release" }
-          - platform: { name: Linux, distro: ubuntu-latest, toolchain: stable }
+          - platform: { name: Linux, distro: blacksmith-4vcpu-ubuntu-2404, toolchain: stable }
             test: { name: Testbench, flag: "--testbench" }
-          - platform: { name: Linux, distro: ubuntu-latest, toolchain: stable }
+          - platform: { name: Linux, distro: blacksmith-4vcpu-ubuntu-2404, toolchain: stable }
             test: { name: UI, flag: "--ui" }
             fallible: true
           # Allow tests on nightly to fail.
           - platform: { toolchain: nightly }
             fallible: true
-          # Use the bigger 'C:/' from the "Switch Disk" step
-          - platform: { name: Windows }
-            working-directory:
-              "C:\\a\\${{ github.event.repository.name }}\\${{ github.event.repository.name }}"
 
     steps:
       - name: Checkout Sources
-        uses: actions/checkout@v4
-
-      - name: Free Disk Space (Linux)
-        if: matrix.platform.name == 'Linux'
-        run: |
-            echo "Freeing up disk space on Linux CI"
-            df -h
-            sudo rm -rf /usr/share/dotnet/
-            sudo rm -rf /opt/ghc
-            sudo rm -rf /usr/local/share/boost
-            sudo rm -rf /usr/local/graalvm/
-            sudo rm -rf /usr/local/.ghcup/
-            sudo rm -rf /usr/local/share/powershell
-            sudo rm -rf /usr/local/share/chromium
-            sudo rm -rf /usr/local/lib/android
-            sudo rm -rf /usr/local/lib/node_modules
-            sudo rm -rf "$AGENT_TOOLSDIRECTORY"
-            sudo docker image prune --all --force
-            df -h
-
-      - name: Install Native Dependencies (macOS)
-        if: matrix.platform.name == 'macOS'
-        run: |
-            brew install mysql-client@8.4 libpq sqlite coreutils
-            brew link --force --overwrite mysql-client@8.4
-            brew link --force --overwrite libpq
-            echo "/usr/local/opt/mysql-client/bin" >> "$GITHUB_PATH"
-
-      # vcpkg --triplet x64-windows install libmysql libpq sqlite3 openssl
-      # + vcpkg/installed/vcpkg (in particular, the status file)
-      - name: Install Native Dependencies (Windows)
-        if: matrix.platform.name == 'Windows'
-        run: |
-          curl -fsLS -o vcpkg.7z https://blob.rocket.rs/vcpkg-2024-08-16.7z
-          7z x vcpkg.7z -y -bb0
-          xcopy .\vcpkg $env:VCPKG_INSTALLATION_ROOT /s /e /h /y /q
-          vcpkg integrate install
-          echo "VCPKGRS_DYNAMIC=1" >> "$env:GITHUB_ENV"
-          echo "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" >> "$env:GITHUB_ENV"
-          echo "$env:VCPKG_INSTALLATION_ROOT\installed\x64-windows\lib" >> "$env:GITHUB_PATH"
-          echo "MYSQLCLIENT_VERSION=8.0.39" >> "$env:GITHUB_ENV"
-
-      - name: Install NASM (Windows)
-        if: matrix.platform.name == 'Windows'
-        uses: ilammy/setup-nasm@v1
-
-      - name: Install Native Dependencies (Linux)
-        if: matrix.platform.name == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libmysqlclient-dev libpq-dev libsqlite3-dev
+        uses: actions/checkout@v5
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@master
@@ -102,29 +49,146 @@ jobs:
           toolchain: ${{ matrix.platform.toolchain }}
           components: rust-src
 
-      - name: Cache Example Workspace
-        if: matrix.test.name == 'Examples'
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: examples
-          key: ${{ matrix.test.name }}-${{ steps.toolchain.outputs.cachekey }}
-
-      - name: Cache Root Workspace
-        if: matrix.test.name != 'Examples'
-        uses: Swatinem/rust-cache@v2
-        with:
-          key: ${{ matrix.test.name }}-${{ steps.toolchain.outputs.cachekey }}
-
-      # Don't run out of disk space on Windows. C: has much much space than D:.
-      - name: Switch Disk (Windows)
-        if: matrix.platform.name == 'Windows'
-        run: |
-          Get-PSDrive
-          cp D:\a C:\ -Recurse
-          Get-PSDrive
+#      - name: Cache Example Workspace
+#        if: matrix.test.name == 'Examples'
+#        uses: Swatinem/rust-cache@v2
+#        with:
+#          workspaces: examples
+#          key: ${{ matrix.test.name }}-${{ steps.toolchain.outputs.cachekey }}
+#
+#      - name: Cache Root Workspace
+#        if: matrix.test.name != 'Examples'
+#        uses: Swatinem/rust-cache@v2
+#        with:
+#          key: ${{ matrix.test.name }}-${{ steps.toolchain.outputs.cachekey }}
 
       - name: Run Tests
         continue-on-error: ${{ matrix.fallible || false }}
         working-directory: ${{ matrix.working-directory || github.workspace }}
         run: ./scripts/test.sh ${{ matrix.test.flag || '' }} -q
         shell: bash
+
+
+#jobs:
+#  test:
+#    name: "${{ matrix.platform.name }} ${{ matrix.test.name }} (${{ matrix.platform.toolchain }})"
+#    runs-on: ${{ matrix.platform.distro }}
+#
+#    strategy:
+#      fail-fast: false
+#      matrix:
+#        platform:
+#          - { name: Linux, distro: ubuntu-latest, toolchain: stable }
+#          - { name: Windows, distro: windows-latest, toolchain: stable }
+#          - { name: macOS, distro: macOS-latest, toolchain: stable }
+#          - { name: Linux, distro: ubuntu-latest, toolchain: nightly }
+#        test:
+#          - { name: Debug }
+#          - { name: Examples, flag: "--examples" }
+#          - { name: Contrib, flag: "--contrib" }
+#        include:
+#          # Additional tests on Linux/stable.
+#          - platform: { name: Linux, distro: ubuntu-latest, toolchain: stable }
+#            test: { name: Core, flag: "--core" }
+#          - platform: { name: Linux, distro: ubuntu-latest, toolchain: stable }
+#            test: { name: Release, flag: "--release" }
+#          - platform: { name: Linux, distro: ubuntu-latest, toolchain: stable }
+#            test: { name: Testbench, flag: "--testbench" }
+#          - platform: { name: Linux, distro: ubuntu-latest, toolchain: stable }
+#            test: { name: UI, flag: "--ui" }
+#            fallible: true
+#          # Allow tests on nightly to fail.
+#          - platform: { toolchain: nightly }
+#            fallible: true
+#          # Use the bigger 'C:/' from the "Switch Disk" step
+#          - platform: { name: Windows }
+#            working-directory:
+#              "C:\\a\\${{ github.event.repository.name }}\\${{ github.event.repository.name }}"
+#
+#    steps:
+#      - name: Checkout Sources
+#        uses: actions/checkout@v4
+#
+#      - name: Free Disk Space (Linux)
+#        if: matrix.platform.name == 'Linux'
+#        run: |
+#            echo "Freeing up disk space on Linux CI"
+#            df -h
+#            sudo rm -rf /usr/share/dotnet/
+#            sudo rm -rf /opt/ghc
+#            sudo rm -rf /usr/local/share/boost
+#            sudo rm -rf /usr/local/graalvm/
+#            sudo rm -rf /usr/local/.ghcup/
+#            sudo rm -rf /usr/local/share/powershell
+#            sudo rm -rf /usr/local/share/chromium
+#            sudo rm -rf /usr/local/lib/android
+#            sudo rm -rf /usr/local/lib/node_modules
+#            sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+#            sudo docker image prune --all --force
+#            df -h
+#
+#      - name: Install Native Dependencies (macOS)
+#        if: matrix.platform.name == 'macOS'
+#        run: |
+#            brew install mysql-client@8.4 libpq sqlite coreutils
+#            brew link --force --overwrite mysql-client@8.4
+#            brew link --force --overwrite libpq
+#            echo "/usr/local/opt/mysql-client/bin" >> "$GITHUB_PATH"
+#
+#      # vcpkg --triplet x64-windows install libmysql libpq sqlite3 openssl
+#      # + vcpkg/installed/vcpkg (in particular, the status file)
+#      - name: Install Native Dependencies (Windows)
+#        if: matrix.platform.name == 'Windows'
+#        run: |
+#          curl -fsLS -o vcpkg.7z https://blob.rocket.rs/vcpkg-2024-08-16.7z
+#          7z x vcpkg.7z -y -bb0
+#          xcopy .\vcpkg $env:VCPKG_INSTALLATION_ROOT /s /e /h /y /q
+#          vcpkg integrate install
+#          echo "VCPKGRS_DYNAMIC=1" >> "$env:GITHUB_ENV"
+#          echo "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" >> "$env:GITHUB_ENV"
+#          echo "$env:VCPKG_INSTALLATION_ROOT\installed\x64-windows\lib" >> "$env:GITHUB_PATH"
+#          echo "MYSQLCLIENT_VERSION=8.0.39" >> "$env:GITHUB_ENV"
+#
+#      - name: Install NASM (Windows)
+#        if: matrix.platform.name == 'Windows'
+#        uses: ilammy/setup-nasm@v1
+#
+#      - name: Install Native Dependencies (Linux)
+#        if: matrix.platform.name == 'Linux'
+#        run: |
+#          sudo apt-get update
+#          sudo apt-get install -y libmysqlclient-dev libpq-dev libsqlite3-dev
+#
+#      - name: Install Rust
+#        uses: dtolnay/rust-toolchain@master
+#        id: toolchain
+#        with:
+#          toolchain: ${{ matrix.platform.toolchain }}
+#          components: rust-src
+#
+#      - name: Cache Example Workspace
+#        if: matrix.test.name == 'Examples'
+#        uses: Swatinem/rust-cache@v2
+#        with:
+#          workspaces: examples
+#          key: ${{ matrix.test.name }}-${{ steps.toolchain.outputs.cachekey }}
+#
+#      - name: Cache Root Workspace
+#        if: matrix.test.name != 'Examples'
+#        uses: Swatinem/rust-cache@v2
+#        with:
+#          key: ${{ matrix.test.name }}-${{ steps.toolchain.outputs.cachekey }}
+#
+#      # Don't run out of disk space on Windows. C: has much much space than D:.
+#      - name: Switch Disk (Windows)
+#        if: matrix.platform.name == 'Windows'
+#        run: |
+#          Get-PSDrive
+#          cp D:\a C:\ -Recurse
+#          Get-PSDrive
+#
+#      - name: Run Tests
+#        continue-on-error: ${{ matrix.fallible || false }}
+#        working-directory: ${{ matrix.working-directory || github.workspace }}
+#        run: ./scripts/test.sh ${{ matrix.test.flag || '' }} -q
+#        shell: bash

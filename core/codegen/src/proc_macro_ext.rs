@@ -1,7 +1,7 @@
 use std::ops::RangeBounds;
 
 use devise::Diagnostic;
-use proc_macro2::{Span, Literal};
+use proc_macro2::{Literal, Span};
 
 // An experiment.
 pub struct Diagnostics(Vec<Diagnostic>);
@@ -30,7 +30,7 @@ impl Diagnostics {
     pub fn head_err_or<T>(self, ok: T) -> devise::Result<T> {
         match self.0.is_empty() {
             true => Ok(ok),
-            false => Err(self.emit_head())
+            false => Err(self.emit_head()),
         }
     }
 }

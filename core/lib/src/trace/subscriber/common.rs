@@ -1,10 +1,10 @@
-use std::fmt;
 use std::cell::Cell;
+use std::fmt;
 
 use tracing::field::Field;
 use tracing::{Level, Metadata};
-use tracing_subscriber::filter;
 use tracing_subscriber::field::RecordFields;
+use tracing_subscriber::filter;
 
 use thread_local::ThreadLocal;
 use yansi::{Condition, Paint, Style};
@@ -14,10 +14,10 @@ use crate::trace::subscriber::RecordDisplay;
 use crate::util::Formatter;
 
 mod private {
-    pub trait FmtKind: Send + Sync + 'static { }
+    pub trait FmtKind: Send + Sync + 'static {}
 
-    impl FmtKind for crate::trace::subscriber::Pretty { }
-    impl FmtKind for crate::trace::subscriber::Compact { }
+    impl FmtKind for crate::trace::subscriber::Pretty {}
+    impl FmtKind for crate::trace::subscriber::Compact {}
 }
 
 #[derive(Default)]
@@ -54,7 +54,7 @@ impl<K: private::FmtKind> RocketFmt<K> {
                 CliColors::Always => Style::new().whenever(Condition::ALWAYS),
                 CliColors::Auto => Style::new().whenever(Condition::DEFAULT),
                 CliColors::Never => Style::new().whenever(Condition::NEVER),
-            }
+            },
         }
     }
 
@@ -76,11 +76,12 @@ impl<K: private::FmtKind> RocketFmt<K> {
         meta.fields().iter().any(|f| f.name() != "message")
     }
 
-    pub(crate) fn message<'a, F: RecordFields + 'a>(&self,
+    pub(crate) fn message<'a, F: RecordFields + 'a>(
+        &self,
         init_prefix: &'a dyn fmt::Display,
         cont_prefix: &'a dyn fmt::Display,
         meta: &'a Metadata<'_>,
-        data: F
+        data: F,
     ) -> impl fmt::Display + 'a {
         let style = self.style(meta);
         Formatter(move |f| {
@@ -110,7 +111,7 @@ impl<K: private::FmtKind> RocketFmt<K> {
     pub(crate) fn compact_fields<'a, F: RecordFields + 'a>(
         &self,
         meta: &'a Metadata<'_>,
-        data: F
+        data: F,
     ) -> impl fmt::Display + 'a {
         let key_style = self.style(meta).bold();
         let val_style = self.style(meta).primary();
@@ -120,7 +121,9 @@ impl<K: private::FmtKind> RocketFmt<K> {
             data.record_display(|field: &Field, val: &dyn fmt::Display| {
                 let key = field.name();
                 if key != "message" {
-                    if printed { let _ = write!(f, " "); }
+                    if printed {
+                        let _ = write!(f, " ");
+                    }
                     let _ = write!(f, "{}: {}", key.paint(key_style), val.paint(val_style));
                     printed = true;
                 }
@@ -135,7 +138,7 @@ impl<K: private::FmtKind> RocketFmt<K> {
         prefix: &dyn fmt::Display,
         cont_prefix: &dyn fmt::Display,
         m: &Metadata<'_>,
-        data: F
+        data: F,
     ) {
         if self.has_message(m) {
             let message = self.message(prefix, cont_prefix, m, &data);

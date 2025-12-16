@@ -1,16 +1,16 @@
 [package]
-name = "rocket_codegen"
-version = "0.6.0-dev"
+name = "rocket_codegen-community"
+version = "0.6.0-rc1"
 authors = ["Sergio Benitez <sb@sergio.bz>"]
-description = "Procedural macros for the Rocket web framework."
+description = "Procedural macros for the Rocket web framework (Community Fork)."
 documentation = "https://api.rocket.rs/master/rocket_codegen/"
 homepage = "https://rocket.rs"
-repository = "https://github.com/rwf2/Rocket"
+repository = "https://github.com/rocket-rs-community/Rocket"
 readme = "../../README.md"
 keywords = ["rocket", "web", "framework", "code", "generation"]
 license = "MIT OR Apache-2.0"
 edition = "2021"
-rust-version = "1.75"
+rust-version = "1.82.0"
 
 [lints]
 workspace = true
@@ -24,13 +24,13 @@ quote = "1.0"
 syn = { version = "2.0", features = ["full", "visit", "visit-mut", "extra-traits"] }
 proc-macro2 = "1.0.60"
 devise = "0.4"
-rocket_http = { version = "0.6.0-dev", path = "../http/" }
+rocket_http = { package = "rocket_http-community", version = "0.6.0-rc1", path = "../http/" }
 unicode-xid = "0.2"
 version_check = "0.9"
 glob = "0.3"
 
 [dev-dependencies]
-rocket = { path = "../lib", features = ["json", "msgpack"] }
+rocket = {package = "rocket-community", path = "../lib", features = ["json", "msgpack"] }
 time = { version =  "0.3", features = ["macros"] }
 pretty_assertions = "1"
 version_check = "0.9"

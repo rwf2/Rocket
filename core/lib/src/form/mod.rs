@@ -361,19 +361,19 @@
 //   3. **Finalization.** Every context is finalized; errors and `Ok` values
 //      are collected.
 
+mod buffer;
+mod context;
+pub mod error;
 mod field;
-mod options;
+mod form;
 mod from_form;
 mod from_form_field;
-mod form;
-mod context;
-mod strict;
 mod lenient;
-mod parser;
-mod buffer;
-pub mod validate;
 pub mod name;
-pub mod error;
+mod options;
+mod parser;
+mod strict;
+pub mod validate;
 
 #[cfg(test)]
 mod tests;
@@ -385,23 +385,23 @@ pub type Result<'v, T> = std::result::Result<T, Errors<'v>>;
 pub use rocket_codegen::{FromForm, FromFormField};
 
 #[doc(inline)]
-pub use self::error::{Errors, Error};
+pub use self::error::{Error, Errors};
 
 #[doc(hidden)]
-pub use self::buffer::{SharedStack, Shareable};
+pub use self::buffer::{Shareable, SharedStack};
 
-pub use field::*;
-pub use options::*;
-pub use from_form_field::*;
-pub use from_form::*;
-pub use form::*;
 pub use context::*;
-pub use strict::*;
+pub use field::*;
+pub use form::*;
+pub use from_form::*;
+pub use from_form_field::*;
 pub use lenient::*;
+pub use options::*;
+pub use strict::*;
 
 #[doc(hidden)]
 pub mod prelude {
-    pub use super::*;
-    pub use super::name::*;
     pub use super::error::*;
+    pub use super::name::*;
+    pub use super::*;
 }

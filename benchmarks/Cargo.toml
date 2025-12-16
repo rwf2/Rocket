@@ -1,5 +1,5 @@
 [package]
-name = "rocket-benchmarks"
+name = "rocket-benchmarks-community"
 version = "0.0.0"
 edition = "2021"
 publish = false
@@ -12,5 +12,5 @@ path = "src/bench.rs"
 harness = false
 
 [dev-dependencies]
-rocket = { path = "../core/lib/" }
+rocket = { package = "rocket-community", path = "../core/lib/" }
 criterion = "0.5.1"

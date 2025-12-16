@@ -9,15 +9,15 @@
 #[macro_use]
 extern crate pear;
 
-pub mod uri;
 pub mod ext;
+pub mod uri;
 
 #[macro_use]
 mod header;
 mod method;
-mod status;
-mod raw_str;
 mod parse;
+mod raw_str;
+mod status;
 
 /// Case-preserving, ASCII case-insensitive string types.
 ///
@@ -25,7 +25,8 @@ mod parse;
 /// cased characters, but comparison (including ordering, equality, and hashing)
 /// is ASCII case-insensitive. **Note:** the `alloc` feature _is_ enabled.
 pub mod uncased {
-    #[doc(inline)] pub use uncased::*;
+    #[doc(inline)]
+    pub use uncased::*;
 }
 
 // Types that we expose for use _only_ by core. Please don't use this.
@@ -35,10 +36,10 @@ pub mod private {
     pub use crate::parse::Indexed;
 }
 
-pub use crate::method::Method;
-pub use crate::status::{Status, StatusClass};
-pub use crate::raw_str::{RawStr, RawStrBuf};
 pub use crate::header::*;
+pub use crate::method::Method;
+pub use crate::raw_str::{RawStr, RawStrBuf};
+pub use crate::status::{Status, StatusClass};
 
 /// HTTP Protocol version
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

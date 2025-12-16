@@ -1,13 +1,13 @@
-use std::net::{IpAddr, SocketAddr};
 use std::collections::{BTreeMap, HashMap};
+use std::net::{IpAddr, SocketAddr};
 
 use pretty_assertions::assert_eq;
 
-use rocket::UriDisplayQuery;
-use rocket::http::uri::fmt::{UriDisplay, Query};
-use rocket::form::{self, Form, Strict, FromForm, FromFormField, Errors};
-use rocket::form::error::{ErrorKind, Entity};
+use rocket::form::error::{Entity, ErrorKind};
+use rocket::form::{self, Errors, Form, FromForm, FromFormField, Strict};
+use rocket::http::uri::fmt::{Query, UriDisplay};
 use rocket::serde::json::Json;
+use rocket::UriDisplayQuery;
 
 fn strict<'f, T: FromForm<'f>>(string: &'f str) -> Result<T, Errors<'f>> {
     Form::<Strict<T>>::parse(string).map(|s| s.into_inner())
@@ -18,7 +18,8 @@ fn lenient<'f, T: FromForm<'f>>(string: &'f str) -> Result<T, Errors<'f>> {
 }
 
 fn strict_encoded<T: 'static>(string: &str) -> Result<T, Errors<'static>>
-    where for<'a> T: FromForm<'a>
+where
+    for<'a> T: FromForm<'a>,
 {
     Form::<Strict<T>>::parse_encoded(string.into()).map(|s| s.into_inner())
 }
@@ -26,39 +27,50 @@ fn strict_encoded<T: 'static>(string: &str) -> Result<T, Errors<'static>>
 #[derive(Debug, PartialEq, FromForm)]
 struct TodoTask {
     description: String,
-    completed: bool
+    completed: bool,
 }
 
 #[test]
 fn simple() {
     // Same number of arguments: simple case.
     let task: Option<TodoTask> = strict("description=Hello&completed=on").ok();
-    assert_eq!(task, Some(TodoTask {
-        description: "Hello".to_string(),
-        completed: true
-    }));
+    assert_eq!(
+        task,
+        Some(TodoTask {
+            description: "Hello".to_string(),
+            completed: true
+        })
+    );
 
     // Argument in string but not in form.
     let task: Option<TodoTask> = strict("other=a&description=Hello&completed=on").ok();
     assert!(task.is_none());
 
     let task: Option<TodoTask> = lenient("other=a&description=Hello&completed=on").ok();
-    assert_eq!(task, Some(TodoTask {
-        description: "Hello".to_string(),
-        completed: true
-    }));
+    assert_eq!(
+        task,
+        Some(TodoTask {
+            description: "Hello".to_string(),
+            completed: true
+        })
+    );
 
     // Ensure _method isn't required.
     let task: Option<TodoTask> = strict("_method=patch&description=Hello&completed=off").ok();
-    assert_eq!(task, Some(TodoTask {
-        description: "Hello".to_string(),
-        completed: false
-    }));
+    assert_eq!(
+        task,
+        Some(TodoTask {
+            description: "Hello".to_string(),
+            completed: false
+        })
+    );
 }
 
 #[derive(Debug, PartialEq, FromFormField)]
 enum FormOption {
-    A, B, C
+    A,
+    B,
+    C,
 }
 
 #[derive(Debug, PartialEq, FromForm)]
@@ -79,18 +91,18 @@ struct DefaultInput<'r> {
 #[derive(Debug, PartialEq, FromForm)]
 struct ManualMethod<'r> {
     _method: Option<&'r str>,
-    done: bool
+    done: bool,
 }
 
 #[derive(Debug, PartialEq, FromForm)]
 struct UnpresentCheckbox {
-    checkbox: bool
+    checkbox: bool,
 }
 
 #[derive(Debug, PartialEq, FromForm)]
 struct UnpresentCheckboxTwo<'r> {
     checkbox: bool,
-    something: &'r str
+    something: &'r str,
 }
 
 #[derive(Debug, PartialEq, FromForm)]
@@ -101,90 +113,110 @@ struct FieldNamedV<'r> {
 #[test]
 fn base_conditions() {
     let form_string = &[
-        "password=testing", "checkbox=off", "number=10", "textarea=",
-        "select=a", "radio=c",
-    ].join("&");
+        "password=testing",
+        "checkbox=off",
+        "number=10",
+        "textarea=",
+        "select=a",
+        "radio=c",
+    ]
+    .join("&");
 
-    let input: Result<FormInput<'_>, _> = strict(&form_string);
-    assert_eq!(input, Ok(FormInput {
-        checkbox: false,
-        number: 10,
-        radio: FormOption::C,
-        password: "testing".into(),
-        textarea: "".to_string(),
-        select: FormOption::A,
-    }));
+    let input: Result<FormInput<'_>, _> = strict(form_string);
+    assert_eq!(
+        input,
+        Ok(FormInput {
+            checkbox: false,
+            number: 10,
+            radio: FormOption::C,
+            password: "testing",
+            textarea: "".to_string(),
+            select: FormOption::A,
+        })
+    );
 
     // Argument not in string with default in form.
     let default: Option<DefaultInput<'_>> = strict("").ok();
-    assert_eq!(default, Some(DefaultInput {
-        arg: None
-    }));
+    assert_eq!(default, Some(DefaultInput { arg: None }));
 
     // Ensure _method can be captured if desired.
     let manual: Option<ManualMethod<'_>> = strict("_method=put&done=true").ok();
-    assert_eq!(manual, Some(ManualMethod {
-        _method: Some("put".into()),
-        done: true
-    }));
+    assert_eq!(
+        manual,
+        Some(ManualMethod {
+            _method: Some("put"),
+            done: true
+        })
+    );
 
     let manual: Option<ManualMethod<'_>> = lenient("_method=put&done=true").ok();
-    assert_eq!(manual, Some(ManualMethod {
-        _method: Some("put".into()),
-        done: true
-    }));
+    assert_eq!(
+        manual,
+        Some(ManualMethod {
+            _method: Some("put"),
+            done: true
+        })
+    );
 
     // And ignored when not present.
     let manual: Option<ManualMethod<'_>> = strict("done=true").ok();
-    assert_eq!(manual, Some(ManualMethod {
-        _method: None,
-        done: true
-    }));
+    assert_eq!(
+        manual,
+        Some(ManualMethod {
+            _method: None,
+            done: true
+        })
+    );
 
     // Check that a `bool` value that isn't in the form is marked as `false`.
     let manual: Option<UnpresentCheckbox> = lenient("").ok();
-    assert_eq!(manual, Some(UnpresentCheckbox {
-        checkbox: false
-    }));
+    assert_eq!(manual, Some(UnpresentCheckbox { checkbox: false }));
 
     // Check that a `bool` value that isn't in the form is marked as `false`.
     let manual: Option<UnpresentCheckboxTwo<'_>> = lenient("something=hello").ok();
-    assert_eq!(manual, Some(UnpresentCheckboxTwo {
-        checkbox: false,
-        something: "hello".into()
-    }));
+    assert_eq!(
+        manual,
+        Some(UnpresentCheckboxTwo {
+            checkbox: false,
+            something: "hello"
+        })
+    );
 
     // Check that a structure with one field `v` parses correctly.
     let manual: Option<FieldNamedV<'_>> = strict("v=abc").ok();
-    assert_eq!(manual, Some(FieldNamedV {
-        v: "abc".into()
-    }));
+    assert_eq!(manual, Some(FieldNamedV { v: "abc" }));
 }
 
 #[test]
 fn lenient_parsing() {
     // Check that a structure with one field `v` parses correctly (lenient).
     let manual: Option<FieldNamedV<'_>> = lenient("v=abc").ok();
-    assert_eq!(manual, Some(FieldNamedV { v: "abc".into() }));
+    assert_eq!(manual, Some(FieldNamedV { v: "abc" }));
 
     let manual: Option<FieldNamedV<'_>> = lenient("v=abc&a=123").ok();
-    assert_eq!(manual, Some(FieldNamedV { v: "abc".into() }));
+    assert_eq!(manual, Some(FieldNamedV { v: "abc" }));
 
     let manual: Option<FieldNamedV<'_>> = lenient("c=abcddef&v=abc&a=123").ok();
-    assert_eq!(manual, Some(FieldNamedV { v: "abc".into() }));
+    assert_eq!(manual, Some(FieldNamedV { v: "abc" }));
 
     // Check default values (bool) with lenient parsing.
     let manual: Option<UnpresentCheckboxTwo<'_>> = lenient("something=hello").ok();
-    assert_eq!(manual, Some(UnpresentCheckboxTwo {
-        checkbox: false,
-        something: "hello".into()
-    }));
+    assert_eq!(
+        manual,
+        Some(UnpresentCheckboxTwo {
+            checkbox: false,
+            something: "hello"
+        })
+    );
 
     let manual: Option<UnpresentCheckboxTwo<'_>> = lenient("hi=hi&something=hello").ok();
-    assert_eq!(manual, Some(UnpresentCheckboxTwo {
-        checkbox: false,
-        something: "hello".into()
-    }));
+    assert_eq!(
+        manual,
+        Some(UnpresentCheckboxTwo {
+            checkbox: false,
+            something: "hello"
+        })
+    );
 
     // Check that a missing field doesn't parse, even leniently.
     let manual: Option<FieldNamedV<'_>> = lenient("a=abc").ok();
@@ -212,26 +244,39 @@ fn field_renaming() {
     }
 
     let form_string = &[
-        "single=100", "camelCase=helloThere", "TitleCase=HiHi", "type=-2",
-        "DOUBLE=bing_bong", "a:b=123"
-    ].join("&");
+        "single=100",
+        "camelCase=helloThere",
+        "TitleCase=HiHi",
+        "type=-2",
+        "DOUBLE=bing_bong",
+        "a:b=123",
+    ]
+    .join("&");
 
-    let form: Option<RenamedForm> = strict(&form_string).ok();
-    assert_eq!(form, Some(RenamedForm {
-        single: 100,
-        camel_case: "helloThere".into(),
-        title_case: "HiHi".into(),
-        field_type: -2,
-        double: "bing_bong".into(),
-        colon: 123,
-    }));
+    let form: Option<RenamedForm> = strict(form_string).ok();
+    assert_eq!(
+        form,
+        Some(RenamedForm {
+            single: 100,
+            camel_case: "helloThere".into(),
+            title_case: "HiHi".into(),
+            field_type: -2,
+            double: "bing_bong".into(),
+            colon: 123,
+        })
+    );
 
     let form_string = &[
-        "single=100", "camel_case=helloThere", "TitleCase=HiHi", "type=-2",
-        "DOUBLE=bing_bong", "colon=123"
-    ].join("&");
+        "single=100",
+        "camel_case=helloThere",
+        "TitleCase=HiHi",
+        "type=-2",
+        "DOUBLE=bing_bong",
+        "colon=123",
+    ]
+    .join("&");
 
-    let form: Option<RenamedForm> = strict(&form_string).ok();
+    let form: Option<RenamedForm> = strict(form_string).ok();
     assert!(form.is_none());
 
     #[derive(Debug, PartialEq, FromForm)]
@@ -243,24 +288,48 @@ fn field_renaming() {
     }
 
     let form_string = &["single=123", "some_case=hi_im_here"].join("&");
-    let form: Option<MultiName<'_>> = strict(&form_string).ok();
-    assert_eq!(form, Some(MultiName { single: 123, some_case: "hi_im_here", }));
+    let form: Option<MultiName<'_>> = strict(form_string).ok();
+    assert_eq!(
+        form,
+        Some(MultiName {
+            single: 123,
+            some_case: "hi_im_here",
+        })
+    );
 
     let form_string = &["single=123", "SomeCase=HiImHere"].join("&");
-    let form: Option<MultiName<'_>> = strict(&form_string).ok();
-    assert_eq!(form, Some(MultiName { single: 123, some_case: "HiImHere", }));
+    let form: Option<MultiName<'_>> = strict(form_string).ok();
+    assert_eq!(
+        form,
+        Some(MultiName {
+            single: 123,
+            some_case: "HiImHere",
+        })
+    );
 
     let form_string = &["single=123", "some_case=hi_im_here", "SomeCase=HiImHere"].join("&");
-    let form: Option<MultiName<'_>> = strict(&form_string).ok();
+    let form: Option<MultiName<'_>> = strict(form_string).ok();
     assert!(form.is_none());
 
     let form_string = &["single=123", "some_case=hi_im_here", "SomeCase=HiImHere"].join("&");
-    let form: Option<MultiName<'_>> = lenient(&form_string).ok();
-    assert_eq!(form, Some(MultiName { single: 123, some_case: "hi_im_here", }));
+    let form: Option<MultiName<'_>> = lenient(form_string).ok();
+    assert_eq!(
+        form,
+        Some(MultiName {
+            single: 123,
+            some_case: "hi_im_here",
+        })
+    );
 
     let form_string = &["single=123", "SomeCase=HiImHere", "some_case=hi_im_here"].join("&");
-    let form: Option<MultiName<'_>> = lenient(&form_string).ok();
-    assert_eq!(form, Some(MultiName { single: 123, some_case: "HiImHere", }));
+    let form: Option<MultiName<'_>> = lenient(form_string).ok();
+    assert_eq!(
+        form,
+        Some(MultiName {
+            single: 123,
+            some_case: "HiImHere",
+        })
+    );
 
     #[derive(Debug, PartialEq, FromForm)]
     struct CaseInsensitive<'r> {
@@ -273,19 +342,37 @@ fn field_renaming() {
     }
 
     let form_string = &["HeLLO=123", "sOMECASe=hi_im_here"].join("&");
-    let form: Option<CaseInsensitive<'_>> = strict(&form_string).ok();
-    assert_eq!(form, Some(CaseInsensitive { hello: 123, some_case: "hi_im_here", }));
+    let form: Option<CaseInsensitive<'_>> = strict(form_string).ok();
+    assert_eq!(
+        form,
+        Some(CaseInsensitive {
+            hello: 123,
+            some_case: "hi_im_here",
+        })
+    );
 
     let form_string = &["hello=456", "SomeCase=HiImHere"].join("&");
-    let form: Option<CaseInsensitive<'_>> = strict(&form_string).ok();
-    assert_eq!(form, Some(CaseInsensitive { hello: 456, some_case: "HiImHere", }));
+    let form: Option<CaseInsensitive<'_>> = strict(form_string).ok();
+    assert_eq!(
+        form,
+        Some(CaseInsensitive {
+            hello: 456,
+            some_case: "HiImHere",
+        })
+    );
 
     let form_string = &["helLO=789", "some_case=hi_there"].join("&");
-    let form: Option<CaseInsensitive<'_>> = strict(&form_string).ok();
-    assert_eq!(form, Some(CaseInsensitive { hello: 789, some_case: "hi_there", }));
+    let form: Option<CaseInsensitive<'_>> = strict(form_string).ok();
+    assert_eq!(
+        form,
+        Some(CaseInsensitive {
+            hello: 789,
+            some_case: "hi_there",
+        })
+    );
 
     let form_string = &["hello=123", "SOme_case=hi_im_here"].join("&");
-    let form: Option<CaseInsensitive<'_>> = strict(&form_string).ok();
+    let form: Option<CaseInsensitive<'_>> = strict(form_string).ok();
     assert!(form.is_none());
 }
 
@@ -305,33 +392,40 @@ fn generics() {
         other: T,
     }
 
-    let form_string = &[
-        "string=hello", "other=00128"
-    ].join("&");
+    let form_string = &["string=hello", "other=00128"].join("&");
 
-    let form: Option<YetOneMore<'_, usize>> = strict(&form_string).ok();
-    assert_eq!(form, Some(YetOneMore {
-        string: "hello".into(),
-        other: 128,
-    }));
+    let form: Option<YetOneMore<'_, usize>> = strict(form_string).ok();
+    assert_eq!(
+        form,
+        Some(YetOneMore {
+            string: "hello",
+            other: 128,
+        })
+    );
 
-    let form: Option<YetOneMore<'_, u8>> = strict(&form_string).ok();
-    assert_eq!(form, Some(YetOneMore {
-        string: "hello".into(),
-        other: 128,
-    }));
+    let form: Option<YetOneMore<'_, u8>> = strict(form_string).ok();
+    assert_eq!(
+        form,
+        Some(YetOneMore {
+            string: "hello",
+            other: 128,
+        })
+    );
 
-    let form: Option<YetOneMore<'_, i8>> = strict(&form_string).ok();
+    let form: Option<YetOneMore<'_, i8>> = strict(form_string).ok();
     assert!(form.is_none());
 
     let form_string = "base=just%20a%20test&a=hey%20there&b=a&c=811";
-    let form: Option<Oops<String, FormOption, usize>> = strict_encoded(&form_string).ok();
-    assert_eq!(form, Some(Oops {
-        base: "just a test".into(),
-        a: "hey there".into(),
-        b: FormOption::A,
-        c: 811,
-    }));
+    let form: Option<Oops<String, FormOption, usize>> = strict_encoded(form_string).ok();
+    assert_eq!(
+        form,
+        Some(Oops {
+            base: "just a test".into(),
+            a: "hey there".into(),
+            b: FormOption::A,
+            c: 811,
+        })
+    );
 }
 
 #[test]
@@ -343,7 +437,13 @@ fn form_errors() {
     }
 
     let form: Result<WhoopsForm, _> = strict("complete=true&other=781");
-    assert_eq!(form, Ok(WhoopsForm { complete: true, other: 781 }));
+    assert_eq!(
+        form,
+        Ok(WhoopsForm {
+            complete: true,
+            other: 781
+        })
+    );
 
     let errors = strict::<WhoopsForm>("complete=true&other=unknown").unwrap_err();
     assert!(errors.iter().any(|e| {
@@ -450,8 +550,12 @@ fn form_validate_contains_all_errors() {
     }
 
     let errors = strict::<WhoopsForm>("firstname=&check=true&lastname=").unwrap_err();
-    assert!(errors.iter().any(|e| e.name.as_ref().unwrap() == "lastname"));
-    assert!(errors.iter().any(|e| e.name.as_ref().unwrap() == "firstname"));
+    assert!(errors
+        .iter()
+        .any(|e| e.name.as_ref().unwrap() == "lastname"));
+    assert!(errors
+        .iter()
+        .any(|e| e.name.as_ref().unwrap() == "firstname"));
 }
 
 #[test]
@@ -479,31 +583,61 @@ fn test_multi() {
         more_dogs: HashMap<&'r str, Dog>,
     }
 
-    let multi: Multi<'_> = strict("checks=true&checks=false&checks=false\
+    let multi: Multi<'_> = strict(
+        "checks=true&checks=false&checks=false\
         &names=Sam&names[]=Smith&names[]=Bob\
         &news[]=Here&news[]=also here\
         &dogs[fido].barks=true&dogs[George].barks=false\
         &dogs[fido].trained=on&dogs[George].trained=yes\
         &dogs[bob boo].trained=no&dogs[bob boo].barks=off\
         &more:dogs[k:0]=My Dog&more:dogs[v:0].barks=true&more:dogs[v:0].trained=yes\
-    ").unwrap();
-    assert_eq!(multi, Multi {
-        checks: vec![true, false, false],
-        names: vec!["Sam".into(), "Smith".into(), "Bob".into()],
-        news: vec!["Here".into(), "also here".into()],
-        dogs: {
-            let mut map = HashMap::new();
-            map.insert("fido".into(), Dog { barks: true, trained: true });
-            map.insert("George".into(), Dog { barks: false, trained: true });
-            map.insert("bob boo".into(), Dog { barks: false, trained: false });
-            map
-        },
-        more_dogs: {
-            let mut map = HashMap::new();
-            map.insert("My Dog".into(), Dog { barks: true, trained: true });
-            map
+    ",
+    )
+    .unwrap();
+    assert_eq!(
+        multi,
+        Multi {
+            checks: vec![true, false, false],
+            names: vec!["Sam", "Smith", "Bob"],
+            news: vec!["Here".into(), "also here".into()],
+            dogs: {
+                let mut map = HashMap::new();
+                map.insert(
+                    "fido".into(),
+                    Dog {
+                        barks: true,
+                        trained: true,
+                    },
+                );
+                map.insert(
+                    "George".into(),
+                    Dog {
+                        barks: false,
+                        trained: true,
+                    },
+                );
+                map.insert(
+                    "bob boo".into(),
+                    Dog {
+                        barks: false,
+                        trained: false,
+                    },
+                );
+                map
+            },
+            more_dogs: {
+                let mut map = HashMap::new();
+                map.insert(
+                    "My Dog",
+                    Dog {
+                        barks: true,
+                        trained: true,
+                    },
+                );
+                map
+            }
         }
-    });
+    );
 
     #[derive(Debug, PartialEq, FromForm)]
     struct MultiOwned {
@@ -512,9 +646,12 @@ fn test_multi() {
 
     let raw = "names=Sam&names%5B%5D=Smith&names%5B%5D=Bob%20Smith%3F";
     let multi: MultiOwned = strict_encoded(raw).unwrap();
-    assert_eq!(multi, MultiOwned {
-        names: vec!["Sam".into(), "Smith".into(), "Bob Smith?".into()],
-    });
+    assert_eq!(
+        multi,
+        MultiOwned {
+            names: vec!["Sam".into(), "Smith".into(), "Bob Smith?".into()],
+        }
+    );
 }
 
 #[derive(Debug, FromForm, PartialEq)]
@@ -526,14 +663,14 @@ struct Dog {
 #[derive(Debug, FromForm, PartialEq)]
 struct Cat<'r> {
     nip: &'r str,
-    meows: bool
+    meows: bool,
 }
 
 #[derive(Debug, FromForm, PartialEq)]
 struct Pet<'r, T> {
     pet: T,
     name: &'r str,
-    age: u8
+    age: u8,
 }
 
 #[derive(Debug, PartialEq, FromForm)]
@@ -546,88 +683,139 @@ struct Person<'r> {
 #[test]
 fn test_nested_multi() {
     let person: Person<'_> = lenient("sitting.barks=true&sitting.trained=true").unwrap();
-    assert_eq!(person, Person {
-        sitting: Dog { barks: true, trained: true },
-        cats: vec![],
-        dogs: vec![],
-    });
+    assert_eq!(
+        person,
+        Person {
+            sitting: Dog {
+                barks: true,
+                trained: true
+            },
+            cats: vec![],
+            dogs: vec![],
+        }
+    );
 
     let person = strict::<Person<'_>>("sitting.barks=true&sitting.trained=true");
     assert!(person.is_err());
 
-    let person: Person<'_> = lenient("sitting.barks=true&sitting.trained=true\
+    let person: Person<'_> = lenient(
+        "sitting.barks=true&sitting.trained=true\
         &dogs[0].name=fido&dogs[0].pet.trained=yes&dogs[0].age=7&dogs[0].pet.barks=no\
-    ").unwrap();
-    assert_eq!(person, Person {
-        sitting: Dog { barks: true, trained: true },
-        cats: vec![],
-        dogs: vec![Pet {
-            pet: Dog { barks: false, trained: true },
-            name: "fido".into(),
-            age: 7
-        }]
-    });
+    ",
+    )
+    .unwrap();
+    assert_eq!(
+        person,
+        Person {
+            sitting: Dog {
+                barks: true,
+                trained: true
+            },
+            cats: vec![],
+            dogs: vec![Pet {
+                pet: Dog {
+                    barks: false,
+                    trained: true
+                },
+                name: "fido",
+                age: 7
+            }]
+        }
+    );
 
-    let person = strict::<Person<'_>>("sitting.barks=true&sitting.trained=true\
-        &dogs[0].name=fido&dogs[0].pet.trained=yes&dogs[0].age=7&dogs[0].pet.barks=no");
+    let person = strict::<Person<'_>>(
+        "sitting.barks=true&sitting.trained=true\
+        &dogs[0].name=fido&dogs[0].pet.trained=yes&dogs[0].age=7&dogs[0].pet.barks=no",
+    );
     assert!(person.is_err());
 
-    let person: Person<'_> = lenient("sitting.trained=no&sitting.barks=true\
+    let person: Person<'_> = lenient(
+        "sitting.trained=no&sitting.barks=true\
         &dogs[0].name=fido&dogs[0].pet.trained=yes&dogs[0].age=7&dogs[0].pet.barks=no\
         &dogs[1].pet.barks=true&dogs[1].name=Bob&dogs[1].pet.trained=no&dogs[1].age=1\
-    ").unwrap();
-    assert_eq!(person, Person {
-        sitting: Dog { barks: true, trained: false },
-        cats: vec![],
-        dogs: vec![
-            Pet {
-                pet: Dog { barks: false, trained: true },
-                name: "fido".into(),
-                age: 7
+    ",
+    )
+    .unwrap();
+    assert_eq!(
+        person,
+        Person {
+            sitting: Dog {
+                barks: true,
+                trained: false
             },
-            Pet {
-                pet: Dog { barks: true, trained: false },
-                name: "Bob".into(),
-                age: 1
-            },
-        ]
-    });
+            cats: vec![],
+            dogs: vec![
+                Pet {
+                    pet: Dog {
+                        barks: false,
+                        trained: true
+                    },
+                    name: "fido",
+                    age: 7
+                },
+                Pet {
+                    pet: Dog {
+                        barks: true,
+                        trained: false
+                    },
+                    name: "Bob",
+                    age: 1
+                },
+            ]
+        }
+    );
 
-    let person: Person<'_> = strict("sitting.barks=true&sitting.trained=no\
+    let person: Person<'_> = strict(
+        "sitting.barks=true&sitting.trained=no\
         &dogs[0].name=fido&dogs[0].pet.trained=yes&dogs[0].age=7&dogs[0].pet.barks=no\
         &dogs[1].pet.barks=true&dogs[1].name=Bob&dogs[1].pet.trained=no&dogs[1].age=1\
         &cats[george].pet.nip=paws&cats[george].name=George&cats[george].age=2\
         &cats[george].pet.meows=yes\
-    ").unwrap();
-    assert_eq!(person, Person {
-        sitting: Dog { barks: true, trained: false },
-        cats: vec![
-            Pet {
-                pet: Cat { nip: "paws".into(), meows: true },
-                name: "George".into(),
+    ",
+    )
+    .unwrap();
+    assert_eq!(
+        person,
+        Person {
+            sitting: Dog {
+                barks: true,
+                trained: false
+            },
+            cats: vec![Pet {
+                pet: Cat {
+                    nip: "paws",
+                    meows: true
+                },
+                name: "George",
                 age: 2
-            }
-        ],
-        dogs: vec![
-            Pet {
-                pet: Dog { barks: false, trained: true },
-                name: "fido".into(),
-                age: 7
-            },
-            Pet {
-                pet: Dog { barks: true, trained: false },
-                name: "Bob".into(),
-                age: 1
-            },
-        ]
-    });
+            }],
+            dogs: vec![
+                Pet {
+                    pet: Dog {
+                        barks: false,
+                        trained: true
+                    },
+                    name: "fido",
+                    age: 7
+                },
+                Pet {
+                    pet: Dog {
+                        barks: true,
+                        trained: false
+                    },
+                    name: "Bob",
+                    age: 1
+                },
+            ]
+        }
+    );
 }
 
 #[test]
 fn test_multipart() {
+    use rocket::fs::TempFile;
     use rocket::http::ContentType;
     use rocket::local::blocking::Client;
-    use rocket::fs::TempFile;
 
     #[derive(FromForm)]
     struct MyForm<'r> {
@@ -662,12 +850,10 @@ fn test_multipart() {
         "hi there",
         "--X-BOUNDARY--",
         "",
-    ].join("\r\n");
+    ]
+    .join("\r\n");
 
-    let response = client.post("/")
-        .header(ct)
-        .body(body)
-        .dispatch();
+    let response = client.post("/").header(ct).body(body).dispatch();
 
     assert!(response.status().class().is_success());
 }
@@ -687,38 +873,44 @@ fn test_default_removed() {
     }
 
     let form_string = &["field1=false", "field2=10", "field3=23", "field4"].join("&");
-    let form1: Option<FormNoDefault> = lenient(&form_string).ok();
-    assert_eq!(form1, Some(FormNoDefault {
-        field1: false,
-        field2: Some(10),
-        field3: Some(Some(23)),
-        field4: true,
-    }));
+    let form1: Option<FormNoDefault> = lenient(form_string).ok();
+    assert_eq!(
+        form1,
+        Some(FormNoDefault {
+            field1: false,
+            field2: Some(10),
+            field3: Some(Some(23)),
+            field4: true,
+        })
+    );
 
     let form_string = &["field1=true", "field2=10", "field3=23", "field4"].join("&");
-    let form1: Option<FormNoDefault> = lenient(&form_string).ok();
-    assert_eq!(form1, Some(FormNoDefault {
-        field1: true,
-        field2: Some(10),
-        field3: Some(Some(23)),
-        field4: true,
-    }));
+    let form1: Option<FormNoDefault> = lenient(form_string).ok();
+    assert_eq!(
+        form1,
+        Some(FormNoDefault {
+            field1: true,
+            field2: Some(10),
+            field3: Some(Some(23)),
+            field4: true,
+        })
+    );
 
     // Field 1 missing.
     let form_string = &["field2=20", "field3=10", "field4"].join("&");
-    assert!(lenient::<FormNoDefault>(&form_string).is_err());
+    assert!(lenient::<FormNoDefault>(form_string).is_err());
 
     // Field 2 missing.
     let form_string = &["field1=true", "field3=10", "field4"].join("&");
-    assert!(lenient::<FormNoDefault>(&form_string).is_err());
+    assert!(lenient::<FormNoDefault>(form_string).is_err());
 
     // Field 3 missing.
     let form_string = &["field1=true", "field2=10", "field4=false"].join("&");
-    assert!(lenient::<FormNoDefault>(&form_string).is_err());
+    assert!(lenient::<FormNoDefault>(form_string).is_err());
 
     // Field 4 missing.
     let form_string = &["field1=true", "field2=10", "field3=23"].join("&");
-    assert!(lenient::<FormNoDefault>(&form_string).is_err());
+    assert!(lenient::<FormNoDefault>(form_string).is_err());
 }
 
 #[test]
@@ -745,6 +937,7 @@ fn test_defaults() {
 
         #[field(default = 100)]
         field1: usize,
+
         #[field(default = true)]
         field3: bool,
         #[field(default = false)]
@@ -801,53 +994,59 @@ fn test_defaults() {
 
     // every other field should.
     let form_string = &["field2=102"].join("&");
-    let form1: Option<FormWithDefaults<'_>> = lenient(&form_string).ok();
-    assert_eq!(form1, Some(FormWithDefaults {
-        field1: 100,
-        field2: 102,
-        field3: true,
-        field4: false,
-        field5: false,
-        field6: 255,
-        opt1: Some(true),
-        opt2: Some(false),
-        res: Ok("hello".into()),
-        res2: Ok("hello"),
-        vec_num: vec![1, 2, 3],
-        vec_str: vec!["wow", "a", "string", "nice"],
-        hashmap: test_hashmap(),
-        btreemap: test_btreemap(),
-        boolean: false,
-        unsigned: 777,
-        nonzero: std::num::NonZeroI32::new(3).unwrap(),
-        nonzero2: std::num::NonZeroI32::new(9001).unwrap(),
-        float: 3.0,
-        str_ref: "wow",
-        string: "wowie".to_string(),
-        ip: [192u8, 168, 1, 0].into(),
-        addr: ([192u8, 168, 1, 0], 20).into(),
-        date: time::macros::date!(2021-05-27),
-        time: time::macros::time!(01:15:00),
-        datetime: time::PrimitiveDateTime::new(
-            time::macros::date!(2021-05-27),
-            time::macros::time!(01:15:00)
-        ),
-    }));
+    let form1: Option<FormWithDefaults<'_>> = lenient(form_string).ok();
+    assert_eq!(
+        form1,
+        Some(FormWithDefaults {
+            field1: 100,
+            field2: 102,
+            field3: true,
+            field4: false,
+            field5: false,
+            field6: 255,
+            opt1: Some(true),
+            opt2: Some(false),
+            res: Ok("hello".into()),
+            res2: Ok("hello"),
+            vec_num: vec![1, 2, 3],
+            vec_str: vec!["wow", "a", "string", "nice"],
+            hashmap: test_hashmap(),
+            btreemap: test_btreemap(),
+            boolean: false,
+            unsigned: 777,
+            nonzero: std::num::NonZeroI32::new(3).unwrap(),
+            nonzero2: std::num::NonZeroI32::new(9001).unwrap(),
+            float: 3.0,
+            str_ref: "wow",
+            string: "wowie".to_string(),
+            ip: [192u8, 168, 1, 0].into(),
+            addr: ([192u8, 168, 1, 0], 20).into(),
+            date: time::macros::date!(2021 - 05 - 27),
+            time: time::macros::time!(01:15:00),
+            datetime: time::PrimitiveDateTime::new(
+                time::macros::date!(2021 - 05 - 27),
+                time::macros::time!(01:15:00)
+            ),
+        })
+    );
 
-    let form2: Option<FormWithDefaults<'_>> = strict(&form_string).ok();
+    let form2: Option<FormWithDefaults<'_>> = strict(form_string).ok();
     assert!(form2.is_none());
 
     // Ensure actual form field values take precedence.
     let form_string = &["field1=101", "field2=102", "field3=true", "field5=true"].join("&");
-    let form3: Option<FormWithDefaults<'_>> = lenient(&form_string).ok();
-    assert_eq!(form3, Some(FormWithDefaults {
-        field1: 101,
-        field2: 102,
-        field3: true,
-        field4: false,
-        field5: true,
-        ..form1.unwrap()
-    }));
+    let form3: Option<FormWithDefaults<'_>> = lenient(form_string).ok();
+    assert_eq!(
+        form3,
+        Some(FormWithDefaults {
+            field1: 101,
+            field2: 102,
+            field3: true,
+            field4: false,
+            field5: true,
+            ..form1.unwrap()
+        })
+    );
 
     // And that strict parsing still works.
     let form = form3.unwrap();
@@ -868,15 +1067,18 @@ fn test_defaults() {
     }
 
     let form5: Option<OwnedFormWithDefaults> = lenient("").ok();
-    assert_eq!(form5, Some(OwnedFormWithDefaults {
-        btreemap: {
-            let mut map = BTreeMap::new();
-            map.insert(vec![3, 7, 9], "prime numbers".into());
-            map.insert(vec![1, 2], "one/ and+two".into());
-            map.insert(vec![], "empty!/!? neat".into());
-            map
-        }
-    }));
+    assert_eq!(
+        form5,
+        Some(OwnedFormWithDefaults {
+            btreemap: {
+                let mut map = BTreeMap::new();
+                map.insert(vec![3, 7, 9], "prime numbers".into());
+                map.insert(vec![1, 2], "one/ and+two".into());
+                map.insert(vec![], "empty!/!? neat".into());
+                map
+            }
+        })
+    );
 
     // And that strict parsing still works even when encoded. We add one value
     // to the empty vec because it would not parse as `strict` otherwise.
@@ -919,15 +1121,18 @@ fn test_lazy_default() {
 
     // Ensure actual form field values take precedence.
     let form_string = &["a=100", "b=300"].join("&");
-    let form3: Option<MyForm> = lenient(&form_string).ok();
-    assert_eq!(form3, Some(MyForm {
-        missing0: 40,
-        missing1: 41,
-        missing2: 41,
-        a: 100,
-        b: 300,
-        missing3: 42
-    }));
+    let form3: Option<MyForm> = lenient(form_string).ok();
+    assert_eq!(
+        form3,
+        Some(MyForm {
+            missing0: 40,
+            missing1: 41,
+            missing2: 41,
+            a: 100,
+            b: 300,
+            missing3: 42
+        })
+    );
 }
 
 #[derive(Debug, PartialEq, FromForm, UriDisplayQuery)]
@@ -956,10 +1161,14 @@ fn wrapper_works() {
     assert_eq!(form, Some(TokenOwned("2318".into())));
 
     let errors = lenient::<Token<'_>>("=hi").unwrap_err();
-    assert!(errors.iter().any(|e| matches!(e.kind, ErrorKind::InvalidLength { .. })));
+    assert!(errors
+        .iter()
+        .any(|e| matches!(e.kind, ErrorKind::InvalidLength { .. })));
 
     let errors = lenient::<TokenOwned>("=hellothere").unwrap_err();
-    assert!(errors.iter().any(|e| matches!(e.kind, ErrorKind::Validation { .. })));
+    assert!(errors
+        .iter()
+        .any(|e| matches!(e.kind, ErrorKind::Validation { .. })));
 }
 
 #[derive(Debug, PartialEq, FromForm, UriDisplayQuery)]
@@ -1003,10 +1212,22 @@ fn range() {
     assert_eq!(range, Range { start: -1, end: 2 });
 
     let range: Range<isize> = strict("start=-1&end=-95").unwrap();
-    assert_eq!(range, Range { start: -1, end: -95 });
+    assert_eq!(
+        range,
+        Range {
+            start: -1,
+            end: -95
+        }
+    );
 
     let range: Range<isize> = strict_encoded("start=-1&end=-95").unwrap();
-    assert_eq!(range, Range { start: -1, end: -95 });
+    assert_eq!(
+        range,
+        Range {
+            start: -1,
+            end: -95
+        }
+    );
 
     let range: RangeFrom<char> = strict("start=a").unwrap();
     assert_eq!(range, RangeFrom { start: 'a' });
@@ -1019,22 +1240,35 @@ fn range() {
 
     // now with compound, non-Step values
     let form_string = &["start.start=0", "start.end=1", "end.start=1", "end.end=2"].join("&");
-    let range: Range<Range<usize>> = strict(&form_string).unwrap();
-    assert_eq!(range, Range {
-        start: Range { start: 0, end : 1},
-        end: Range { start: 1, end : 2 }
-    });
+    let range: Range<Range<usize>> = strict(form_string).unwrap();
+    assert_eq!(
+        range,
+        Range {
+            start: Range { start: 0, end: 1 },
+            end: Range { start: 1, end: 2 }
+        }
+    );
 
     let form_string = &[
         "start.description=some%20task",
         "start.completed=false",
         "end.description=yet%20more%20work",
         "end.completed=true",
-    ].join("&");
+    ]
+    .join("&");
 
     let range: Range<TodoTask> = strict_encoded(form_string).unwrap();
-    assert_eq!(range, Range {
-        start: TodoTask { description: "some task".into(), completed: false, },
-        end: TodoTask { description: "yet more work".into(), completed: true, },
-    });
+    assert_eq!(
+        range,
+        Range {
+            start: TodoTask {
+                description: "some task".into(),
+                completed: false,
+            },
+            end: TodoTask {
+                description: "yet more work".into(),
+                completed: true,
+            },
+        }
+    );
 }

@@ -1,6 +1,6 @@
 use std::io;
-use std::task::{Poll, Context};
 use std::pin::Pin;
+use std::task::{Context, Poll};
 
 use pin_project_lite::pin_project;
 use tokio::io::{AsyncRead, ReadBuf};
@@ -18,7 +18,10 @@ pin_project! {
 
 impl<T, U> Chain<T, U> {
     pub(crate) fn new(first: T, second: U) -> Self {
-        Self { first: Some(first), second }
+        Self {
+            first: Some(first),
+            second,
+        }
     }
 }
 

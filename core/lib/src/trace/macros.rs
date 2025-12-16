@@ -84,7 +84,7 @@ macro_rules! span {
 }
 
 #[doc(inline)]
-pub use span as span;
+pub use span;
 
 declare_span_macro!(span_error ERROR);
 declare_span_macro!(span_warn WARN);
@@ -93,7 +93,7 @@ declare_span_macro!(span_debug DEBUG);
 declare_span_macro!(span_trace TRACE);
 
 #[doc(inline)]
-pub use event as event;
+pub use event;
 
 reexport!(tracing::error);
 reexport!(tracing::warn);
@@ -101,8 +101,13 @@ reexport!(tracing::info);
 reexport!(tracing::debug);
 reexport!(tracing::trace);
 
-#[doc(hidden)] pub use tracing::error;
-#[doc(hidden)] pub use tracing::warn;
-#[doc(hidden)] pub use tracing::info;
-#[doc(hidden)] pub use tracing::debug;
-#[doc(hidden)] pub use tracing::trace;
+#[doc(hidden)]
+pub use tracing::debug;
+#[doc(hidden)]
+pub use tracing::error;
+#[doc(hidden)]
+pub use tracing::info;
+#[doc(hidden)]
+pub use tracing::trace;
+#[doc(hidden)]
+pub use tracing::warn;

@@ -1,3 +1,5 @@
+extern crate rocket_community as rocket;
+
 #[test]
 #[should_panic]
 fn bad_dynamic_mount() {

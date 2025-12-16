@@ -1,11 +1,11 @@
-use std::marker::PhantomData;
 use std::borrow::Cow;
+use std::marker::PhantomData;
 
 use percent_encoding::AsciiSet;
 
-use crate::RawStr;
-use crate::uri::fmt::{Part, Path, Query};
 use crate::parse::uri::tables::PATH_CHARS;
+use crate::uri::fmt::{Part, Path, Query};
+use crate::RawStr;
 
 #[derive(Clone, Copy)]
 #[allow(non_camel_case_types)]
@@ -35,19 +35,17 @@ const PATH_SET: AsciiSet = set_from_table(&PATH_CHARS);
 
 impl<P: Part> Default for UNSAFE_ENCODE_SET<P> {
     #[inline(always)]
-    fn default() -> Self { UNSAFE_ENCODE_SET(PhantomData) }
+    fn default() -> Self {
+        UNSAFE_ENCODE_SET(PhantomData)
+    }
 }
 
 impl EncodeSet for UNSAFE_ENCODE_SET<Path> {
-    const SET: AsciiSet = PATH_SET
-        .add(b'%');
+    const SET: AsciiSet = PATH_SET.add(b'%');
 }
 
 impl EncodeSet for UNSAFE_ENCODE_SET<Query> {
-    const SET: AsciiSet = PATH_SET
-        .remove(b'?')
-        .add(b'%')
-        .add(b'+');
+    const SET: AsciiSet = PATH_SET.remove(b'?').add(b'%').add(b'+');
 }
 
 #[derive(Clone, Copy)]
@@ -55,14 +53,11 @@ impl EncodeSet for UNSAFE_ENCODE_SET<Query> {
 pub struct ENCODE_SET<P: Part>(PhantomData<P>);
 
 impl EncodeSet for ENCODE_SET<Path> {
-    const SET: AsciiSet = <UNSAFE_ENCODE_SET<Path>>::SET
-        .add(b'/');
+    const SET: AsciiSet = <UNSAFE_ENCODE_SET<Path>>::SET.add(b'/');
 }
 
 impl EncodeSet for ENCODE_SET<Query> {
-    const SET: AsciiSet = <UNSAFE_ENCODE_SET<Query>>::SET
-        .add(b'&')
-        .add(b'=');
+    const SET: AsciiSet = <UNSAFE_ENCODE_SET<Query>>::SET.add(b'&').add(b'=');
 }
 
 #[derive(Default, Clone, Copy)]

@@ -145,7 +145,7 @@ error: URI suffix must contain only query and/or fragment
    |                         ^^^^^^^^^
 
 error: route expects 2 parameters but 0 were supplied
-       = note: route `simple` has uri "/<_id>/<_name>"
+       ␛[1;34m= ␛[0m␛[1;32mnote␛[0m␛[39m: ␛[0m␛[1;39mroute `simple` has uri "/<_id>/<_name>"␛[0m
   --> tests/ui-fail-stable/typed-uris-invalid-syntax.rs:13:10
    |
 13 |     uri!(simple,);

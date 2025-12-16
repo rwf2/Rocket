@@ -1,14 +1,14 @@
-use state::TypeMap;
 use figment::Figment;
+use state::TypeMap;
 
+use crate::fairing::Fairings;
 use crate::listener::Endpoint;
+use crate::router::{Finalized, Router};
 use crate::shutdown::Stages;
 use crate::{Catcher, Config, Rocket, Route};
-use crate::router::{Router, Finalized};
-use crate::fairing::Fairings;
 
 mod private {
-    pub trait Sealed {  }
+    pub trait Sealed {}
 }
 
 #[doc(hidden)]

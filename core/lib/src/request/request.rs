@@ -1,25 +1,25 @@
-use std::{io, fmt};
-use std::ops::RangeFrom;
-use std::sync::{Arc, atomic::Ordering};
 use std::borrow::Cow;
-use std::str::FromStr;
 use std::future::Future;
 use std::net::IpAddr;
+use std::ops::RangeFrom;
+use std::str::FromStr;
+use std::sync::{atomic::Ordering, Arc};
+use std::{fmt, io};
 
-use http::Version;
-use rocket_http::HttpVersion;
-use state::{TypeMap, InitCell};
 use futures::future::BoxFuture;
+use http::Version;
 use ref_swap::OptionRefSwap;
+use rocket_http::HttpVersion;
+use state::{InitCell, TypeMap};
 
-use crate::{Rocket, Route, Orbit};
-use crate::request::{FromParam, FromSegments, FromRequest, Outcome, AtomicMethod};
-use crate::form::{self, ValueField, FromForm};
 use crate::data::Limits;
+use crate::form::{self, FromForm, ValueField};
+use crate::request::{AtomicMethod, FromParam, FromRequest, FromSegments, Outcome};
+use crate::{Orbit, Rocket, Route};
 
+use crate::http::uri::{fmt::Path, Authority, Host, Origin, Segments};
 use crate::http::ProxyProto;
-use crate::http::{Method, Header, HeaderMap, ContentType, Accept, MediaType, CookieJar, Cookie};
-use crate::http::uri::{fmt::Path, Origin, Segments, Host, Authority};
+use crate::http::{Accept, ContentType, Cookie, CookieJar, Header, HeaderMap, MediaType, Method};
 use crate::listener::{Certificates, Endpoint};
 
 /// The type of an incoming web request.
@@ -105,7 +105,7 @@ impl<'r> Request<'r> {
                 content_type: InitCell::new(),
                 cache: Arc::new(<TypeMap![Send + Sync]>::new()),
                 host: None,
-            }
+            },
         }
     }
 
@@ -114,6 +114,7 @@ impl<'r> Request<'r> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::http::HttpVersion;
     ///
     /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
@@ -130,6 +131,7 @@ impl<'r> Request<'r> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::http::Method;
     ///
     /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
@@ -148,6 +150,7 @@ impl<'r> Request<'r> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::http::Method;
     /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
     /// # let mut req = c.get("/");
@@ -168,6 +171,7 @@ impl<'r> Request<'r> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
     /// # let get = |uri| c.get(uri);
     /// assert_eq!(get("/hello/rocketeer").uri().path(), "/hello/rocketeer");
@@ -183,6 +187,7 @@ impl<'r> Request<'r> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::http::uri::Origin;
     /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
     /// # let mut req = c.get("/");
@@ -228,6 +233,7 @@ impl<'r> Request<'r> {
     /// Retrieve the raw host, unusable to construct safe URIs:
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::http::uri::Host;
     /// # use rocket::uri;
     /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
@@ -251,7 +257,7 @@ impl<'r> Request<'r> {
     /// URI:
     ///
     /// ```rust
-    /// # #[macro_use] extern crate rocket;
+    /// # #[macro_use] extern crate rocket_community as rocket;
     /// # type Token = String;
     /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
     /// # let mut req = c.get("/");
@@ -302,6 +308,7 @@ impl<'r> Request<'r> {
     /// Set the host to `rocket.rs:443`.
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::http::uri::Host;
     /// # use rocket::uri;
     /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
@@ -337,6 +344,7 @@ impl<'r> Request<'r> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use std::net::{IpAddr, Ipv4Addr, SocketAddr};
     /// use rocket::listener::Endpoint;
     /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
@@ -361,6 +369,7 @@ impl<'r> Request<'r> {
     /// Set the remote address to be 127.0.0.1:8111:
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use std::net::{IpAddr, Ipv4Addr, SocketAddr};
     /// use rocket::listener::Endpoint;
     /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
@@ -385,6 +394,7 @@ impl<'r> Request<'r> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use std::net::Ipv4Addr;
     /// use rocket::http::Header;
     ///
@@ -398,13 +408,11 @@ impl<'r> Request<'r> {
     /// ```
     pub fn real_ip(&self) -> Option<IpAddr> {
         let ip_header = self.rocket().config.ip_header.as_ref()?.as_str();
-        self.headers()
-            .get_one(ip_header)
-            .and_then(|ip| {
-                ip.parse()
-                    .map_err(|_| warn!(value = ip, "'{ip_header}' header is malformed"))
-                    .ok()
-            })
+        self.headers().get_one(ip_header).and_then(|ip| {
+            ip.parse()
+                .map_err(|_| warn!(value = ip, "'{ip_header}' header is malformed"))
+                .ok()
+        })
     }
 
     /// Returns the [`ProxyProto`] associated with the current request.
@@ -418,6 +426,7 @@ impl<'r> Request<'r> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::http::{Header, ProxyProto};
     ///
     /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
@@ -466,6 +475,7 @@ impl<'r> Request<'r> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::http::{Header, ProxyProto};
     ///
     /// # let client = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
@@ -493,6 +503,7 @@ impl<'r> Request<'r> {
     /// can be used to retrieve the same information in a handler:
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// # use rocket::get;
     /// use std::net::IpAddr;
     ///
@@ -510,6 +521,7 @@ impl<'r> Request<'r> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// # use rocket::http::Header;
     /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
     /// # let mut req = c.get("/");
@@ -544,6 +556,7 @@ impl<'r> Request<'r> {
     /// Add a new cookie to a request's cookies:
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::http::Cookie;
     ///
     /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
@@ -565,6 +578,7 @@ impl<'r> Request<'r> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::http::{Accept, ContentType};
     ///
     /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
@@ -586,6 +600,7 @@ impl<'r> Request<'r> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::http::ContentType;
     /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
     /// # let mut req = c.get("/");
@@ -611,6 +626,7 @@ impl<'r> Request<'r> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::http::ContentType;
     /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
     /// # let mut req = c.get("/");
@@ -639,6 +655,7 @@ impl<'r> Request<'r> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::http::ContentType;
     ///
     /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
@@ -650,8 +667,13 @@ impl<'r> Request<'r> {
     /// ```
     #[inline]
     pub fn content_type(&self) -> Option<&ContentType> {
-        self.state.content_type
-            .get_or_init(|| self.headers().get_one("Content-Type").and_then(|v| v.parse().ok()))
+        self.state
+            .content_type
+            .get_or_init(|| {
+                self.headers()
+                    .get_one("Content-Type")
+                    .and_then(|v| v.parse().ok())
+            })
             .as_ref()
     }
 
@@ -661,6 +683,7 @@ impl<'r> Request<'r> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::http::Accept;
     ///
     /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
@@ -670,8 +693,13 @@ impl<'r> Request<'r> {
     /// ```
     #[inline]
     pub fn accept(&self) -> Option<&Accept> {
-        self.state.accept
-            .get_or_init(|| self.headers().get_one("Accept").and_then(|v| v.parse().ok()))
+        self.state
+            .accept
+            .get_or_init(|| {
+                self.headers()
+                    .get_one("Accept")
+                    .and_then(|v| v.parse().ok())
+            })
             .as_ref()
     }
 
@@ -698,6 +726,7 @@ impl<'r> Request<'r> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::http::{Accept, ContentType, MediaType};
     /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
     /// # let get = |uri| c.get(uri);
@@ -739,6 +768,7 @@ impl<'r> Request<'r> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
     /// # let request = c.get("/");
     /// # type Pool = usize;
@@ -762,6 +792,7 @@ impl<'r> Request<'r> {
     /// This is convenience function equivalent to:
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
     /// # let request = c.get("/");
     /// &request.rocket().config().limits
@@ -771,6 +802,7 @@ impl<'r> Request<'r> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::data::ToByteUnit;
     /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
     /// # let request = c.get("/");
@@ -795,6 +827,7 @@ impl<'r> Request<'r> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
     /// # let request = c.get("/");
     /// let route = request.route();
@@ -811,6 +844,7 @@ impl<'r> Request<'r> {
     /// Assuming a `User` request guard exists, invoke it:
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// # type User = rocket::http::Method;
     /// # rocket::async_test(async move {
     /// # let c = rocket::local::asynchronous::Client::debug_with(vec![]).await.unwrap();
@@ -820,7 +854,10 @@ impl<'r> Request<'r> {
     /// ```
     #[inline(always)]
     pub fn guard<'z, 'a, T>(&'a self) -> BoxFuture<'z, Outcome<T, T::Error>>
-        where T: FromRequest<'a> + 'z, 'a: 'z, 'r: 'z
+    where
+        T: FromRequest<'a> + 'z,
+        'a: 'z,
+        'r: 'z,
     {
         T::from_request(self)
     }
@@ -841,6 +878,7 @@ impl<'r> Request<'r> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
     /// # let request = c.get("/");
     /// // The first store into local cache for a given type wins.
@@ -852,14 +890,14 @@ impl<'r> Request<'r> {
     /// ```
     #[inline]
     pub fn local_cache<T, F>(&self, f: F) -> &T
-        where F: FnOnce() -> T,
-              T: Send + Sync + 'static
+    where
+        F: FnOnce() -> T,
+        T: Send + Sync + 'static,
     {
-        self.state.cache.try_get()
-            .unwrap_or_else(|| {
-                self.state.cache.set(f());
-                self.state.cache.get()
-            })
+        self.state.cache.try_get().unwrap_or_else(|| {
+            self.state.cache.set(f());
+            self.state.cache.get()
+        })
     }
 
     /// Retrieves the cached value for type `T` from the request-local cached
@@ -870,6 +908,7 @@ impl<'r> Request<'r> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// # use rocket::Request;
     /// # type User = ();
     /// async fn current_user<'r>(request: &Request<'r>) -> User {
@@ -885,9 +924,10 @@ impl<'r> Request<'r> {
     /// # })
     /// ```
     #[inline]
-    pub async fn local_cache_async<'a, T, F>(&'a self, fut: F) -> &'a T
-        where F: Future<Output = T>,
-              T: Send + Sync + 'static
+    pub async fn local_cache_async<T, F>(&'_ self, fut: F) -> &'_ T
+    where
+        F: Future<Output = T>,
+        T: Send + Sync + 'static,
     {
         match self.state.cache.try_get() {
             Some(s) => s,
@@ -913,6 +953,7 @@ impl<'r> Request<'r> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
     /// # let get = |uri| c.get(uri);
     /// use rocket::error::Empty;
@@ -930,7 +971,8 @@ impl<'r> Request<'r> {
     /// ```
     #[inline]
     pub fn param<'a, T>(&'a self, n: usize) -> Option<Result<T, T::Error>>
-        where T: FromParam<'a>
+    where
+        T: FromParam<'a>,
     {
         self.routed_segment(n).map(T::from_param)
     }
@@ -951,6 +993,7 @@ impl<'r> Request<'r> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use std::path::PathBuf;
     ///
     /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
@@ -968,7 +1011,8 @@ impl<'r> Request<'r> {
     /// ```
     #[inline]
     pub fn segments<'a, T>(&'a self, n: RangeFrom<usize>) -> Result<T, T::Error>
-        where T: FromSegments<'a>
+    where
+        T: FromSegments<'a>,
     {
         T::from_segments(self.routed_segments(n))
     }
@@ -993,6 +1037,7 @@ impl<'r> Request<'r> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::form::FromForm;
     ///
     /// #[derive(Debug, PartialEq, FromForm)]
@@ -1017,7 +1062,8 @@ impl<'r> Request<'r> {
     /// ```
     #[inline]
     pub fn query_value<'a, T>(&'a self, name: &str) -> Option<form::Result<'a, T>>
-        where T: FromForm<'a>
+    where
+        T: FromForm<'a>,
     {
         if !self.query_fields().any(|f| f.name == name) {
             return None;
@@ -1047,10 +1093,10 @@ impl<'r> Request<'r> {
             if self.accept().is_none() || replace {
                 self.state.accept = InitCell::new();
             }
-        } else if Some(header.name()) == self.rocket().config.proxy_proto_header.as_deref() {
-            if !self.cookies().state.secure || replace {
-                self.cookies_mut().state.secure |= ProxyProto::from(header.value()).is_https();
-            }
+        } else if Some(header.name()) == self.rocket().config.proxy_proto_header.as_deref()
+            && (!self.cookies().state.secure || replace)
+        {
+            self.cookies_mut().state.secure |= ProxyProto::from(header.value()).is_https();
         }
     }
 
@@ -1066,18 +1112,20 @@ impl<'r> Request<'r> {
     /// point for the currently matched route, if they exist. Used by codegen.
     #[inline]
     pub fn routed_segments(&self, range: RangeFrom<usize>) -> Segments<'_, Path> {
-        let mount_segments = self.route()
-            .map(|r| r.uri.metadata.base_len)
-            .unwrap_or(0);
+        let mount_segments = self.route().map(|r| r.uri.metadata.base_len).unwrap_or(0);
 
         trace!(name: "segments", mount_segments, range.start);
-        self.uri().path().segments().skip(mount_segments + range.start)
+        self.uri()
+            .path()
+            .segments()
+            .skip(mount_segments + range.start)
     }
 
     // Retrieves the pre-parsed query items. Used by matching and codegen.
     #[inline]
     pub fn query_fields(&self) -> impl Iterator<Item = ValueField<'_>> {
-        self.uri().query()
+        self.uri()
+            .query()
             .map(|q| q.segments().map(ValueField::from))
             .into_iter()
             .flatten()
@@ -1126,7 +1174,9 @@ impl<'r> Request<'r> {
         };
 
         // TODO: Keep around not just the path/query, but the rest, if there?
-        let uri = hyper.uri.path_and_query()
+        let uri = hyper
+            .uri
+            .path_and_query()
             .map(|uri| {
                 // In debug, make sure we agree with Hyper about URI validity.
                 // If we disagree, log a warning but continue anyway; if this is
@@ -1151,14 +1201,19 @@ impl<'r> Request<'r> {
             });
 
         // Construct the request object; fill in metadata and headers next.
-        let mut request = Request::new(rocket, method, uri, match hyper.version {
-            Version::HTTP_09 => Some(HttpVersion::Http09),
-            Version::HTTP_10 => Some(HttpVersion::Http10),
-            Version::HTTP_11 => Some(HttpVersion::Http11),
-            Version::HTTP_2 => Some(HttpVersion::Http2),
-            Version::HTTP_3 => Some(HttpVersion::Http3),
-            _ => None,
-        });
+        let mut request = Request::new(
+            rocket,
+            method,
+            uri,
+            match hyper.version {
+                Version::HTTP_09 => Some(HttpVersion::Http09),
+                Version::HTTP_10 => Some(HttpVersion::Http10),
+                Version::HTTP_11 => Some(HttpVersion::Http11),
+                Version::HTTP_2 => Some(HttpVersion::Http2),
+                Version::HTTP_3 => Some(HttpVersion::Http3),
+                _ => None,
+            },
+        );
         request.errors = errors;
 
         // Set the passed in connection metadata.
@@ -1168,15 +1223,21 @@ impl<'r> Request<'r> {
         // use the `:authority` pseudo-header which hyper makes part of the URI.
         // TODO: Use an `InitCell` to compute this later.
         request.state.host = if hyper.version < hyper::Version::HTTP_2 {
-            hyper.headers.get("host").and_then(|h| Host::parse_bytes(h.as_bytes()).ok())
+            hyper
+                .headers
+                .get("host")
+                .and_then(|h| Host::parse_bytes(h.as_bytes()).ok())
         } else {
-            hyper.uri.host().map(|h| Host::new(Authority::new(None, h, hyper.uri.port_u16())))
+            hyper
+                .uri
+                .host()
+                .map(|h| Host::new(Authority::new(None, h, hyper.uri.port_u16())))
         };
 
         // Set the request cookies, if they exist.
         for header in hyper.headers.get_all("Cookie") {
             let Ok(raw_str) = std::str::from_utf8(header.as_bytes()) else {
-                continue
+                continue;
             };
 
             for cookie_str in raw_str.split(';').map(|s| s.trim()) {

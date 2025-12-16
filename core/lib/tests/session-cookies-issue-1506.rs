@@ -1,6 +1,8 @@
 #![cfg(feature = "secrets")]
 
-use rocket::http::{CookieJar, Cookie};
+extern crate rocket_community as rocket;
+
+use rocket::http::{Cookie, CookieJar};
 
 #[rocket::get("/")]
 fn index(jar: &CookieJar<'_>) {

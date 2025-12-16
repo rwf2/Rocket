@@ -6,7 +6,7 @@ edition = "2021"
 publish = false
 
 [dependencies]
-rocket = { path = "../../core/lib", features = ["tls", "mtls", "secrets", "http3-preview"] }
+rocket = { package = "rocket-community", path = "../../core/lib", features = ["tls", "mtls", "secrets", "http3-preview"] }
 yansi = "1.0.1"
 
 [target.'cfg(unix)'.dependencies]

@@ -2,14 +2,14 @@ use std::io;
 use std::mem::transmute;
 use std::pin::Pin;
 use std::sync::Arc;
-use std::task::{Poll, Context};
+use std::task::{Context, Poll};
 
 use futures::future::BoxFuture;
 use http::request::Parts;
 use tokio::io::{AsyncRead, ReadBuf};
 
 use crate::data::{Data, IoHandler, RawStream};
-use crate::{Request, Response, Rocket, Orbit};
+use crate::{Orbit, Request, Response, Rocket};
 
 // TODO: Magic with trait async fn to get rid of the box pin.
 // TODO: Write safety proofs.
@@ -31,7 +31,7 @@ pub struct ErasedRequest {
 }
 
 impl Drop for ErasedRequest {
-    fn drop(&mut self) { }
+    fn drop(&mut self) {}
 }
 
 #[derive(Debug)]
@@ -42,7 +42,7 @@ pub struct ErasedResponse {
 }
 
 impl Drop for ErasedResponse {
-    fn drop(&mut self) { }
+    fn drop(&mut self) {}
 }
 
 pub struct ErasedIoHandler {
@@ -52,17 +52,14 @@ pub struct ErasedIoHandler {
 }
 
 impl Drop for ErasedIoHandler {
-    fn drop(&mut self) { }
+    fn drop(&mut self) {}
 }
 
 impl ErasedRequest {
     pub fn new(
         rocket: Arc<Rocket<Orbit>>,
         parts: Parts,
-        constructor: impl for<'r> FnOnce(
-            &'r Rocket<Orbit>,
-            &'r Parts
-        ) -> Request<'r>,
+        constructor: impl for<'r> FnOnce(&'r Rocket<Orbit>, &'r Parts) -> Request<'r>,
     ) -> ErasedRequest {
         let rocket: Arc<Rocket<Orbit>> = rocket;
         let parts: Box<Parts> = Box::new(parts);
@@ -74,7 +71,11 @@ impl ErasedRequest {
             constructor(rocket, parts)
         };
 
-        ErasedRequest { _rocket: rocket, _parts: parts, request, }
+        ErasedRequest {
+            _rocket: rocket,
+            _parts: parts,
+            request,
+        }
     }
 
     pub fn inner(&self) -> &Request<'_> {
@@ -88,17 +89,18 @@ impl ErasedRequest {
         preprocess: impl for<'r, 'x> FnOnce(
             &'r Rocket<Orbit>,
             &'r mut Request<'x>,
-            &'r mut Data<'x>
+            &'r mut Data<'x>,
         ) -> BoxFuture<'r, T>,
         dispatch: impl for<'r> FnOnce(
             T,
             &'r Rocket<Orbit>,
             &'r Request<'r>,
-            Data<'r>
+            Data<'r>,
         ) -> BoxFuture<'r, Response<'r>>,
     ) -> ErasedResponse
-        where T: Send + Sync + 'static,
-              D: for<'r> Into<RawStream<'r>>
+    where
+        T: Send + Sync + 'static,
+        D: for<'r> Into<RawStream<'r>>,
     {
         let mut data: Data<'_> = Data::from(raw_stream);
         let mut parent = Arc::new(self);
@@ -134,7 +136,7 @@ impl ErasedResponse {
 
     pub fn with_inner_mut<'a, T>(
         &'a mut self,
-        f: impl for<'r> FnOnce(&'a mut Response<'r>) -> T
+        f: impl for<'r> FnOnce(&'a mut Response<'r>) -> T,
     ) -> T {
         static_assert_covariance!(Response);
         f(&mut self.response)
@@ -145,7 +147,7 @@ impl ErasedResponse {
         constructor: impl for<'r> FnOnce(
             &'r Request<'r>,
             &'a mut Response<'r>,
-        ) -> Option<(T, Box<dyn IoHandler + 'r>)>
+        ) -> Option<(T, Box<dyn IoHandler + 'r>)>,
     ) -> Option<(T, ErasedIoHandler)> {
         let parent: Arc<ErasedRequest> = self._request.clone();
         let io: Option<(T, Box<dyn IoHandler + '_>)> = {
@@ -155,26 +157,34 @@ impl ErasedResponse {
             constructor(request, &mut self.response)
         };
 
-        io.map(|(v, io)| (v, ErasedIoHandler { _request: parent, io }))
+        io.map(|(v, io)| {
+            (
+                v,
+                ErasedIoHandler {
+                    _request: parent,
+                    io,
+                },
+            )
+        })
     }
 }
 
 impl ErasedIoHandler {
     pub fn with_inner_mut<'a, T: 'a>(
         &'a mut self,
-        f: impl for<'r> FnOnce(&'a mut Box<dyn IoHandler + 'r>) -> T
+        f: impl for<'r> FnOnce(&'a mut Box<dyn IoHandler + 'r>) -> T,
     ) -> T {
-        fn _assert_covariance<'x: 'y, 'y>(
-            x: &'y Box<dyn IoHandler + 'x>
-        ) -> &'y Box<dyn IoHandler + 'y> { x }
+        fn _assert_covariance<'x: 'y, 'y>(x: &'y (dyn IoHandler + 'x)) -> &'y (dyn IoHandler + 'y) {
+            x
+        }
 
         f(&mut self.io)
     }
 
     pub fn take<'a>(&'a mut self) -> Box<dyn IoHandler + 'a> {
-        fn _assert_covariance<'x: 'y, 'y>(
-            x: &'y Box<dyn IoHandler + 'x>
-        ) -> &'y Box<dyn IoHandler + 'y> { x }
+        fn _assert_covariance<'x: 'y, 'y>(x: &'y (dyn IoHandler + 'x)) -> &'y (dyn IoHandler + 'y) {
+            x
+        }
 
         self.with_inner_mut(|handler| std::mem::replace(handler, Box::new(())))
     }
@@ -186,6 +196,7 @@ impl AsyncRead for ErasedResponse {
         cx: &mut Context<'_>,
         buf: &mut ReadBuf<'_>,
     ) -> Poll<io::Result<()>> {
-        self.get_mut().with_inner_mut(|r| Pin::new(r.body_mut()).poll_read(cx, buf))
+        self.get_mut()
+            .with_inner_mut(|r| Pin::new(r.body_mut()).poll_read(cx, buf))
     }
 }

@@ -1,5 +1,5 @@
-use std::path::Path;
 use std::collections::HashMap;
+use std::path::Path;
 
 use rocket::serde::Serialize;
 
@@ -38,6 +38,7 @@ pub(crate) trait Engine: Send + Sync + Sized + 'static {
 ///
 /// ```rust
 /// # #[cfg(feature = "tera")] {
+/// # extern crate rocket_dyn_templates_community as rocket_dyn_templates;
 /// use std::collections::HashMap;
 ///
 /// use rocket_dyn_templates::{Template, Engines};
@@ -93,14 +94,18 @@ pub struct Engines {
 
 impl Engines {
     pub(crate) const ENABLED_EXTENSIONS: &'static [&'static str] = &[
-        #[cfg(feature = "tera")] Tera::EXT,
-        #[cfg(feature = "handlebars")] Handlebars::EXT,
-        #[cfg(feature = "minijinja")] Environment::EXT,
+        #[cfg(feature = "tera")]
+        Tera::EXT,
+        #[cfg(feature = "handlebars")]
+        Handlebars::EXT,
+        #[cfg(feature = "minijinja")]
+        Environment::EXT,
     ];
 
-    pub(crate) fn init(templates: &HashMap<String, TemplateInfo>) -> Option<Engines> {
+    pub(crate) fn init(_templates: &HashMap<String, TemplateInfo>) -> Option<Engines> {
         fn inner<E: Engine>(templates: &HashMap<String, TemplateInfo>) -> Option<E> {
-            let named_templates = templates.iter()
+            let named_templates = templates
+                .iter()
                 .filter(|&(_, i)| i.engine_ext == E::EXT)
                 .filter_map(|(k, i)| Some((k.as_str(), i.path.as_ref()?)))
                 .map(|(k, p)| (k, p.as_path()));
@@ -110,20 +115,11 @@ impl Engines {
 
         Some(Engines {
             #[cfg(feature = "tera")]
-            tera: match inner::<Tera>(templates) {
-                Some(tera) => tera,
-                None => return None
-            },
+            tera: inner::<Tera>(_templates)?,
             #[cfg(feature = "handlebars")]
-            handlebars: match inner::<Handlebars<'static>>(templates) {
-                Some(hb) => hb,
-                None => return None
-            },
+            handlebars: inner::<Handlebars<'static>>(_templates)?,
             #[cfg(feature = "minijinja")]
-            minijinja: match inner::<Environment<'static>>(templates) {
-                Some(hb) => hb,
-                None => return None
-            },
+            minijinja: inner::<Environment<'static>>(_templates)?,
         })
     }
 
@@ -133,19 +129,22 @@ impl Engines {
         info: &TemplateInfo,
         context: C,
     ) -> Option<String> {
-        #[cfg(feature = "tera")] {
+        #[cfg(feature = "tera")]
+        {
             if info.engine_ext == Tera::EXT {
                 return Engine::render(&self.tera, name, context);
             }
         }
 
-        #[cfg(feature = "handlebars")] {
+        #[cfg(feature = "handlebars")]
+        {
             if info.engine_ext == Handlebars::EXT {
                 return Engine::render(&self.handlebars, name, context);
             }
         }
 
-        #[cfg(feature = "minijinja")] {
+        #[cfg(feature = "minijinja")]
+        {
             if info.engine_ext == Environment::EXT {
                 return Engine::render(&self.minijinja, name, context);
             }
@@ -160,16 +159,24 @@ impl Engines {
         let tera = self.tera.get_template_names().map(|name| (name, Tera::EXT));
 
         #[cfg(feature = "handlebars")]
-        let handlebars = self.handlebars.get_templates().keys()
-                .map(|name| (name.as_str(), Handlebars::EXT));
+        let handlebars = self
+            .handlebars
+            .get_templates()
+            .keys()
+            .map(|name| (name.as_str(), Handlebars::EXT));
 
         #[cfg(feature = "minijinja")]
-        let minijinja = self.minijinja.templates()
+        let minijinja = self
+            .minijinja
+            .templates()
             .map(|(name, _)| (name, Environment::EXT));
 
-        #[cfg(not(feature = "tera"))] let tera = std::iter::empty();
-        #[cfg(not(feature = "handlebars"))] let handlebars = std::iter::empty();
-        #[cfg(not(feature = "minijinja"))] let minijinja = std::iter::empty();
+        #[cfg(not(feature = "tera"))]
+        let tera = std::iter::empty();
+        #[cfg(not(feature = "handlebars"))]
+        let handlebars = std::iter::empty();
+        #[cfg(not(feature = "minijinja"))]
+        let minijinja = std::iter::empty();
 
         tera.chain(handlebars).chain(minijinja)
     }

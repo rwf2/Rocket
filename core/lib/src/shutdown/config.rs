@@ -85,6 +85,8 @@ use crate::shutdown::Sig;
 /// defaults.
 ///
 /// ```rust
+/// # extern crate rocket_community as rocket;
+///
 /// # use rocket::figment::{Figment, providers::{Format, Toml}};
 /// use rocket::Config;
 ///
@@ -117,6 +119,8 @@ use crate::shutdown::Sig;
 /// Or, as with all configuration options, programmatically:
 ///
 /// ```rust
+/// # extern crate rocket_community as rocket;
+///
 /// # use rocket::figment::{Figment, providers::{Format, Toml}};
 /// use rocket::config::{Config, ShutdownConfig};
 ///
@@ -194,6 +198,8 @@ pub struct ShutdownConfig {
     /// _always_ be done using a public constructor or update syntax:
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
+    ///
     /// use rocket::config::ShutdownConfig;
     ///
     /// let config = ShutdownConfig {
@@ -212,7 +218,11 @@ impl Default for ShutdownConfig {
         ShutdownConfig {
             ctrlc: true,
             #[cfg(unix)]
-            signals: { let mut set = HashSet::new(); set.insert(Sig::Term); set },
+            signals: {
+                let mut set = HashSet::new();
+                set.insert(Sig::Term);
+                set
+            },
             grace: 2,
             mercy: 3,
             force: true,
@@ -232,8 +242,8 @@ impl ShutdownConfig {
 
     #[cfg(unix)]
     pub(crate) fn signal_stream(&self) -> Option<impl Stream<Item = Sig>> {
-        use tokio_stream::{StreamExt, StreamMap, wrappers::SignalStream};
         use tokio::signal::unix::{signal, SignalKind};
+        use tokio_stream::{wrappers::SignalStream, StreamExt, StreamMap};
 
         if !self.ctrlc && self.signals.is_empty() {
             return None;
@@ -256,11 +266,13 @@ impl ShutdownConfig {
                 Sig::Quit => SignalKind::quit(),
                 Sig::Term => SignalKind::terminate(),
                 Sig::Usr1 => SignalKind::user_defined1(),
-                Sig::Usr2 => SignalKind::user_defined2()
+                Sig::Usr2 => SignalKind::user_defined2(),
             };
 
             match signal(sigkind) {
-                Ok(signal) => { map.insert(sig, SignalStream::new(signal)); },
+                Ok(signal) => {
+                    map.insert(sig, SignalStream::new(signal));
+                }
                 Err(e) => warn!("Failed to enable `{}` shutdown signal: {}", sig, e),
             }
         }
@@ -270,15 +282,19 @@ impl ShutdownConfig {
 
     #[cfg(not(unix))]
     pub(crate) fn signal_stream(&self) -> Option<impl Stream<Item = Sig>> {
-        use tokio_stream::StreamExt;
         use futures::stream::once;
+        use tokio_stream::StreamExt;
 
-        self.ctrlc.then(|| tokio::signal::ctrl_c())
+        self.ctrlc
+            .then(|| tokio::signal::ctrl_c())
             .map(|signal| once(Box::pin(signal)))
-            .map(|stream| stream.filter_map(|result| {
-                result.map(|_| Sig::Int)
-                    .map_err(|e| warn!("Failed to enable `ctrl-c` shutdown signal: {}", e))
-                    .ok()
-            }))
+            .map(|stream| {
+                stream.filter_map(|result| {
+                    result
+                        .map(|_| Sig::Int)
+                        .map_err(|e| warn!("Failed to enable `ctrl-c` shutdown signal: {}", e))
+                        .ok()
+                })
+            })
     }
 }

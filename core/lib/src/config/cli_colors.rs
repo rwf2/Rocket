@@ -40,7 +40,7 @@ impl fmt::Display for CliColors {
         match self {
             CliColors::Always => write!(f, "always"),
             CliColors::Auto => write!(f, "auto"),
-            CliColors::Never => write!(f, "never")
+            CliColors::Never => write!(f, "never"),
         }
     }
 }

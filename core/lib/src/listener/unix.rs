@@ -5,7 +5,7 @@ use either::{Either, Left, Right};
 use tokio::time::{sleep, Duration};
 
 use crate::fs::NamedFile;
-use crate::listener::{Listener, Bind, Connection, Endpoint};
+use crate::listener::{Bind, Connection, Endpoint, Listener};
 use crate::util::unix;
 use crate::{Ignite, Rocket};
 
@@ -33,7 +33,7 @@ impl UnixListener {
         let lock = if reuse {
             let lock_ext = match path.extension().and_then(|s| s.to_str()) {
                 Some(ext) if !ext.is_empty() => format!("{}.lock", ext),
-                _ => "lock".to_string()
+                _ => "lock".to_string(),
             };
 
             let mut opts = tokio::fs::File::options();
@@ -56,18 +56,22 @@ impl UnixListener {
         // and this will succeed. So let's try a few times.
         let mut retries = 5;
         let listener = loop {
-            match tokio::net::UnixListener::bind(&path) {
+            match tokio::net::UnixListener::bind(path) {
                 Ok(listener) => break listener,
                 Err(e) if path.exists() && lock.is_none() => return Err(e),
                 Err(_) if retries > 0 => {
                     retries -= 1;
                     sleep(Duration::from_millis(100)).await;
-                },
+                }
                 Err(e) => return Err(e),
             }
         };
 
-        Ok(UnixListener { lock, listener, path: path.into() })
+        Ok(UnixListener {
+            lock,
+            listener,
+            path: path.into(),
+        })
     }
 }
 
@@ -76,11 +80,12 @@ impl Bind for UnixListener {
 
     async fn bind(rocket: &Rocket<Ignite>) -> Result<Self, Self::Error> {
         let endpoint = Self::bind_endpoint(rocket)?;
-        let path = endpoint.unix()
+        let path = endpoint
+            .unix()
             .ok_or_else(|| Right(io::Error::other("internal error: invalid endpoint")))?;
 
         let reuse: Option<bool> = rocket.figment().extract_inner("reuse").map_err(Left)?;
-        Ok(Self::bind(path, reuse.unwrap_or(true)).await.map_err(Right)?)
+        Self::bind(path, reuse.unwrap_or(true)).await.map_err(Right)
     }
 
     fn bind_endpoint(rocket: &Rocket<Ignite>) -> Result<Endpoint, Self::Error> {
@@ -100,7 +105,7 @@ impl Listener for UnixListener {
         Ok(self.listener.accept().await?.0)
     }
 
-    async fn connect(&self, accept:Self::Accept) -> io::Result<Self::Connection> {
+    async fn connect(&self, accept: Self::Accept) -> io::Result<Self::Connection> {
         Ok(accept)
     }
 

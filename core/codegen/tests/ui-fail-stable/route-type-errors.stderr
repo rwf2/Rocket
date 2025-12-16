@@ -2,37 +2,52 @@ error[E0277]: the trait bound `Q: FromParam<'_>` is not satisfied
  --> tests/ui-fail-stable/route-type-errors.rs:6:13
   |
 6 | fn f0(_foo: Q) {}
-  |             ^ the trait `FromParam<'_>` is not implemented for `Q`
+  |             ^ unsatisfied trait bound
   |
+help: the trait `FromParam<'_>` is not implemented for `Q`
+ --> tests/ui-fail-stable/route-type-errors.rs:3:1
+  |
+3 | struct Q;
+  | ^^^^^^^^
   = help: the following other types implement trait `FromParam<'a>`:
-            <&'a str as FromParam<'a>>
-            <IpAddr as FromParam<'a>>
-            <Ipv4Addr as FromParam<'a>>
-            <Ipv6Addr as FromParam<'a>>
-            <NonZero<i128> as FromParam<'a>>
-            <NonZero<i16> as FromParam<'a>>
-            <NonZero<i32> as FromParam<'a>>
-            <NonZero<i64> as FromParam<'a>>
+            `&'a str` implements `FromParam<'a>`
+            `IpAddr` implements `FromParam<'a>`
+            `Ipv4Addr` implements `FromParam<'a>`
+            `Ipv6Addr` implements `FromParam<'a>`
+            `NonZero<i128>` implements `FromParam<'a>`
+            `NonZero<i16>` implements `FromParam<'a>`
+            `NonZero<i32>` implements `FromParam<'a>`
+            `NonZero<i64>` implements `FromParam<'a>`
           and $N others
 
 error[E0277]: the trait bound `Q: FromSegments<'_>` is not satisfied
  --> tests/ui-fail-stable/route-type-errors.rs:9:13
   |
 9 | fn f1(_foo: Q) {}
-  |             ^ the trait `FromSegments<'_>` is not implemented for `Q`
+  |             ^ unsatisfied trait bound
   |
+help: the trait `FromSegments<'_>` is not implemented for `Q`
+ --> tests/ui-fail-stable/route-type-errors.rs:3:1
+  |
+3 | struct Q;
+  | ^^^^^^^^
   = help: the following other types implement trait `FromSegments<'r>`:
-            <PathBuf as FromSegments<'_>>
-            <Result<T, <T as FromSegments<'r>>::Error> as FromSegments<'r>>
-            <Segments<'r, rocket::http::uri::fmt::Path> as FromSegments<'r>>
-            <std::option::Option<T> as FromSegments<'r>>
+            `PathBuf` implements `FromSegments<'_>`
+            `Result<T, <T as FromSegments<'r>>::Error>` implements `FromSegments<'r>`
+            `Segments<'r, rocket::http::uri::fmt::Path>` implements `FromSegments<'r>`
+            `std::option::Option<T>` implements `FromSegments<'r>`
 
 error[E0277]: the trait bound `Q: FromFormField<'_>` is not satisfied
   --> tests/ui-fail-stable/route-type-errors.rs:12:13
    |
 12 | fn f2(_foo: Q) {}
-   |             ^ the trait `FromFormField<'_>` is not implemented for `Q`, which is required by `Q: FromForm<'_>`
+   |             ^ unsatisfied trait bound
    |
+help: the trait `FromFormField<'_>` is not implemented for `Q`
+  --> tests/ui-fail-stable/route-type-errors.rs:3:1
+   |
+ 3 | struct Q;
+   | ^^^^^^^^
    = help: the following other types implement trait `FromFormField<'v>`:
              &'v [u8]
              &'v str
@@ -49,8 +64,13 @@ error[E0277]: the trait bound `Q: FromFormField<'_>` is not satisfied
   --> tests/ui-fail-stable/route-type-errors.rs:15:13
    |
 15 | fn f3(_foo: Q) {}
-   |             ^ the trait `FromFormField<'_>` is not implemented for `Q`, which is required by `Q: FromForm<'_>`
+   |             ^ unsatisfied trait bound
    |
+help: the trait `FromFormField<'_>` is not implemented for `Q`
+  --> tests/ui-fail-stable/route-type-errors.rs:3:1
+   |
+ 3 | struct Q;
+   | ^^^^^^^^
    = help: the following other types implement trait `FromFormField<'v>`:
              &'v [u8]
              &'v str
@@ -67,8 +87,13 @@ error[E0277]: the trait bound `Q: FromData<'_>` is not satisfied
   --> tests/ui-fail-stable/route-type-errors.rs:18:13
    |
 18 | fn f4(_foo: Q) {}
-   |             ^ the trait `FromData<'_>` is not implemented for `Q`
+   |             ^ unsatisfied trait bound
    |
+help: the trait `FromData<'_>` is not implemented for `Q`
+  --> tests/ui-fail-stable/route-type-errors.rs:3:1
+   |
+ 3 | struct Q;
+   | ^^^^^^^^
    = help: the following other types implement trait `FromData<'r>`:
              &'r RawStr
              &'r [u8]
@@ -84,8 +109,13 @@ error[E0277]: the trait bound `Q: FromRequest<'_>` is not satisfied
   --> tests/ui-fail-stable/route-type-errors.rs:21:11
    |
 21 | fn f5(_a: Q, _foo: Q) {}
-   |           ^ the trait `FromRequest<'_>` is not implemented for `Q`
+   |           ^ unsatisfied trait bound
    |
+help: the trait `FromRequest<'_>` is not implemented for `Q`
+  --> tests/ui-fail-stable/route-type-errors.rs:3:1
+   |
+ 3 | struct Q;
+   | ^^^^^^^^
    = help: the following other types implement trait `FromRequest<'r>`:
              &'r Accept
              &'r ContentType
@@ -101,25 +131,35 @@ error[E0277]: the trait bound `Q: FromParam<'_>` is not satisfied
   --> tests/ui-fail-stable/route-type-errors.rs:21:20
    |
 21 | fn f5(_a: Q, _foo: Q) {}
-   |                    ^ the trait `FromParam<'_>` is not implemented for `Q`
+   |                    ^ unsatisfied trait bound
    |
+help: the trait `FromParam<'_>` is not implemented for `Q`
+  --> tests/ui-fail-stable/route-type-errors.rs:3:1
+   |
+ 3 | struct Q;
+   | ^^^^^^^^
    = help: the following other types implement trait `FromParam<'a>`:
-             <&'a str as FromParam<'a>>
-             <IpAddr as FromParam<'a>>
-             <Ipv4Addr as FromParam<'a>>
-             <Ipv6Addr as FromParam<'a>>
-             <NonZero<i128> as FromParam<'a>>
-             <NonZero<i16> as FromParam<'a>>
-             <NonZero<i32> as FromParam<'a>>
-             <NonZero<i64> as FromParam<'a>>
+             `&'a str` implements `FromParam<'a>`
+             `IpAddr` implements `FromParam<'a>`
+             `Ipv4Addr` implements `FromParam<'a>`
+             `Ipv6Addr` implements `FromParam<'a>`
+             `NonZero<i128>` implements `FromParam<'a>`
+             `NonZero<i16>` implements `FromParam<'a>`
+             `NonZero<i32>` implements `FromParam<'a>`
+             `NonZero<i64>` implements `FromParam<'a>`
            and $N others
 
 error[E0277]: the trait bound `Q: FromRequest<'_>` is not satisfied
   --> tests/ui-fail-stable/route-type-errors.rs:24:11
    |
 24 | fn f6(_a: Q, _foo: Q, _good: usize, _bar: Q) {}
-   |           ^ the trait `FromRequest<'_>` is not implemented for `Q`
+   |           ^ unsatisfied trait bound
    |
+help: the trait `FromRequest<'_>` is not implemented for `Q`
+  --> tests/ui-fail-stable/route-type-errors.rs:3:1
+   |
+ 3 | struct Q;
+   | ^^^^^^^^
    = help: the following other types implement trait `FromRequest<'r>`:
              &'r Accept
              &'r ContentType
@@ -135,32 +175,42 @@ error[E0277]: the trait bound `Q: FromParam<'_>` is not satisfied
   --> tests/ui-fail-stable/route-type-errors.rs:24:20
    |
 24 | fn f6(_a: Q, _foo: Q, _good: usize, _bar: Q) {}
-   |                    ^ the trait `FromParam<'_>` is not implemented for `Q`
+   |                    ^ unsatisfied trait bound
    |
+help: the trait `FromParam<'_>` is not implemented for `Q`
+  --> tests/ui-fail-stable/route-type-errors.rs:3:1
+   |
+ 3 | struct Q;
+   | ^^^^^^^^
    = help: the following other types implement trait `FromParam<'a>`:
-             <&'a str as FromParam<'a>>
-             <IpAddr as FromParam<'a>>
-             <Ipv4Addr as FromParam<'a>>
-             <Ipv6Addr as FromParam<'a>>
-             <NonZero<i128> as FromParam<'a>>
-             <NonZero<i16> as FromParam<'a>>
-             <NonZero<i32> as FromParam<'a>>
-             <NonZero<i64> as FromParam<'a>>
+             `&'a str` implements `FromParam<'a>`
+             `IpAddr` implements `FromParam<'a>`
+             `Ipv4Addr` implements `FromParam<'a>`
+             `Ipv6Addr` implements `FromParam<'a>`
+             `NonZero<i128>` implements `FromParam<'a>`
+             `NonZero<i16>` implements `FromParam<'a>`
+             `NonZero<i32>` implements `FromParam<'a>`
+             `NonZero<i64>` implements `FromParam<'a>`
            and $N others
 
 error[E0277]: the trait bound `Q: FromParam<'_>` is not satisfied
   --> tests/ui-fail-stable/route-type-errors.rs:24:43
    |
 24 | fn f6(_a: Q, _foo: Q, _good: usize, _bar: Q) {}
-   |                                           ^ the trait `FromParam<'_>` is not implemented for `Q`
+   |                                           ^ unsatisfied trait bound
    |
+help: the trait `FromParam<'_>` is not implemented for `Q`
+  --> tests/ui-fail-stable/route-type-errors.rs:3:1
+   |
+ 3 | struct Q;
+   | ^^^^^^^^
    = help: the following other types implement trait `FromParam<'a>`:
-             <&'a str as FromParam<'a>>
-             <IpAddr as FromParam<'a>>
-             <Ipv4Addr as FromParam<'a>>
-             <Ipv6Addr as FromParam<'a>>
-             <NonZero<i128> as FromParam<'a>>
-             <NonZero<i16> as FromParam<'a>>
-             <NonZero<i32> as FromParam<'a>>
-             <NonZero<i64> as FromParam<'a>>
+             `&'a str` implements `FromParam<'a>`
+             `IpAddr` implements `FromParam<'a>`
+             `Ipv4Addr` implements `FromParam<'a>`
+             `Ipv6Addr` implements `FromParam<'a>`
+             `NonZero<i128>` implements `FromParam<'a>`
+             `NonZero<i16>` implements `FromParam<'a>`
+             `NonZero<i32>` implements `FromParam<'a>`
+             `NonZero<i64>` implements `FromParam<'a>`
            and $N others

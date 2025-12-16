@@ -20,6 +20,7 @@ version = "0.28"
 features = ["signal"]
 
 [dependencies.rocket]
+package = "rocket-community"
 path = "../core/lib/"
 features = ["secrets", "tls", "mtls"]
 

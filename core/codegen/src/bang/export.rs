@@ -1,8 +1,8 @@
 use std::hash::Hash;
 
-use devise::Spanned;
 use devise::ext::SpanDiagnosticExt;
-use proc_macro2::{TokenStream, TokenTree, Punct};
+use devise::Spanned;
+use proc_macro2::{Punct, TokenStream, TokenTree};
 
 use crate::syn_ext::IdentExt;
 
@@ -20,13 +20,15 @@ pub fn _macro(input: proc_macro::TokenStream) -> devise::Result<TokenStream> {
     let mod_name = macro_name.uniqueify_with(|mut hasher| def.hash(&mut hasher));
 
     let macro_rules_tokens = def.tokens.clone();
-    let decl_macro_tokens: TokenStream = def.tokens.into_iter()
+    let decl_macro_tokens: TokenStream = def
+        .tokens
+        .into_iter()
         .map(|t| match t {
             TokenTree::Punct(p) if p.as_char() == ';' => {
                 let mut token = Punct::new(',', p.spacing());
                 token.set_span(p.span());
                 TokenTree::Punct(token)
-            },
+            }
             _ => t,
         })
         .collect();
@@ -45,7 +47,7 @@ pub fn _macro(input: proc_macro::TokenStream) -> devise::Result<TokenStream> {
         },
         Some(false) => quote! {
             pub use #mod_name::#internal_name as #macro_name;
-        }
+        },
     };
 
     Ok(quote! {

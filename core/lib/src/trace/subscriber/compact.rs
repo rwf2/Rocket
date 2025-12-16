@@ -1,20 +1,20 @@
 use std::fmt;
-use std::time::Instant;
 use std::num::NonZeroU64;
+use std::time::Instant;
 
-use tracing::{Event, Level, Metadata, Subscriber};
 use tracing::span::{Attributes, Id, Record};
-use tracing_subscriber::layer::{Layer, Context};
-use tracing_subscriber::registry::LookupSpan;
+use tracing::{Event, Level, Metadata, Subscriber};
 use tracing_subscriber::field::RecordFields;
+use tracing_subscriber::layer::{Context, Layer};
+use tracing_subscriber::registry::LookupSpan;
 
 use time::OffsetDateTime;
 use yansi::{Paint, Painted};
 
-use crate::util::Formatter;
-use crate::trace::subscriber::{Data, RocketFmt};
-use crate::http::{Status, StatusClass};
 use super::RecordDisplay;
+use crate::http::{Status, StatusClass};
+use crate::trace::subscriber::{Data, RocketFmt};
+use crate::util::Formatter;
 
 #[derive(Debug, Default, Copy, Clone)]
 pub struct Compact {
@@ -48,28 +48,42 @@ impl RocketFmt<Compact> {
         Formatter(move |f| {
             let (date, time) = (datetime.date(), datetime.time());
             let (year, month, day) = (date.year(), date.month() as u8, date.day());
-            let (h, m, s, l) = (time.hour(), time.minute(), time.second(), time.millisecond());
-            write!(f, "{year:04}-{month:02}-{day:02}T{h:02}:{m:02}:{s:02}.{l:03}Z")
+            let (h, m, s, l) = (
+                time.hour(),
+                time.minute(),
+                time.second(),
+                time.millisecond(),
+            );
+            write!(
+                f,
+                "{year:04}-{month:02}-{day:02}T{h:02}:{m:02}:{s:02}.{l:03}Z"
+            )
         })
     }
 
     fn in_debug(&self) -> bool {
-        self.level.map_or(false, |l| l >= Level::DEBUG)
+        self.level.is_some_and(|l| l >= Level::DEBUG)
     }
 
     fn prefix<'a>(&self, meta: &'a Metadata<'_>) -> impl fmt::Display + 'a {
         let style = self.style(meta);
-        let name = meta.name()
-            .starts_with("event ")
-            .then_some(meta.target())
-            .unwrap_or(meta.name());
+        let name = if meta.name().starts_with("event ") {
+            meta.target()
+        } else {
+            meta.name()
+        };
 
         let pad = self.level.map_or(0, |lvl| lvl.as_str().len());
         let timestamp = self.timestamp_for(OffsetDateTime::now_utc());
-        Formatter(move |f| write!(f, "{} {:>pad$} {} ",
-            timestamp.paint(style).primary().dim(),
-            meta.level().paint(style),
-            name.paint(style).primary()))
+        Formatter(move |f| {
+            write!(
+                f,
+                "{} {:>pad$} {} ",
+                timestamp.paint(style).primary().dim(),
+                meta.level().paint(style),
+                name.paint(style).primary()
+            )
+        })
     }
 
     fn chevron(&self, meta: &Metadata<'_>) -> Painted<&'static str> {
@@ -88,7 +102,8 @@ impl RocketFmt<Compact> {
 
 impl<S: Subscriber + for<'a> LookupSpan<'a>> Layer<S> for RocketFmt<Compact> {
     fn enabled(&self, metadata: &Metadata<'_>, _: Context<'_, S>) -> bool {
-        self.filter.would_enable(metadata.target(), metadata.level())
+        self.filter
+            .would_enable(metadata.target(), metadata.level())
             && (self.in_debug()
                 || self.request_span_id().is_none()
                 || metadata.name() == "request"
@@ -146,10 +161,12 @@ impl<S: Subscriber + for<'a> LookupSpan<'a>> Layer<S> for RocketFmt<Compact> {
         }
 
         if self.in_debug() {
-            println!("{}{} {}",
+            println!(
+                "{}{} {}",
                 self.prefix(span.metadata()),
                 self.chevron(span.metadata()),
-                self.compact_fields(span.metadata(), values));
+                self.compact_fields(span.metadata(), values)
+            );
         }
     }
 
@@ -182,7 +199,9 @@ impl<S: Subscriber + for<'a> LookupSpan<'a>> Layer<S> for RocketFmt<Compact> {
             let chevron = self.chevron(span.metadata());
             let arrow = "→".paint(s.primary().bright());
 
-            let status_class = data.fields["status"].parse().ok()
+            let status_class = data.fields["status"]
+                .parse()
+                .ok()
                 .and_then(Status::from_code)
                 .map(|status| status.class());
 
@@ -196,25 +215,20 @@ impl<S: Subscriber + for<'a> LookupSpan<'a>> Layer<S> for RocketFmt<Compact> {
                 None => s.primary(),
             };
 
-            let autohandle = Formatter(|f| {
-                match data.fields.get("autohandled") {
-                    Some("true") => write!(f, " {} {}", "via".paint(s.dim()), "GET".paint(s)),
-                    _ => Ok(())
-                }
+            let autohandle = Formatter(|f| match data.fields.get("autohandled") {
+                Some("true") => write!(f, " {} {}", "via".paint(s.dim()), "GET".paint(s)),
+                _ => Ok(()),
             });
 
-            let item = Formatter(|f| {
-                match &data.item {
-                    Some((kind, name)) => write!(f,
-                        "{} {} {arrow} ",
-                        kind.paint(s),
-                        name.paint(s.bold()),
-                    ),
-                    None => Ok(())
+            let item = Formatter(|f| match &data.item {
+                Some((kind, name)) => {
+                    write!(f, "{} {} {arrow} ", kind.paint(s), name.paint(s.bold()),)
                 }
+                None => Ok(()),
             });
 
-            println!("{prefix}{chevron} ({} {}ms) {}{autohandle} {} {arrow} {item}{}",
+            println!(
+                "{prefix}{chevron} ({} {}ms) {}{autohandle} {} {arrow} {item}{}",
                 timestamp.paint(s).primary().dim(),
                 elapsed.as_millis(),
                 &data.fields["method"].paint(s),

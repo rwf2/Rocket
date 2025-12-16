@@ -1,5 +1,5 @@
-use std::path::{Path, PathBuf};
 use std::collections::{BTreeMap, HashMap};
+use std::path::{Path, PathBuf};
 
 use either::Either;
 
@@ -288,8 +288,8 @@ macro_rules! impl_from_uri_param_identity {
 use std::borrow::Cow;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6};
 use std::num::{
-    NonZeroIsize, NonZeroI8, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI128,
-    NonZeroUsize, NonZeroU8, NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU128,
+    NonZeroI128, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI8, NonZeroIsize, NonZeroU128,
+    NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU8, NonZeroUsize,
 };
 
 impl_from_uri_param_identity! {
@@ -378,7 +378,8 @@ impl<A, T: FromUriParam<fmt::Path, A>> FromUriParam<fmt::Path, A> for Option<T> 
 
 /// A no cost conversion allowing `T` to be used in place of an `Result<T, E>`.
 impl<A, E, T> FromUriParam<fmt::Path, A> for Result<T, E>
-    where T: FromUriParam<fmt::Path, A>
+where
+    T: FromUriParam<fmt::Path, A>,
 {
     type Target = T::Target;
 
@@ -389,7 +390,9 @@ impl<A, E, T> FromUriParam<fmt::Path, A> for Result<T, E>
 }
 
 impl<P: Part, A, B, T, U> FromUriParam<P, Either<A, B>> for Either<T, U>
-    where T: FromUriParam<P, A>, U: FromUriParam<P, B>
+where
+    T: FromUriParam<P, A>,
+    U: FromUriParam<P, B>,
 {
     type Target = Either<T::Target, U::Target>;
 

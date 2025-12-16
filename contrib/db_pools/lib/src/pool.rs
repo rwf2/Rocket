@@ -1,7 +1,10 @@
 use rocket::figment::Figment;
 
 #[allow(unused_imports)]
-use {std::time::Duration, crate::{Error, Config}};
+use {
+    crate::{Config, Error},
+    std::time::Duration,
+};
 
 /// Generic [`Database`](crate::Database) driver connection pool trait.
 ///
@@ -20,6 +23,7 @@ use {std::time::Duration, crate::{Error, Config}};
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
+/// # extern crate rocket_db_pools_community as rocket_db_pools;
 /// use rocket::figment::Figment;
 /// use rocket_db_pools::Pool;
 ///
@@ -64,6 +68,7 @@ use {std::time::Duration, crate::{Error, Config}};
 /// Concretely, this looks like:
 ///
 /// ```rust
+/// # extern crate rocket_db_pools_community as rocket_db_pools;
 /// use rocket::figment::Figment;
 /// use rocket_db_pools::{Pool, Config, Error};
 /// #
@@ -114,7 +119,7 @@ use {std::time::Duration, crate::{Error, Config}};
 /// }
 /// ```
 #[rocket::async_trait]
-pub trait Pool: Sized + Send + Sync + 'static {
+pub trait Pool: Sized + Send + 'static {
     /// The connection type managed by this pool, returned by [`Self::get()`].
     type Connection;
 
@@ -154,20 +159,26 @@ pub trait Pool: Sized + Send + Sync + 'static {
 
 #[cfg(feature = "deadpool")]
 mod deadpool_postgres {
-    use deadpool::{Runtime, managed::{Manager, Pool, PoolError, Object}};
-    use super::{Duration, Error, Config, Figment};
+    use super::{Config, Duration, Error, Figment};
+    use deadpool::{
+        managed::{Manager, Object, Pool, PoolError},
+        Runtime,
+    };
 
     #[cfg(feature = "diesel")]
     use diesel_async::pooled_connection::AsyncDieselConnectionManager;
 
-    pub trait DeadManager: Manager + Sized + Send + Sync + 'static {
+    pub trait DeadManager: Manager + Sized + Send + 'static {
         fn new(config: &Config) -> Result<Self, Self::Error>;
     }
 
     #[cfg(feature = "deadpool_postgres")]
     impl DeadManager for deadpool_postgres::Manager {
         fn new(config: &Config) -> Result<Self, Self::Error> {
-            Ok(Self::new(config.url.parse()?, deadpool_postgres::tokio_postgres::NoTls))
+            Ok(Self::new(
+                config.url.parse()?,
+                deadpool_postgres::tokio_postgres::NoTls,
+            ))
         }
     }
 
@@ -194,7 +205,10 @@ mod deadpool_postgres {
 
     #[rocket::async_trait]
     impl<M: DeadManager, C: From<Object<M>>> crate::Pool for Pool<M, C>
-        where M::Type: Send, C: Send + Sync + 'static, M::Error: std::error::Error
+    where
+        M::Type: Send,
+        C: Send + 'static,
+        M::Error: std::error::Error,
     {
         type Error = Error<PoolError<M::Error>>;
 
@@ -226,9 +240,9 @@ mod deadpool_postgres {
 
 #[cfg(feature = "sqlx")]
 mod sqlx {
-    use sqlx::ConnectOptions;
-    use super::{Duration, Error, Config, Figment};
+    use super::{Config, Duration, Error, Figment};
     use rocket::tracing::level_filters::LevelFilter;
+    use sqlx::ConnectOptions;
 
     type Options<D> = <<D as sqlx::Database>::Connection as sqlx::Connection>::Options;
 
@@ -271,7 +285,8 @@ mod sqlx {
                         LevelFilter::TRACE => log::LevelFilter::Trace,
                     };
 
-                    opts = opts.log_statements(log_level)
+                    opts = opts
+                        .log_statements(log_level)
                         .log_slow_statements(log_level, Duration::default());
                 }
             }
@@ -296,8 +311,8 @@ mod sqlx {
 
 #[cfg(feature = "mongodb")]
 mod mongodb {
-    use mongodb::{Client, options::ClientOptions};
-    use super::{Duration, Error, Config, Figment};
+    use super::{Config, Duration, Error, Figment};
+    use mongodb::{options::ClientOptions, Client};
 
     #[rocket::async_trait]
     impl crate::Pool for Client {
@@ -307,7 +322,9 @@ mod mongodb {
 
         async fn init(figment: &Figment) -> Result<Self, Self::Error> {
             let config = figment.extract::<Config>()?;
-            let mut opts = ClientOptions::parse(&config.url).await.map_err(Error::Init)?;
+            let mut opts = ClientOptions::parse(&config.url)
+                .await
+                .map_err(Error::Init)?;
             opts.min_pool_size = config.min_connections;
             opts.max_pool_size = Some(config.max_connections as u32);
             opts.max_idle_time = config.idle_timeout.map(Duration::from_secs);

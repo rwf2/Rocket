@@ -1,8 +1,8 @@
+use rocket::http::Accept;
+use rocket::http::{ContentType, Cookie, Status};
 use rocket::local::asynchronous::Client;
-use rocket::http::{Status, ContentType, Cookie};
 use rocket::response::Responder;
 use rocket::serde::json::Json;
-use rocket::http::Accept;
 
 #[derive(Responder)]
 pub enum Foo<'r> {
@@ -43,17 +43,23 @@ async fn responder_foo() {
     assert_eq!(r.content_type(), Some(ContentType::Binary));
     assert_eq!(r.body_mut().to_string().await.unwrap(), "just a test");
 
-    let mut r = Foo::Third { responder: "well, hi", ct: ContentType::JSON }
-        .respond_to(req)
-        .expect("response okay");
+    let mut r = Foo::Third {
+        responder: "well, hi",
+        ct: ContentType::JSON,
+    }
+    .respond_to(req)
+    .expect("response okay");
 
     assert_eq!(r.status(), Status::NotFound);
     assert_eq!(r.content_type(), Some(ContentType::HTML));
     assert_eq!(r.body_mut().to_string().await.unwrap(), "well, hi");
 
-    let mut r = Foo::Fourth { string: "goodbye", ct: ContentType::JSON }
-        .respond_to(req)
-        .expect("response okay");
+    let mut r = Foo::Fourth {
+        string: "goodbye",
+        ct: ContentType::JSON,
+    }
+    .respond_to(req)
+    .expect("response okay");
 
     assert_eq!(r.status().code, 105);
     assert_eq!(r.content_type(), Some(ContentType::JSON));
@@ -80,8 +86,10 @@ async fn responder_bar() {
         responder: Foo::Second("foo foo".into()),
         other: ContentType::HTML,
         third: Cookie::new("cookie", "here!"),
-        _yet_another: "uh..hi?".into()
-    }.respond_to(req).expect("response okay");
+        _yet_another: "uh..hi?".into(),
+    }
+    .respond_to(req)
+    .expect("response okay");
 
     assert_eq!(r.status(), Status::InternalServerError);
     assert_eq!(r.content_type(), Some(ContentType::Plain));
@@ -101,12 +109,17 @@ async fn responder_baz() {
     let local_req = client.get("/");
     let req = local_req.inner();
 
-    let mut r = Baz { responder: "just a custom" }
-        .respond_to(req)
-        .expect("response okay");
+    let mut r = Baz {
+        responder: "just a custom",
+    }
+    .respond_to(req)
+    .expect("response okay");
 
     assert_eq!(r.status(), Status::Ok);
-    assert_eq!(r.content_type(), Some(ContentType::new("application", "x-custom")));
+    assert_eq!(
+        r.content_type(),
+        Some(ContentType::new("application", "x-custom"))
+    );
     assert_eq!(r.body_mut().to_string().await.unwrap(), "just a custom");
 }
 

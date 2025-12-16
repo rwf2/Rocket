@@ -1,12 +1,12 @@
 error: parameter must be named
-       = help: use a name such as `_guard` or `_param`
+       ␛[1;34m= ␛[0m␛[1;36mhelp␛[0m␛[39m: ␛[0m␛[1;39muse a name such as `_guard` or `_param`␛[0m
  --> tests/ui-fail-stable/bad-ignored-segments.rs:6:12
   |
 6 | #[get("/c?<_>")]
   |            ^
 
 error: parameter must be named
-       = help: use a name such as `_guard` or `_param`
+       ␛[1;34m= ␛[0m␛[1;36mhelp␛[0m␛[39m: ␛[0m␛[1;39muse a name such as `_guard` or `_param`␛[0m
  --> tests/ui-fail-stable/bad-ignored-segments.rs:9:22
   |
 9 | #[post("/d", data = "<_>")]

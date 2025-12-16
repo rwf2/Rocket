@@ -8,11 +8,19 @@ pub struct Peekable<const N: usize, R> {
 
 impl<const N: usize, R: AsyncRead + Unpin> Peekable<N, R> {
     pub fn new(reader: R) -> Self {
-        Self { buffer: Vec::new(), complete: false, reader }
+        Self {
+            buffer: Vec::new(),
+            complete: false,
+            reader,
+        }
     }
 
     pub fn with_buffer(buffer: Vec<u8>, complete: bool, reader: R) -> Self {
-        Self { buffer, complete, reader }
+        Self {
+            buffer,
+            complete,
+            reader,
+        }
     }
 
     pub async fn peek(&mut self, num: usize) -> &[u8] {
@@ -34,8 +42,8 @@ impl<const N: usize, R: AsyncRead + Unpin> Peekable<N, R> {
                 Ok(0) => {
                     self.complete = self.buffer.capacity() > self.buffer.len();
                     break;
-                },
-                Ok(_) => { /* continue */ },
+                }
+                Ok(_) => { /* continue */ }
                 Err(e) => {
                     error!("failed to read into peek buffer: {:?}.", e);
                     break;

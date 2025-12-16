@@ -1,16 +1,16 @@
 //! Types and traits for request parsing and handling.
 
-mod request;
+mod atomic_method;
 mod from_param;
 mod from_request;
-mod atomic_method;
+mod request;
 
 #[cfg(test)]
 mod tests;
 
-pub use self::request::Request;
-pub use self::from_request::{FromRequest, Outcome};
 pub use self::from_param::{FromParam, FromSegments};
+pub use self::from_request::{FromRequest, Outcome};
+pub use self::request::Request;
 
 #[doc(hidden)]
 pub use rocket_codegen::FromParam;
@@ -18,8 +18,8 @@ pub use rocket_codegen::FromParam;
 #[doc(inline)]
 pub use crate::response::flash::FlashMessage;
 
-pub(crate) use self::request::ConnectionMeta;
 pub(crate) use self::atomic_method::AtomicMethod;
+pub(crate) use self::request::ConnectionMeta;
 
 crate::export! {
     /// Store and immediately retrieve a vector-like value `$v` (`String` or
@@ -37,6 +37,7 @@ crate::export! {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::request::{local_cache, local_cache_once};
     /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
     /// # let request = c.get("/");
@@ -87,6 +88,7 @@ crate::export! {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::request::local_cache_once;
     /// # let c = rocket::local::blocking::Client::debug_with(vec![]).unwrap();
     /// # let request = c.get("/");

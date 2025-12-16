@@ -1,3 +1,5 @@
+#![allow(unexpected_cfgs)]
+
 use std::io;
 
 use futures::TryFutureExt;
@@ -49,11 +51,11 @@ impl<A: Listener, B: Listener> Listener for Either<A, B> {
         }
     }
 
-    async fn connect(&self, accept: Self::Accept) -> io::Result<Self::Connection>  {
+    async fn connect(&self, accept: Self::Accept) -> io::Result<Self::Connection> {
         match (self, accept) {
             (Either::Left(l), Either::Left(a)) => l.connect(a).map_ok(Either::Left).await,
             (Either::Right(l), Either::Right(a)) => l.connect(a).map_ok(Either::Right).await,
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
 

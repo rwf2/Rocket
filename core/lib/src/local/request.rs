@@ -10,6 +10,7 @@ macro_rules! pub_request_impl {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     #[doc = $import]
     ///
     /// # Client::_test(|_, request, _| {
@@ -31,6 +32,7 @@ macro_rules! pub_request_impl {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     #[doc = $import]
     ///
     /// # Client::_test(|_, request, _| {
@@ -56,6 +58,7 @@ macro_rules! pub_request_impl {
     /// Add the Content-Type header:
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     #[doc = $import]
     /// use rocket::http::Header;
     /// use rocket::http::ContentType;
@@ -82,6 +85,7 @@ macro_rules! pub_request_impl {
     /// Add the Content-Type header:
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     #[doc = $import]
     /// use rocket::http::ContentType;
     ///
@@ -109,6 +113,7 @@ macro_rules! pub_request_impl {
     /// Set the remote address to "8.8.8.8:80":
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use std::net::Ipv4Addr;
     ///
     #[doc = $import]
@@ -142,6 +147,7 @@ macro_rules! pub_request_impl {
     /// Add `user_id` cookie:
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     #[doc = $import]
     /// use rocket::http::Cookie;
     ///
@@ -165,6 +171,7 @@ macro_rules! pub_request_impl {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     #[doc = $import]
     /// use rocket::http::Cookie;
     ///
@@ -196,6 +203,7 @@ macro_rules! pub_request_impl {
     /// Add `user_id` as a private cookie:
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     #[doc = $import]
     /// use rocket::http::Cookie;
     ///
@@ -231,6 +239,7 @@ macro_rules! pub_request_impl {
     /// in at compile-time, use [`include_bytes!()`].
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use std::fs::File;
     ///
     #[doc = $import]
@@ -262,6 +271,7 @@ macro_rules! pub_request_impl {
     /// # Examples
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     #[doc = $import]
     /// use rocket::http::ContentType;
     ///
@@ -292,6 +302,7 @@ macro_rules! pub_request_impl {
     /// # Examples
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     #[doc = $import]
     /// use rocket::serde::Serialize;
     /// use rocket::http::ContentType;
@@ -326,6 +337,7 @@ macro_rules! pub_request_impl {
     /// # Examples
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     #[doc = $import]
     /// use rocket::serde::Serialize;
     /// use rocket::http::ContentType;
@@ -358,6 +370,7 @@ macro_rules! pub_request_impl {
     /// Set the body to be a JSON structure; also sets the Content-Type.
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     #[doc = $import]
     /// use rocket::http::ContentType;
     ///
@@ -380,6 +393,7 @@ macro_rules! pub_request_impl {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     #[doc = $import]
     ///
     /// # Client::_test(|_, request, _| {

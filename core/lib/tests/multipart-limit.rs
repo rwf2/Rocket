@@ -1,9 +1,10 @@
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket_community as rocket;
 
-use rocket::{Config, Build, Rocket};
-use rocket::{data::Limits, form::Form};
 use rocket::http::{ContentType, Status};
-use ubyte::{ToByteUnit, ByteUnit};
+use rocket::{data::Limits, form::Form};
+use rocket::{Build, Config, Rocket};
+use ubyte::{ByteUnit, ToByteUnit};
 
 #[derive(FromForm)]
 struct Data<'r> {
@@ -19,7 +20,8 @@ fn rocket_with_form_data_limit(limit: ByteUnit) -> Rocket<Build> {
     rocket::custom(Config {
         limits: Limits::default().limit("data-form", limit),
         ..Config::debug_default()
-    }).mount("/", routes![form])
+    })
+    .mount("/", routes![form])
 }
 
 #[test]
@@ -34,19 +36,30 @@ fn test_multipart_limit() {
         "hi",
         "--X-BOUNDARY--",
         "",
-    ].join("\r\n");
+    ]
+    .join("\r\n");
 
     let client = Client::debug(rocket_with_form_data_limit(body.len().bytes())).unwrap();
-    let response = client.post("/")
-        .header("multipart/form-data; boundary=X-BOUNDARY".parse::<ContentType>().unwrap())
+    let response = client
+        .post("/")
+        .header(
+            "multipart/form-data; boundary=X-BOUNDARY"
+                .parse::<ContentType>()
+                .unwrap(),
+        )
         .body(body)
         .dispatch();
 
     assert_eq!(response.into_string().unwrap(), "hi");
 
     let client = Client::debug(rocket_with_form_data_limit(body.len().bytes() - 1)).unwrap();
-    let response = client.post("/")
-        .header("multipart/form-data; boundary=X-BOUNDARY".parse::<ContentType>().unwrap())
+    let response = client
+        .post("/")
+        .header(
+            "multipart/form-data; boundary=X-BOUNDARY"
+                .parse::<ContentType>()
+                .unwrap(),
+        )
         .body(body)
         .dispatch();
 

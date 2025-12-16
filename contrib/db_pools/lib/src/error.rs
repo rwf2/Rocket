@@ -3,6 +3,7 @@ use std::fmt;
 /// A general error type for use by [`Pool`](crate::Pool#implementing)
 /// implementors and returned by the [`Connection`](crate::Connection) request
 /// guard.
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug)]
 pub enum Error<A, B = A> {
     /// An error that occurred during database/pool initialization.
@@ -26,7 +27,11 @@ impl<A: fmt::Display, B: fmt::Display> fmt::Display for Error<A, B> {
 }
 
 impl<A, B> std::error::Error for Error<A, B>
-    where A: fmt::Debug + fmt::Display, B: fmt::Debug + fmt::Display {}
+where
+    A: fmt::Debug + fmt::Display,
+    B: fmt::Debug + fmt::Display,
+{
+}
 
 impl<A, B> From<crate::figment::Error> for Error<A, B> {
     fn from(e: crate::figment::Error) -> Self {

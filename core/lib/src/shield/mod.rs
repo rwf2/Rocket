@@ -49,7 +49,7 @@
 //! configured instance of [`Shield`]:
 //!
 //! ```rust
-//! # #[macro_use] extern crate rocket;
+//! # #[macro_use] extern crate rocket_community as rocket;
 //! use rocket::shield::Shield;
 //!
 //! #[launch]
@@ -67,7 +67,7 @@
 //! `Shield`:
 //!
 //! ```rust
-//! # #[macro_use] extern crate rocket;
+//! # #[macro_use] extern crate rocket_community as rocket;
 //! use time::Duration;
 //!
 //! use rocket::http::uri::Uri;
@@ -97,8 +97,8 @@
 //!
 //! [OWASP]: https://www.owasp.org/index.php/OWASP_Secure_Headers_Project#tab=Headers
 
-mod shield;
 mod policy;
+mod shield;
 
-pub use self::shield::Shield;
 pub use self::policy::*;
+pub use self::shield::Shield;

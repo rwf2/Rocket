@@ -1,5 +1,5 @@
 [package]
-name = "rocket-fuzz"
+name = "rocket-fuzz-community"
 version = "0.0.0"
 authors = ["Automatically generated"]
 publish = false
@@ -22,6 +22,7 @@ afl = "*"
 honggfuzz = "*"
 
 [dependencies.rocket]
+package = "rocket-community"
 path = ".."
 
 # Prevent this from interfering with workspaces

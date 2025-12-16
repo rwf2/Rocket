@@ -5,31 +5,31 @@ error[E0277]: the trait bound `u8: Responder<'_, '_>` is not satisfied
   |            ^^ the trait `Responder<'_, '_>` is not implemented for `u8`
   |
   = help: the following other types implement trait `Responder<'r, 'o>`:
-            <&'o [u8] as Responder<'r, 'o>>
-            <&'o str as Responder<'r, 'o>>
-            <() as Responder<'r, 'static>>
-            <(ContentType, R) as Responder<'r, 'o>>
-            <(Status, R) as Responder<'r, 'o>>
-            <Accepted<R> as Responder<'r, 'o>>
-            <Arc<[u8]> as Responder<'r, 'static>>
-            <Arc<str> as Responder<'r, 'static>>
+            `&'o [u8]` implements `Responder<'r, 'o>`
+            `&'o str` implements `Responder<'r, 'o>`
+            `()` implements `Responder<'r, 'static>`
+            `(ContentType, R)` implements `Responder<'r, 'o>`
+            `(Status, R)` implements `Responder<'r, 'o>`
+            `Accepted<R>` implements `Responder<'r, 'o>`
+            `Arc<[u8]>` implements `Responder<'r, 'static>`
+            `Arc<str>` implements `Responder<'r, 'static>`
           and $N others
 
 error[E0277]: the trait bound `Header<'_>: From<u8>` is not satisfied
   --> tests/ui-fail-stable/responder-types.rs:11:5
    |
 11 |     other: u8,
-   |     ^^^^^^^^^ the trait `From<u8>` is not implemented for `Header<'_>`, which is required by `u8: Into<Header<'_>>`
+   |     ^^^^^^^^^ the trait `From<u8>` is not implemented for `Header<'_>`
    |
    = help: the following other types implement trait `From<T>`:
-             <Header<'static> as From<&Cookie<'_>>>
-             <Header<'static> as From<&ExpectCt>>
-             <Header<'static> as From<&Frame>>
-             <Header<'static> as From<&Hsts>>
-             <Header<'static> as From<&NoSniff>>
-             <Header<'static> as From<&Permission>>
-             <Header<'static> as From<&Prefetch>>
-             <Header<'static> as From<&Referrer>>
+             `Header<'_>` implements `From<&Cookie<'_>>`
+             `Header<'_>` implements `From<&ExpectCt>`
+             `Header<'_>` implements `From<&Frame>`
+             `Header<'_>` implements `From<&Hsts>`
+             `Header<'_>` implements `From<&NoSniff>`
+             `Header<'_>` implements `From<&Permission>`
+             `Header<'_>` implements `From<&Prefetch>`
+             `Header<'_>` implements `From<&Referrer>`
            and $N others
    = note: required for `u8` to implement `Into<Header<'_>>`
 note: required by a bound in `Response::<'r>::set_header`
@@ -45,31 +45,31 @@ error[E0277]: the trait bound `u8: Responder<'_, '_>` is not satisfied
    |            ^^ the trait `Responder<'_, '_>` is not implemented for `u8`
    |
    = help: the following other types implement trait `Responder<'r, 'o>`:
-             <&'o [u8] as Responder<'r, 'o>>
-             <&'o str as Responder<'r, 'o>>
-             <() as Responder<'r, 'static>>
-             <(ContentType, R) as Responder<'r, 'o>>
-             <(Status, R) as Responder<'r, 'o>>
-             <Accepted<R> as Responder<'r, 'o>>
-             <Arc<[u8]> as Responder<'r, 'static>>
-             <Arc<str> as Responder<'r, 'static>>
+             `&'o [u8]` implements `Responder<'r, 'o>`
+             `&'o str` implements `Responder<'r, 'o>`
+             `()` implements `Responder<'r, 'static>`
+             `(ContentType, R)` implements `Responder<'r, 'o>`
+             `(Status, R)` implements `Responder<'r, 'o>`
+             `Accepted<R>` implements `Responder<'r, 'o>`
+             `Arc<[u8]>` implements `Responder<'r, 'static>`
+             `Arc<str>` implements `Responder<'r, 'static>`
            and $N others
 
 error[E0277]: the trait bound `Header<'_>: From<u8>` is not satisfied
   --> tests/ui-fail-stable/responder-types.rs:17:5
    |
 17 |     other: u8,
-   |     ^^^^^^^^^ the trait `From<u8>` is not implemented for `Header<'_>`, which is required by `u8: Into<Header<'_>>`
+   |     ^^^^^^^^^ the trait `From<u8>` is not implemented for `Header<'_>`
    |
    = help: the following other types implement trait `From<T>`:
-             <Header<'static> as From<&Cookie<'_>>>
-             <Header<'static> as From<&ExpectCt>>
-             <Header<'static> as From<&Frame>>
-             <Header<'static> as From<&Hsts>>
-             <Header<'static> as From<&NoSniff>>
-             <Header<'static> as From<&Permission>>
-             <Header<'static> as From<&Prefetch>>
-             <Header<'static> as From<&Referrer>>
+             `Header<'_>` implements `From<&Cookie<'_>>`
+             `Header<'_>` implements `From<&ExpectCt>`
+             `Header<'_>` implements `From<&Frame>`
+             `Header<'_>` implements `From<&Hsts>`
+             `Header<'_>` implements `From<&NoSniff>`
+             `Header<'_>` implements `From<&Permission>`
+             `Header<'_>` implements `From<&Prefetch>`
+             `Header<'_>` implements `From<&Referrer>`
            and $N others
    = note: required for `u8` to implement `Into<Header<'_>>`
 note: required by a bound in `Response::<'r>::set_header`
@@ -82,17 +82,17 @@ error[E0277]: the trait bound `Header<'_>: From<std::string::String>` is not sat
   --> tests/ui-fail-stable/responder-types.rs:24:5
    |
 24 |     then: String,
-   |     ^^^^^^^^^^^^ the trait `From<std::string::String>` is not implemented for `Header<'_>`, which is required by `std::string::String: Into<Header<'_>>`
+   |     ^^^^^^^^^^^^ the trait `From<std::string::String>` is not implemented for `Header<'_>`
    |
    = help: the following other types implement trait `From<T>`:
-             <Header<'static> as From<&Cookie<'_>>>
-             <Header<'static> as From<&ExpectCt>>
-             <Header<'static> as From<&Frame>>
-             <Header<'static> as From<&Hsts>>
-             <Header<'static> as From<&NoSniff>>
-             <Header<'static> as From<&Permission>>
-             <Header<'static> as From<&Prefetch>>
-             <Header<'static> as From<&Referrer>>
+             `Header<'_>` implements `From<&Cookie<'_>>`
+             `Header<'_>` implements `From<&ExpectCt>`
+             `Header<'_>` implements `From<&Frame>`
+             `Header<'_>` implements `From<&Hsts>`
+             `Header<'_>` implements `From<&NoSniff>`
+             `Header<'_>` implements `From<&Permission>`
+             `Header<'_>` implements `From<&Prefetch>`
+             `Header<'_>` implements `From<&Referrer>`
            and $N others
    = note: required for `std::string::String` to implement `Into<Header<'_>>`
 note: required by a bound in `Response::<'r>::set_header`
@@ -105,19 +105,19 @@ error[E0277]: the trait bound `usize: Responder<'_, '_>` is not satisfied
   --> tests/ui-fail-stable/responder-types.rs:28:13
    |
 27 | #[get("/")]
-   | ----------- in this procedural macro expansion
+   | ----------- in this attribute macro expansion
 28 | fn foo() -> usize { 0 }
    |             ^^^^^ the trait `Responder<'_, '_>` is not implemented for `usize`
    |
    = help: the following other types implement trait `Responder<'r, 'o>`:
-             <&'o [u8] as Responder<'r, 'o>>
-             <&'o str as Responder<'r, 'o>>
-             <() as Responder<'r, 'static>>
-             <(ContentType, R) as Responder<'r, 'o>>
-             <(Status, R) as Responder<'r, 'o>>
-             <Accepted<R> as Responder<'r, 'o>>
-             <Arc<[u8]> as Responder<'r, 'static>>
-             <Arc<str> as Responder<'r, 'static>>
+             `&'o [u8]` implements `Responder<'r, 'o>`
+             `&'o str` implements `Responder<'r, 'o>`
+             `()` implements `Responder<'r, 'static>`
+             `(ContentType, R)` implements `Responder<'r, 'o>`
+             `(Status, R)` implements `Responder<'r, 'o>`
+             `Accepted<R>` implements `Responder<'r, 'o>`
+             `Arc<[u8]>` implements `Responder<'r, 'static>`
+             `Arc<str>` implements `Responder<'r, 'static>`
            and $N others
 note: required by a bound in `route::handler::<impl Outcome<Response<'o>, Status, (rocket::Data<'o>, Status)>>::from`
   --> $WORKSPACE/core/lib/src/route/handler.rs

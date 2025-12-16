@@ -2,9 +2,9 @@ use std::fs::File;
 use std::io::Cursor;
 use std::sync::Arc;
 
-use crate::http::{Status, ContentType, StatusClass};
-use crate::response::{self, Response};
+use crate::http::{ContentType, Status, StatusClass};
 use crate::request::Request;
+use crate::response::{self, Response};
 
 /// Trait implemented by types that generate responses for clients.
 ///
@@ -12,7 +12,7 @@ use crate::request::Request;
 /// handler:
 ///
 /// ```rust
-/// # #[macro_use] extern crate rocket;
+/// # #[macro_use] extern crate rocket_community as rocket;
 /// # type T = ();
 /// #
 /// // This works for any `T` that implements `Responder`.
@@ -29,7 +29,7 @@ use crate::request::Request;
 /// used as response headers:
 ///
 /// ```rust
-/// # #[macro_use] extern crate rocket;
+/// # #[macro_use] extern crate rocket_community as rocket;
 /// # #[cfg(feature = "json")] mod _main {
 /// # type Template = String;
 /// use rocket::http::ContentType;
@@ -168,6 +168,7 @@ use crate::request::Request;
 /// In practice, you are likely choosing between four signatures:
 ///
 /// ```rust
+/// # extern crate rocket_community as rocket;
 /// # use rocket::request::Request;
 /// # use rocket::response::{self, Responder};
 /// # struct A;
@@ -218,7 +219,7 @@ use crate::request::Request;
 /// `Person` directly from a handler:
 ///
 /// ```rust
-/// # #[macro_use] extern crate rocket;
+/// # #[macro_use] extern crate rocket_community as rocket;
 /// # type Person = String;
 /// #[get("/person/<id>")]
 /// fn person(id: usize) -> Option<Person> {
@@ -235,7 +236,7 @@ use crate::request::Request;
 /// following `Responder` implementation accomplishes this:
 ///
 /// ```rust
-/// # #[macro_use] extern crate rocket;
+/// # #[macro_use] extern crate rocket_community as rocket;
 /// #
 /// # #[derive(Debug)]
 /// # struct Person { name: String, age: u16 }
@@ -266,6 +267,7 @@ use crate::request::Request;
 /// in a slightly different manner:
 ///
 /// ```rust
+/// # extern crate rocket_community as rocket;
 /// use rocket::http::Header;
 /// use rocket::response::Responder;
 ///
@@ -330,7 +332,10 @@ impl<'r> Responder<'r, 'static> for String {
 #[repr(transparent)]
 struct DerefRef<T>(T);
 
-impl<T: std::ops::Deref> AsRef<[u8]> for DerefRef<T> where T::Target: AsRef<[u8]> {
+impl<T: std::ops::Deref> AsRef<[u8]> for DerefRef<T>
+where
+    T::Target: AsRef<[u8]>,
+{
     fn as_ref(&self) -> &[u8] {
         self.0.deref().as_ref()
     }
@@ -406,7 +411,7 @@ impl<'r> Responder<'r, 'static> for Box<[u8]> {
 /// does not support `Box<dyn Responder>`.
 ///
 /// ```rust,compile_fail
-/// #[macro_use] extern crate rocket;
+/// #[macro_use] extern crate rocket_community as rocket;
 ///
 /// use rocket::response::Responder;
 ///
@@ -419,7 +424,7 @@ impl<'r> Responder<'r, 'static> for Box<[u8]> {
 /// However, this `impl` allows boxing sized responders:
 ///
 /// ```rust
-/// #[macro_use] extern crate rocket;
+/// #[macro_use] extern crate rocket_community as rocket;
 ///
 /// #[derive(Responder)]
 /// enum Content {
@@ -467,7 +472,9 @@ impl<'r> Responder<'r, 'static> for () {
 
 /// Responds with the inner `Responder` in `Cow`.
 impl<'r, 'o: 'r, R: ?Sized + ToOwned> Responder<'r, 'o> for std::borrow::Cow<'o, R>
-    where &'o R: Responder<'r, 'o> + 'o, <R as ToOwned>::Owned: Responder<'r, 'o> + 'r
+where
+    &'o R: Responder<'r, 'o> + 'o,
+    <R as ToOwned>::Owned: Responder<'r, 'o> + 'r,
 {
     fn respond_to(self, req: &'r Request<'_>) -> response::Result<'o> {
         match self {
@@ -487,7 +494,7 @@ impl<'r, 'o: 'r, R: Responder<'r, 'o>> Responder<'r, 'o> for Option<R> {
                 let type_name = std::any::type_name::<Self>();
                 debug!(type_name, "`Option` responder returned `None`");
                 Err(Status::NotFound)
-            },
+            }
         }
     }
 }
@@ -495,7 +502,9 @@ impl<'r, 'o: 'r, R: Responder<'r, 'o>> Responder<'r, 'o> for Option<R> {
 /// Responds with the wrapped `Responder` in `self`, whether it is `Ok` or
 /// `Err`.
 impl<'r, 'o: 'r, 't: 'o, 'e: 'o, T, E> Responder<'r, 'o> for Result<T, E>
-    where T: Responder<'r, 't>, E: Responder<'r, 'e>
+where
+    T: Responder<'r, 't>,
+    E: Responder<'r, 'e>,
 {
     fn respond_to(self, req: &'r Request<'_>) -> response::Result<'o> {
         match self {
@@ -508,7 +517,9 @@ impl<'r, 'o: 'r, 't: 'o, 'e: 'o, T, E> Responder<'r, 'o> for Result<T, E>
 /// Responds with the wrapped `Responder` in `self`, whether it is `Left` or
 /// `Right`.
 impl<'r, 'o: 'r, 't: 'o, 'e: 'o, T, E> Responder<'r, 'o> for either::Either<T, E>
-    where T: Responder<'r, 't>, E: Responder<'r, 'e>
+where
+    T: Responder<'r, 't>,
+    E: Responder<'r, 'e>,
 {
     fn respond_to(self, req: &'r Request<'_>) -> response::Result<'o> {
         match self {
@@ -536,16 +547,14 @@ impl<'r> Responder<'r, 'static> for Status {
     fn respond_to(self, _: &'r Request<'_>) -> response::Result<'static> {
         match self.class() {
             StatusClass::ClientError | StatusClass::ServerError => Err(self),
-            StatusClass::Success if self.code < 206 => {
-                Response::build().status(self).ok()
-            }
-            StatusClass::Informational if self.code == 100 => {
-                Response::build().status(self).ok()
-            }
+            StatusClass::Success if self.code < 206 => Response::build().status(self).ok(),
+            StatusClass::Informational if self.code == 100 => Response::build().status(self).ok(),
             _ => {
-                error!(status = self.code,
+                error!(
+                    status = self.code,
                     "invalid status used as responder\n\
-                    status must be one of 100, 200..=205, 400..=599");
+                    status must be one of 100, 200..=205, 400..=599"
+                );
 
                 Err(Status::InternalServerError)
             }

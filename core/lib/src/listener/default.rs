@@ -1,23 +1,29 @@
 use core::fmt;
 
+use either::Either;
 use serde::Deserialize;
 use tokio_util::either::Either::{Left, Right};
-use either::Either;
 
+use crate::listener::{tcp::TcpListener, Bind, Endpoint};
 use crate::{Ignite, Rocket};
-use crate::listener::{Bind, Endpoint, tcp::TcpListener};
 
-#[cfg(unix)] use crate::listener::unix::UnixListener;
-#[cfg(feature = "tls")] use crate::tls::{TlsListener, TlsConfig};
+#[cfg(unix)]
+use crate::listener::unix::UnixListener;
+#[cfg(feature = "tls")]
+use crate::tls::{TlsConfig, TlsListener};
 
 mod private {
     use super::*;
     use tokio_util::either::Either;
 
-    #[cfg(feature = "tls")] type TlsListener<T> = super::TlsListener<T>;
-    #[cfg(not(feature = "tls"))] type TlsListener<T> = T;
-    #[cfg(unix)] type UnixListener = super::UnixListener;
-    #[cfg(not(unix))] type UnixListener = TcpListener;
+    #[cfg(feature = "tls")]
+    type TlsListener<T> = super::TlsListener<T>;
+    #[cfg(not(feature = "tls"))]
+    type TlsListener<T> = T;
+    #[cfg(unix)]
+    type UnixListener = super::UnixListener;
+    #[cfg(not(unix))]
+    type UnixListener = TcpListener;
 
     pub type Listener = Either<
         Either<TlsListener<TcpListener>, TlsListener<UnixListener>>,
@@ -76,20 +82,32 @@ type Connection = crate::listener::tcp::TcpStream;
 #[cfg(doc)]
 impl Bind for DefaultListener {
     type Error = Error;
-    async fn bind(_: &Rocket<Ignite>) -> Result<Self, Error>  { unreachable!() }
-    fn bind_endpoint(_: &Rocket<Ignite>) -> Result<Endpoint, Error> { unreachable!() }
+    async fn bind(_: &Rocket<Ignite>) -> Result<Self, Error> {
+        unreachable!()
+    }
+    fn bind_endpoint(_: &Rocket<Ignite>) -> Result<Endpoint, Error> {
+        unreachable!()
+    }
 }
 
 #[cfg(doc)]
 impl super::Listener for DefaultListener {
-    #[doc(hidden)] type Accept = Connection;
-    #[doc(hidden)] type Connection = Connection;
     #[doc(hidden)]
-    async fn accept(&self) -> std::io::Result<Connection>  { unreachable!() }
+    type Accept = Connection;
     #[doc(hidden)]
-    async fn connect(&self, _: Self::Accept) -> std::io::Result<Connection>  { unreachable!() }
+    type Connection = Connection;
     #[doc(hidden)]
-    fn endpoint(&self) -> std::io::Result<Endpoint> { unreachable!() }
+    async fn accept(&self) -> std::io::Result<Connection> {
+        unreachable!()
+    }
+    #[doc(hidden)]
+    async fn connect(&self, _: Self::Accept) -> std::io::Result<Connection> {
+        unreachable!()
+    }
+    #[doc(hidden)]
+    fn endpoint(&self) -> std::io::Result<Endpoint> {
+        unreachable!()
+    }
 }
 
 #[cfg(not(doc))]

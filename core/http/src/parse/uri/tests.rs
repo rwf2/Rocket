@@ -109,11 +109,13 @@ fn bad_parses() {
 
 #[test]
 fn test_parse_issue_924_samples() {
-    assert_parse!("/path?param={value}",
+    assert_parse!(
+        "/path?param={value}",
         "/path/?param={value}",
         "/some/path/?param={forgot-to-replace-placeholder}",
         "/path?param={value}&onemore={value}",
-        "/some/path/?tags=[]", "/some/path/?tags=[rocket,is,perfect]",
+        "/some/path/?tags=[]",
+        "/some/path/?tags=[rocket,is,perfect]",
         "/some/path/?tags=[rocket|is\\perfect^`]&users={arenot}",
         "/rocket/@user/",
         "/rocket/@user/?tags=[rocket,%F0%9F%98%8B]",

@@ -1,6 +1,9 @@
-use std::io;
 use std::future::Future;
-use std::{pin::Pin, task::{Context, Poll}};
+use std::io;
+use std::{
+    pin::Pin,
+    task::{Context, Poll},
+};
 
 use tokio::io::{AsyncRead, ReadBuf};
 
@@ -15,7 +18,7 @@ use crate::{Request, Response};
 /// body can be read directly:
 ///
 /// ```rust
-/// # #[macro_use] extern crate rocket;
+/// # #[macro_use] extern crate rocket_community as rocket;
 /// use std::io;
 ///
 /// use rocket::local::asynchronous::Client;
@@ -60,13 +63,14 @@ pub struct LocalResponse<'c> {
 }
 
 impl Drop for LocalResponse<'_> {
-    fn drop(&mut self) { }
+    fn drop(&mut self) {}
 }
 
 impl<'c> LocalResponse<'c> {
     pub(crate) fn new<F, O>(req: Request<'c>, f: F) -> impl Future<Output = LocalResponse<'c>>
-        where F: FnOnce(&'c Request<'c>) -> O + Send,
-              O: Future<Output = Response<'c>> + Send
+    where
+        F: FnOnce(&'c Request<'c>) -> O + Send,
+        O: Future<Output = Response<'c>> + Send,
     {
         // `LocalResponse` is a self-referential structure. In particular,
         // `response` and `cookies` can refer to `_request` and its contents. As
@@ -103,7 +107,11 @@ impl<'c> LocalResponse<'c> {
                 cookies.add_original(cookie.into_owned());
             }
 
-            LocalResponse { _request: boxed_req, cookies, response, }
+            LocalResponse {
+                _request: boxed_req,
+                cookies,
+                response,
+            }
         }
     }
 }
@@ -127,25 +135,30 @@ impl LocalResponse<'_> {
 
     #[cfg(feature = "json")]
     async fn _into_json<T>(self) -> Option<T>
-        where T: Send + serde::de::DeserializeOwned + 'static
+    where
+        T: Send + serde::de::DeserializeOwned + 'static,
     {
-        self.blocking_read(|r| serde_json::from_reader(r)).await?.ok()
+        self.blocking_read(|r| serde_json::from_reader(r))
+            .await?
+            .ok()
     }
 
     #[cfg(feature = "msgpack")]
     async fn _into_msgpack<T>(self) -> Option<T>
-        where T: Send + serde::de::DeserializeOwned + 'static
+    where
+        T: Send + serde::de::DeserializeOwned + 'static,
     {
         self.blocking_read(|r| rmp_serde::from_read(r)).await?.ok()
     }
 
     #[cfg(any(feature = "json", feature = "msgpack"))]
     async fn blocking_read<T, F>(mut self, f: F) -> Option<T>
-        where T: Send + 'static,
-              F: FnOnce(&mut dyn io::Read) -> T + Send + 'static
+    where
+        T: Send + 'static,
+        F: FnOnce(&mut dyn io::Read) -> T + Send + 'static,
     {
-        use tokio::sync::mpsc;
         use tokio::io::AsyncReadExt;
+        use tokio::sync::mpsc;
 
         struct ChanReader {
             last: Option<io::Cursor<Vec<u8>>>,

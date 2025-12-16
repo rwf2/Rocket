@@ -1,14 +1,14 @@
-use figment::{Figment, Profile, Provider, Metadata, error::Result};
-use figment::providers::{Serialized, Env, Toml, Format};
-use figment::value::{Map, Dict, magic::RelativePathBuf};
+use figment::providers::{Env, Format, Serialized, Toml};
+use figment::value::{magic::RelativePathBuf, Dict, Map};
+use figment::{error::Result, Figment, Metadata, Profile, Provider};
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "secrets")]
 use crate::config::SecretKey;
-use crate::config::{ShutdownConfig, Level, TraceFormat, Ident, CliColors};
-use crate::request::{self, Request, FromRequest};
-use crate::http::uncased::Uncased;
+use crate::config::{CliColors, Ident, Level, ShutdownConfig, TraceFormat};
 use crate::data::Limits;
+use crate::http::uncased::Uncased;
+use crate::request::{self, FromRequest, Request};
 
 /// Rocket server configuration.
 ///
@@ -133,6 +133,7 @@ pub struct Config {
     /// _always_ be done using a public constructor or update syntax:
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::Config;
     ///
     /// let config = Config {
@@ -153,13 +154,20 @@ impl Default for Config {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::Config;
     ///
     /// let config = Config::default();
     /// ```
     fn default() -> Config {
-        #[cfg(debug_assertions)] { Config::debug_default() }
-        #[cfg(not(debug_assertions))] { Config::release_default() }
+        #[cfg(debug_assertions)]
+        {
+            Config::debug_default()
+        }
+        #[cfg(not(debug_assertions))]
+        {
+            Config::release_default()
+        }
     }
 }
 
@@ -175,6 +183,7 @@ impl Config {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::Config;
     ///
     /// let config = Config::debug_default();
@@ -211,6 +220,7 @@ impl Config {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::Config;
     ///
     /// let config = Config::release_default();
@@ -242,6 +252,7 @@ impl Config {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::Config;
     /// use serde::Deserialize;
     ///
@@ -256,7 +267,10 @@ impl Config {
         Figment::from(Config::default())
             .merge(Toml::file(Env::var_or("ROCKET_CONFIG", "Rocket.toml")).nested())
             .merge(Env::prefixed("ROCKET_").ignore(&["PROFILE"]).global())
-            .select(Profile::from_env_or("ROCKET_PROFILE", Self::DEFAULT_PROFILE))
+            .select(Profile::from_env_or(
+                "ROCKET_PROFILE",
+                Self::DEFAULT_PROFILE,
+            ))
     }
 
     /// Attempts to extract a `Config` from `provider`, returning the result.
@@ -264,6 +278,7 @@ impl Config {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::Config;
     /// use rocket::figment::providers::{Toml, Format, Env};
     ///
@@ -292,6 +307,7 @@ impl Config {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::Config;
     /// use rocket::figment::providers::{Toml, Format, Env};
     ///
@@ -373,10 +389,19 @@ impl Config {
 
     /// An array of all of the stringy parameter names.
     pub const PARAMETERS: &'static [&'static str] = &[
-        Self::WORKERS, Self::MAX_BLOCKING, Self::KEEP_ALIVE, Self::IDENT,
-        Self::IP_HEADER, Self::PROXY_PROTO_HEADER, Self::LIMITS,
-        Self::SECRET_KEY, Self::TEMP_DIR, Self::LOG_LEVEL, Self::LOG_FORMAT,
-        Self::SHUTDOWN, Self::CLI_COLORS,
+        Self::WORKERS,
+        Self::MAX_BLOCKING,
+        Self::KEEP_ALIVE,
+        Self::IDENT,
+        Self::IP_HEADER,
+        Self::PROXY_PROTO_HEADER,
+        Self::LIMITS,
+        Self::SECRET_KEY,
+        Self::TEMP_DIR,
+        Self::LOG_LEVEL,
+        Self::LOG_FORMAT,
+        Self::SHUTDOWN,
+        Self::CLI_COLORS,
     ];
 
     /// The stringy parameter name for setting/extracting [`Config::profile`].
@@ -386,15 +411,16 @@ impl Config {
 
     /// An array of deprecated stringy parameter names.
     pub(crate) const DEPRECATED_KEYS: &'static [(&'static str, Option<&'static str>)] = &[
-        ("env", Some(Self::PROFILE)), ("log", Some(Self::LOG_LEVEL)),
-        ("read_timeout", None), ("write_timeout", None),
+        ("env", Some(Self::PROFILE)),
+        ("log", Some(Self::LOG_LEVEL)),
+        ("read_timeout", None),
+        ("write_timeout", None),
     ];
 
     /// Secret keys that have been used in docs or leaked otherwise.
     #[cfg(feature = "secrets")]
-    pub(crate) const KNOWN_SECRET_KEYS: &'static [&'static str] = &[
-        "hPRYyVRiMyxpw5sBB1XeCMN1kFsDCqKvBi2QJxBVHQk="
-    ];
+    pub(crate) const KNOWN_SECRET_KEYS: &'static [&'static str] =
+        &["hPRYyVRiMyxpw5sBB1XeCMN1kFsDCqKvBi2QJxBVHQk="];
 }
 
 impl Provider for Config {

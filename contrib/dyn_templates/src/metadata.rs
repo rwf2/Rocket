@@ -1,12 +1,12 @@
-use std::fmt;
 use std::borrow::Cow;
+use std::fmt;
 
-use rocket::{Request, Rocket, Ignite, Sentinel};
-use rocket::http::{Status, ContentType};
+use rocket::http::{ContentType, Status};
 use rocket::request::{self, FromRequest};
 use rocket::serde::Serialize;
+use rocket::{Ignite, Request, Rocket, Sentinel};
 
-use crate::{Template, context::ContextManager};
+use crate::{context::ContextManager, Template};
 
 /// Request guard for dynamically querying template metadata.
 ///
@@ -17,7 +17,7 @@ use crate::{Template, context::ContextManager};
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
-/// # #[macro_use] extern crate rocket_dyn_templates;
+/// # #[macro_use] extern crate rocket_dyn_templates_community as rocket_dyn_templates;
 /// use rocket_dyn_templates::{Template, Metadata, context};
 ///
 /// #[get("/")]
@@ -48,7 +48,7 @@ impl Metadata<'_> {
     ///
     /// ```rust
     /// # #[macro_use] extern crate rocket;
-    /// # extern crate rocket_dyn_templates;
+    /// # extern crate rocket_dyn_templates_community as rocket_dyn_templates;
     /// #
     /// use rocket_dyn_templates::Metadata;
     ///
@@ -68,7 +68,7 @@ impl Metadata<'_> {
     ///
     /// ```rust
     /// # #[macro_use] extern crate rocket;
-    /// # extern crate rocket_dyn_templates;
+    /// # extern crate rocket_dyn_templates_community as rocket_dyn_templates;
     /// #
     /// use rocket_dyn_templates::Metadata;
     ///
@@ -90,6 +90,7 @@ impl Metadata<'_> {
     ///
     /// ```rust
     /// # #[macro_use] extern crate rocket;
+    /// # extern crate rocket_dyn_templates_community as rocket_dyn_templates;
     /// use rocket::http::ContentType;
     /// use rocket_dyn_templates::{Metadata, Template, context};
     ///
@@ -118,17 +119,19 @@ impl Metadata<'_> {
     /// }
     /// ```
     pub fn render<S, C>(&self, name: S, context: C) -> Option<(ContentType, String)>
-        where S: Into<Cow<'static, str>>, C: Serialize
+    where
+        S: Into<Cow<'static, str>>,
+        C: Serialize,
     {
-        Template::render(name.into(), context).finalize(&self.0.context()).ok()
+        Template::render(name.into(), context)
+            .finalize(&self.0.context())
+            .ok()
     }
 }
 
 impl fmt::Debug for Metadata<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_map()
-            .entries(&self.0.context().templates)
-            .finish()
+        f.debug_map().entries(&self.0.context().templates).finish()
     }
 }
 
@@ -155,7 +158,9 @@ impl<'r> FromRequest<'r> for Metadata<'r> {
     type Error = ();
 
     async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, ()> {
-        request.rocket().state::<ContextManager>()
+        request
+            .rocket()
+            .state::<ContextManager>()
             .map(|cm| request::Outcome::Success(Metadata(cm)))
             .unwrap_or_else(|| {
                 error!(

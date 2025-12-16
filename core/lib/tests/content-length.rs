@@ -1,5 +1,5 @@
 #[macro_use]
-extern crate rocket;
+extern crate rocket_community as rocket;
 
 #[get("/")]
 fn index() -> String {

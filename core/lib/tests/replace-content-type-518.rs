@@ -1,24 +1,34 @@
-use rocket::{Rocket, Build};
+extern crate rocket_community as rocket;
+
 use rocket::{fairing::AdHoc, http::ContentType, local::blocking::Client};
+use rocket::{Build, Rocket};
 
 #[rocket::post("/", data = "<_data>", format = "json")]
-fn index(_data: rocket::Data<'_>) -> &'static str { "json" }
+fn index(_data: rocket::Data<'_>) -> &'static str {
+    "json"
+}
 
 #[rocket::post("/", data = "<_data>", rank = 2)]
-fn other_index(_data: rocket::Data<'_>) -> &'static str { "other" }
+fn other_index(_data: rocket::Data<'_>) -> &'static str {
+    "other"
+}
 
 fn rocket() -> Rocket<Build> {
     rocket::build()
         .mount("/", rocket::routes![index, other_index])
-        .attach(AdHoc::on_request("Change CT", |req, _| Box::pin(async move {
-            let need_ct = req.content_type().is_none();
-            if req.uri().path().starts_with("/add") {
-                req.set_uri(rocket::uri!(index));
-                if need_ct { req.add_header(ContentType::JSON); }
-            } else if need_ct {
-                req.replace_header(ContentType::JSON);
-            }
-        })))
+        .attach(AdHoc::on_request("Change CT", |req, _| {
+            Box::pin(async move {
+                let need_ct = req.content_type().is_none();
+                if req.uri().path().starts_with("/add") {
+                    req.set_uri(rocket::uri!(index));
+                    if need_ct {
+                        req.add_header(ContentType::JSON);
+                    }
+                } else if need_ct {
+                    req.replace_header(ContentType::JSON);
+                }
+            })
+        }))
 }
 
 #[test]

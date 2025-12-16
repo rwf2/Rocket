@@ -22,6 +22,7 @@ macro_rules! req_method {
         /// # Example
         ///
         /// ```rust,no_run
+        /// # extern crate rocket_community as rocket;
         #[doc = $import]
         ///
         /// # Client::_test(|client, _, _| {
@@ -61,6 +62,7 @@ macro_rules! pub_client_impl {
     /// the `Error` is returned.
     ///
     /// ```rust,no_run
+    /// # extern crate rocket_community as rocket;
     #[doc = $import]
     ///
     /// let rocket = rocket::build();
@@ -91,6 +93,7 @@ macro_rules! pub_client_impl {
     /// errors, the `Error` is returned.
     ///
     /// ```rust,no_run
+    /// # extern crate rocket_community as rocket;
     #[doc = $import]
     ///
     /// let rocket = rocket::build();
@@ -115,6 +118,7 @@ macro_rules! pub_client_impl {
     /// [`Shutdown::notify()`]: crate::Shutdown::notify()
     ///
     /// ```rust,no_run
+    /// # extern crate rocket_community as rocket;
     #[doc = $import]
     ///
     /// # fn f(client: Client) {
@@ -150,6 +154,7 @@ macro_rules! pub_client_impl {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     #[doc = $import]
     ///
     /// # Client::_test(|client, _, _| {
@@ -172,6 +177,7 @@ macro_rules! pub_client_impl {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     #[doc = $import]
     ///
     /// # Client::_test(|client, _, _| {
@@ -203,6 +209,7 @@ macro_rules! pub_client_impl {
     /// # Example
     ///
     /// ```rust,no_run
+    /// # extern crate rocket_community as rocket;
     #[doc = $import]
     /// use rocket::http::Method;
     ///

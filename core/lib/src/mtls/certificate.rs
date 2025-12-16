@@ -1,8 +1,8 @@
 use ref_cast::RefCast;
 
-use crate::mtls::{x509, oid, bigint, Name, Result, Error};
-use crate::request::{Request, FromRequest, Outcome};
 use crate::http::Status;
+use crate::mtls::{bigint, oid, x509, Error, Name, Result};
+use crate::request::{FromRequest, Outcome, Request};
 
 /// A request guard for validated, verified client certificates.
 ///
@@ -35,7 +35,7 @@ use crate::http::Status;
 /// administrator, a `CertifiedAdmin` type can authorize as follow:
 ///
 /// ```rust
-/// # #[macro_use] extern crate rocket;
+/// # #[macro_use] extern crate rocket_community as rocket;
 /// use rocket::mtls::{self, bigint::BigUint, Certificate};
 /// use rocket::request::{Request, FromRequest, Outcome};
 /// use rocket::outcome::try_outcome;
@@ -78,7 +78,7 @@ use crate::http::Status;
 /// To retrieve certificate data in a route, use `Certificate` as a guard:
 ///
 /// ```rust
-/// # extern crate rocket;
+/// # extern crate rocket_community as rocket;
 /// # use rocket::get;
 /// use rocket::mtls::{self, Certificate};
 ///
@@ -114,7 +114,8 @@ impl<'r> FromRequest<'r> for Certificate<'r> {
     async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
         use crate::outcome::{try_outcome, IntoOutcome};
 
-        let certs = req.connection
+        let certs = req
+            .connection
             .peer_certs
             .as_ref()
             .or_forward(Status::Unauthorized);
@@ -167,7 +168,7 @@ impl<'a> Certificate<'a> {
     /// # Example
     ///
     /// ```rust
-    /// # extern crate rocket;
+    /// # extern crate rocket_community as rocket;
     /// # use rocket::get;
     /// use rocket::mtls::Certificate;
     ///
@@ -185,7 +186,7 @@ impl<'a> Certificate<'a> {
     /// # Example
     ///
     /// ```rust
-    /// # extern crate rocket;
+    /// # extern crate rocket_community as rocket;
     /// # use rocket::get;
     /// use rocket::mtls::Certificate;
     ///
@@ -204,7 +205,7 @@ impl<'a> Certificate<'a> {
     /// # Example
     ///
     /// ```rust
-    /// # extern crate rocket;
+    /// # extern crate rocket_community as rocket;
     /// # use rocket::get;
     /// use rocket::mtls::Certificate;
     ///
@@ -225,7 +226,7 @@ impl<'a> Certificate<'a> {
     /// # Example
     ///
     /// ```rust
-    /// # extern crate rocket;
+    /// # extern crate rocket_community as rocket;
     /// # use rocket::get;
     /// use rocket::mtls::Certificate;
     ///
@@ -245,7 +246,7 @@ impl<'a> Certificate<'a> {
     /// # Example
     ///
     /// ```rust
-    /// # extern crate rocket;
+    /// # extern crate rocket_community as rocket;
     /// # use rocket::get;
     /// use rocket::mtls::{oid, x509, Certificate};
     ///
@@ -279,7 +280,7 @@ impl<'a> Certificate<'a> {
     /// not.
     ///
     /// ```rust
-    /// # extern crate rocket;
+    /// # extern crate rocket_community as rocket;
     /// # use rocket::get;
     /// use rocket::mtls::Certificate;
     ///
@@ -302,7 +303,7 @@ impl<'a> Certificate<'a> {
     /// # Example
     ///
     /// ```rust
-    /// # extern crate rocket;
+    /// # extern crate rocket_community as rocket;
     /// # use rocket::get;
     /// use rocket::mtls::Certificate;
     ///

@@ -16,6 +16,7 @@
 //! be defined using `yield` and `for await` syntax:
 //!
 //! ```rust
+//! # extern crate rocket_community as rocket;
 //! use rocket::futures::stream::Stream;
 //! use rocket::response::stream::stream;
 //!
@@ -53,6 +54,7 @@
 //! `"hello"`s, one per second:
 //!
 //! ```rust
+//! # extern crate rocket_community as rocket;
 //! # use rocket::get;
 //! use rocket::tokio::time::{self, Duration};
 //! use rocket::response::stream::TextStream;
@@ -73,6 +75,7 @@
 //! The `TextStream![&'static str]` invocation expands to:
 //!
 //! ```rust
+//! # extern crate rocket_community as rocket;
 //! # use rocket::response::stream::TextStream;
 //! # use rocket::futures::stream::Stream;
 //! # use rocket::response::stream::stream;
@@ -84,6 +87,7 @@
 //! While the inner `TextStream! { .. }` invocation expands to:
 //!
 //! ```rust
+//! # extern crate rocket_community as rocket;
 //! # use rocket::response::stream::{TextStream, stream};
 //! TextStream::from(stream! { /* .. */ })
 //! # ;
@@ -97,6 +101,7 @@
 //! A stream can _yield_ borrowed values with no extra effort:
 //!
 //! ```rust
+//! # extern crate rocket_community as rocket;
 //! # use rocket::get;
 //! use rocket::State;
 //! use rocket::response::stream::TextStream;
@@ -114,6 +119,7 @@
 //! requires this fact be explicit with a lifetime annotation:
 //!
 //! ```rust
+//! # extern crate rocket_community as rocket;
 //! # use rocket::get;
 //! use rocket::State;
 //! use rocket::response::stream::TextStream;
@@ -164,6 +170,7 @@
 //! `hello` with shutdown detection:
 //!
 //! ```rust
+//! # extern crate rocket_community as rocket;
 //! # use rocket::get;
 //! use rocket::Shutdown;
 //! use rocket::response::stream::TextStream;
@@ -188,20 +195,20 @@
 //! }
 //! ```
 
-mod reader;
 mod bytes;
-mod text;
 mod one;
-mod sse;
 mod raw_sse;
+mod reader;
+mod sse;
+mod text;
 
 pub(crate) use self::raw_sse::*;
 
-pub use self::one::One;
-pub use self::text::TextStream;
 pub use self::bytes::ByteStream;
+pub use self::one::One;
 pub use self::reader::ReaderStream;
 pub use self::sse::{Event, EventStream};
+pub use self::text::TextStream;
 
 crate::export! {
     /// Retrofitted support for [`Stream`]s with `yield`, `for await` syntax.
@@ -229,6 +236,7 @@ crate::export! {
     /// # Examples
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::response::stream::stream;
     /// use rocket::futures::stream::Stream;
     ///
@@ -256,6 +264,7 @@ crate::export! {
     /// Using `?` on an `Err` short-circuits stream termination:
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use std::io;
     ///
     /// use rocket::response::stream::stream;

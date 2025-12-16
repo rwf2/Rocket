@@ -1,7 +1,7 @@
 use std::ops::{Deref, DerefMut};
 
 use crate::form::prelude::*;
-use crate::http::uri::fmt::{Query, FromUriParam};
+use crate::http::uri::fmt::{FromUriParam, Query};
 
 /// A form guard for parsing form types leniently.
 ///
@@ -28,7 +28,7 @@ use crate::http::uri::fmt::{Query, FromUriParam};
 /// otherwise strict parses lenient, for example, in `Option<Lenient<T>>`:
 ///
 /// ```rust
-/// # #[macro_use] extern crate rocket;
+/// # #[macro_use] extern crate rocket_community as rocket;
 /// use rocket::form::Lenient;
 ///
 /// #[derive(FromForm)]
@@ -51,7 +51,7 @@ impl<T> Lenient<T> {
     /// # Example
     ///
     /// ```rust
-    /// # #[macro_use] extern crate rocket;
+    /// # #[macro_use] extern crate rocket_community as rocket;
     /// use rocket::form::{Form, Lenient};
     ///
     /// #[derive(FromForm)]

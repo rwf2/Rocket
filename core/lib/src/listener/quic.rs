@@ -23,22 +23,22 @@
 //!
 //! mTLS is not yet supported via this implementation.
 
-use std::io;
 use std::fmt;
+use std::io;
 use std::net::SocketAddr;
 use std::pin::pin;
 
+use quic_h3::h3;
 use s2n_quic as quic;
 use s2n_quic_h3 as quic_h3;
-use quic_h3::h3 as h3;
 
 use bytes::Bytes;
 use futures::Stream;
 use tokio::sync::Mutex;
 use tokio_stream::StreamExt;
 
-use crate::tls::{TlsConfig, Error};
 use crate::listener::Endpoint;
+use crate::tls::{Error, TlsConfig};
 
 type H3Conn = h3::server::Connection<quic_h3::Connection, bytes::Bytes>;
 
@@ -67,7 +67,8 @@ impl QuicListener {
     pub async fn bind(address: SocketAddr, tls: TlsConfig) -> Result<Self, Error> {
         use quic::provider::tls::rustls::Server as H3TlsServer;
 
-        let cert_chain = tls.load_certs()?
+        let cert_chain = tls
+            .load_certs()?
             .into_iter()
             .map(|v| v.to_vec())
             .collect::<Vec<_>>();
@@ -98,9 +99,7 @@ impl QuicListener {
 
 impl QuicListener {
     pub async fn accept(&self) -> Option<quic::Connection> {
-        self.listener
-            .lock().await
-            .accept().await
+        self.listener.lock().await.accept().await
     }
 
     pub async fn connect(&self, accept: quic::Connection) -> io::Result<H3Stream> {
@@ -117,30 +116,39 @@ impl QuicListener {
 
 impl H3Stream {
     pub async fn accept(&mut self) -> io::Result<Option<H3Connection>> {
-        let remote = self.1.clone();
+        let remote = self.1;
         let ((parts, _), (tx, rx)) = match self.0.accept().await {
             Ok(Some((req, stream))) => (req.into_parts(), stream.split()),
             Ok(None) => return Ok(None),
             Err(e) => {
                 if matches!(e.try_get_code().map(|c| c.value()), Some(0 | 0x100)) {
-                    return Ok(None)
+                    return Ok(None);
                 }
 
                 return Err(io::Error::other(e));
             }
         };
 
-        Ok(Some(H3Connection { remote, parts, tx: QuicTx(tx), rx: QuicRx(rx) }))
+        Ok(Some(H3Connection {
+            remote,
+            parts,
+            tx: QuicTx(tx),
+            rx: QuicRx(rx),
+        }))
     }
 }
 
 impl QuicTx {
     pub async fn send_response<S>(&mut self, response: http::Response<S>) -> io::Result<()>
-        where S: Stream<Item = io::Result<Bytes>>
+    where
+        S: Stream<Item = io::Result<Bytes>>,
     {
         let (parts, body) = response.into_parts();
         let response = http::Response::from_parts(parts, ());
-        self.0.send_response(response).await.map_err(io::Error::other)?;
+        self.0
+            .send_response(response)
+            .await
+            .map_err(io::Error::other)?;
 
         let mut body = pin!(body);
         while let Some(bytes) = body.next().await {

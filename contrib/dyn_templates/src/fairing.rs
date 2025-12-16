@@ -1,11 +1,11 @@
-use rocket::{Rocket, Build, Orbit};
 use rocket::fairing::{self, Fairing, Info, Kind};
-use rocket::figment::{Source, value::magic::RelativePathBuf};
+use rocket::figment::{value::magic::RelativePathBuf, Source};
 use rocket::trace::Trace;
+use rocket::{Build, Orbit, Rocket};
 
 use crate::context::{Callback, Context, ContextManager};
-use crate::template::DEFAULT_TEMPLATE_DIR;
 use crate::engine::Engines;
+use crate::template::DEFAULT_TEMPLATE_DIR;
 
 /// The TemplateFairing initializes the template system on attach, running
 /// custom_callback after templates have been loaded. In debug mode, the fairing
@@ -22,9 +22,13 @@ pub struct TemplateFairing {
 impl Fairing for TemplateFairing {
     fn info(&self) -> Info {
         let kind = Kind::Ignite | Kind::Liftoff;
-        #[cfg(debug_assertions)] let kind = kind | Kind::Request;
+        #[cfg(debug_assertions)]
+        let kind = kind | Kind::Request;
 
-        Info { kind, name: "Templating" }
+        Info {
+            kind,
+            name: "Templating",
+        }
     }
 
     /// Initializes the template context. Templates will be searched for in the
@@ -33,7 +37,8 @@ impl Fairing for TemplateFairing {
     /// template engines. In debug mode, the `ContextManager::new` method
     /// initializes a directory watcher for auto-reloading of templates.
     async fn on_ignite(&self, rocket: Rocket<Build>) -> fairing::Result {
-        let configured_dir = rocket.figment()
+        let configured_dir = rocket
+            .figment()
             .extract_inner::<RelativePathBuf>("template_dir")
             .map(|path| path.relative());
 
@@ -55,7 +60,8 @@ impl Fairing for TemplateFairing {
     }
 
     async fn on_liftoff(&self, rocket: &Rocket<Orbit>) {
-        let cm = rocket.state::<ContextManager>()
+        let cm = rocket
+            .state::<ContextManager>()
             .expect("Template ContextManager registered in on_ignite");
 
         span_info!("templating" => {
@@ -66,7 +72,9 @@ impl Fairing for TemplateFairing {
 
     #[cfg(debug_assertions)]
     async fn on_request(&self, req: &mut rocket::Request<'_>, _data: &mut rocket::Data<'_>) {
-        let cm = req.rocket().state::<ContextManager>()
+        let cm = req
+            .rocket()
+            .state::<ContextManager>()
             .expect("Template ContextManager registered in on_ignite");
 
         cm.reload_if_needed(&self.callback);

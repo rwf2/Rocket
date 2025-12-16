@@ -1,0 +1,18 @@
+name: CVE Scanning for Rust
+
+on: [pull_request]
+
+jobs:
+  scan:
+    #runs-on: ubuntu-latest
+    #runs-on: [self-hosted, linux, X64]
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    strategy:
+      matrix:
+        BUILD_TARGET: [release]
+    outputs:
+      release_built: ${{ steps.set-output.outputs.release_built }}
+    steps:
+      - uses: actions/checkout@v5
+      - run: cargo install --force cargo-audit
+      - run: cargo audit --ignore "RUSTSEC-2023-0071"

@@ -1,8 +1,8 @@
 [package]
-name = "rocket_ws"
+name = "rocket_ws-community"
 version = "0.1.0"
 authors = ["Sergio Benitez <sb@sergio.bz>"]
-description = "WebSocket support for Rocket."
+description = "WebSocket support for Rocket. (Community Fork)"
 documentation = "https://api.rocket.rs/master/rocket_ws/"
 homepage = "https://rocket.rs"
 repository = "https://github.com/rwf2/Rocket/tree/master/contrib/ws"
@@ -23,7 +23,8 @@ tungstenite = ["tokio-tungstenite"]
 tokio-tungstenite = { version = "0.24", optional = true }
 
 [dependencies.rocket]
-version = "0.6.0-dev"
+package = "rocket-community"
+version = "0.6.0-rc1"
 path = "../../core/lib"
 default-features = false
 

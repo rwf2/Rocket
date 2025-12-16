@@ -1,8 +1,8 @@
 [package]
-name = "rocket_sync_db_pools_codegen"
+name = "rocket_sync_db_pools_codegen-community"
 version = "0.1.0"
 authors = ["Sergio Benitez <sb@sergio.bz>"]
-description = "Procedural macros for rocket_sync_db_pools."
+description = "Procedural macros for rocket_sync_db_pools. (Community Fork)"
 repository = "https://github.com/rwf2/Rocket/tree/master/contrib/sync_db_pools"
 readme = "../README.md"
 keywords = ["rocket", "framework", "database", "pools"]
@@ -23,5 +23,5 @@ devise = "0.4"
 [dev-dependencies]
 version_check = "0.9"
 trybuild = "1.0"
-rocket_sync_db_pools = { path = "../lib" }
-rocket = { path = "../../../core/lib" }
+rocket_sync_db_pools = { package = "rocket_sync_db_pools-community", path = "../lib" }
+rocket = { package = "rocket-community", path = "../../../core/lib" }

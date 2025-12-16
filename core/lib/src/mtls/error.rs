@@ -9,7 +9,7 @@ use crate::mtls::x509::{self, nom};
 /// guard type:
 ///
 /// ```rust
-/// # extern crate rocket;
+/// # extern crate rocket_community as rocket;
 /// # use rocket::get;
 /// use rocket::mtls::{self, Certificate};
 ///
@@ -68,7 +68,7 @@ impl std::error::Error for Error {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
             Error::Parse(e) => Some(e),
-            _ => None
+            _ => None,
         }
     }
 }

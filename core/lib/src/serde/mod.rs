@@ -16,6 +16,8 @@
 //! requires annotating structures with `#[serde(crate = "rocket::serde")]`:
 //!
 //! ```rust
+//! # extern crate rocket_community as rocket;
+//!
 //! use rocket::serde::{Serialize, Deserialize};
 //!
 //! #[derive(Serialize, Deserialize)]

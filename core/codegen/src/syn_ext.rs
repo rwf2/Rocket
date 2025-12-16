@@ -1,13 +1,13 @@
 //! Extensions to `syn` types.
 
-use std::ops::Deref;
-use std::hash::{Hash, Hasher};
 use std::borrow::Cow;
+use std::hash::{Hash, Hasher};
+use std::ops::Deref;
 
-use syn::{Ident, ext::IdentExt as _, visit::Visit};
-use proc_macro2::{Span, TokenStream};
 use devise::ext::{PathExt, TypeExt as _};
+use proc_macro2::{Span, TokenStream};
 use rocket_http::ext::IntoOwned;
+use syn::{ext::IdentExt as _, visit::Visit, Ident};
 
 pub trait IdentExt {
     fn prepend(&self, string: &str) -> syn::Ident;
@@ -115,8 +115,8 @@ impl FnArgExt for syn::FnArg {
         match self {
             syn::FnArg::Typed(arg) => match *arg.pat {
                 syn::Pat::Ident(ref pat) => Some((&pat.ident, &arg.ty)),
-                _ => None
-            }
+                _ => None,
+            },
             _ => None,
         }
     }
@@ -125,15 +125,18 @@ impl FnArgExt for syn::FnArg {
         match self {
             syn::FnArg::Typed(arg) => match *arg.pat {
                 syn::Pat::Wild(ref pat) => Some(pat),
-                _ => None
-            }
+                _ => None,
+            },
             _ => None,
         }
     }
 }
 
 fn macro_inner_ty(t: &syn::TypeMacro, names: &[&str], m: MacTyMapFn) -> Option<syn::Type> {
-    if !names.iter().any(|k| t.mac.path.last_ident().map_or(false, |i| i == k)) {
+    if !names
+        .iter()
+        .any(|k| t.mac.path.last_ident().is_some_and(|i| i == k))
+    {
         return None;
     }
 
@@ -153,7 +156,12 @@ impl TypeExt for syn::Type {
 
         impl<'m> Visitor<'_, 'm> {
             fn new(names: &'m [&'m str], mapper: MacTyMapFn) -> Self {
-                Visitor { parents: vec![], children: vec![], names, mapper }
+                Visitor {
+                    parents: vec![],
+                    children: vec![],
+                    names,
+                    mapper,
+                }
             }
         }
 
@@ -175,7 +183,10 @@ impl TypeExt for syn::Type {
                     }
                 }
 
-                self.children.push(Child { parent, ty: Cow::Borrowed(ty) });
+                self.children.push(Child {
+                    parent,
+                    ty: Cow::Borrowed(ty),
+                });
                 self.parents.push(Cow::Borrowed(ty));
                 syn::visit::visit_type(self, ty);
                 self.parents.pop();
@@ -203,7 +214,7 @@ impl TypeExt for syn::Type {
                     }
                     BareFn(_) | Never(_) => {
                         self.0 = true;
-                    },
+                    }
                     _ => syn::visit::visit_type(self, ty),
                 }
             }

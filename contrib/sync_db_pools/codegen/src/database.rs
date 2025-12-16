@@ -1,5 +1,5 @@
+use devise::{ext::SpanDiagnosticExt, Result, Spanned};
 use proc_macro::TokenStream;
-use devise::{Spanned, Result, ext::SpanDiagnosticExt};
 
 use crate::syn;
 
@@ -35,7 +35,7 @@ fn parse_invocation(attr: TokenStream, input: TokenStream) -> Result<DatabaseInv
 
     let structure = match input.data {
         syn::Data::Struct(s) => s,
-        _ => return Err(input.span().error(ONLY_ON_STRUCTS_MSG))
+        _ => return Err(input.span().error(ONLY_ON_STRUCTS_MSG)),
     };
 
     let inner_type = match structure.fields {
@@ -43,7 +43,13 @@ fn parse_invocation(attr: TokenStream, input: TokenStream) -> Result<DatabaseInv
             let first = fields.unnamed.first().expect("checked length");
             first.ty.clone()
         }
-        _ => return Err(structure.fields.span().error(ONLY_UNNAMED_FIELDS).help(EXAMPLE))
+        _ => {
+            return Err(structure
+                .fields
+                .span()
+                .error(ONLY_UNNAMED_FIELDS)
+                .help(EXAMPLE))
+        }
     };
 
     Ok(DatabaseInvocation {
@@ -73,7 +79,8 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
     let rocket = quote!(#root::rocket);
 
     let request_guard_type = quote_spanned! { span =>
-        #(#attrs)* #vis struct #guard_type(#[allow(dead_code)] #root::Connection<Self, #conn_type>);
+        #(#attrs)* #vis struct #guard_type(#[allow(dead_code,clippy::needless_borrow)]
+            #root::Connection<Self, #conn_type>);
     };
 
     let pool = quote_spanned!(span => #root::ConnectionPool<Self, #conn_type>);
@@ -126,5 +133,6 @@ pub fn database_attr(attr: TokenStream, input: TokenStream) -> Result<TokenStrea
                 <#conn>::abort(__r)
             }
         }
-    }.into())
+    }
+    .into())
 }

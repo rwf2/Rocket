@@ -35,7 +35,7 @@ pub enum Sig {
     /// The `SIGUSR1` Unix signal.
     Usr1,
     /// The `SIGUSR2` Unix signal.
-    Usr2
+    Usr2,
 }
 
 impl Sig {

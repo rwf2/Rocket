@@ -1,29 +1,30 @@
 mod chain;
-mod reader_stream;
 mod join;
+mod reader_stream;
 
 #[cfg(unix)]
 pub mod unix;
 
 pub use chain::Chain;
-pub use reader_stream::ReaderStream;
 pub use join::join;
+pub use reader_stream::ReaderStream;
 
 #[track_caller]
 pub fn spawn_inspect<E, F, Fut>(or: F, future: Fut)
-    where F: FnOnce(&E) + Send + Sync + 'static,
-          E: Send + Sync + 'static,
-        Fut: std::future::Future<Output = Result<(), E>> + Send + 'static,
+where
+    F: FnOnce(&E) + Send + Sync + 'static,
+    E: Send + Sync + 'static,
+    Fut: std::future::Future<Output = Result<(), E>> + Send + 'static,
 {
     use futures::TryFutureExt;
     tokio::spawn(future.inspect_err(or));
 }
 
-use std::{fmt, io};
-use std::pin::pin;
-use std::future::Future;
 use either::Either;
 use futures::future;
+use std::future::Future;
+use std::pin::pin;
+use std::{fmt, io};
 
 pub trait FutureExt: Future + Sized {
     /// Await `self` or `other`, whichever finishes first.
@@ -35,7 +36,8 @@ pub trait FutureExt: Future + Sized {
     }
 
     async fn race_io<T, K: Future>(self, trigger: K) -> io::Result<T>
-        where Self: Future<Output = io::Result<T>>
+    where
+        Self: Future<Output = io::Result<T>>,
     {
         match future::select(pin!(self), pin!(trigger)).await {
             future::Either::Left((v, _)) => v,
@@ -44,7 +46,7 @@ pub trait FutureExt: Future + Sized {
     }
 }
 
-impl<F: Future + Sized> FutureExt for F { }
+impl<F: Future + Sized> FutureExt for F {}
 
 pub struct Formatter<F: Fn(&mut fmt::Formatter<'_>) -> fmt::Result>(pub F);
 

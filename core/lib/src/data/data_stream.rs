@@ -1,17 +1,17 @@
+use std::io::{self, Cursor};
+use std::path::Path;
 use std::pin::Pin;
 use std::task::{Context, Poll};
-use std::path::Path;
-use std::io::{self, Cursor};
 
 use futures::ready;
 use futures::stream::Stream;
-use tokio::fs::File;
-use tokio::io::{AsyncRead, AsyncWrite, AsyncReadExt, ReadBuf, Take};
-use tokio_util::io::StreamReader;
 use hyper::body::{Body, Bytes, Incoming as HyperBody};
+use tokio::fs::File;
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, ReadBuf, Take};
+use tokio_util::io::StreamReader;
 
-use crate::data::{Capped, N};
 use crate::data::transform::Transform;
+use crate::data::{Capped, N};
 use crate::util::Chain;
 
 use super::peekable::Peekable;
@@ -44,6 +44,7 @@ use super::transform::TransformBuf;
 ///
 /// [`DataStream::stream_to(&mut vec)`]: DataStream::stream_to()
 /// [`DataStream::stream_to(&mut file)`]: DataStream::stream_to()
+#[allow(clippy::large_enum_variant)]
 #[non_exhaustive]
 pub enum DataStream<'r> {
     #[doc(hidden)]
@@ -66,6 +67,7 @@ pub type BaseReader<'r> = Take<Chain<Cursor<Vec<u8>>, RawReader<'r>>>;
 pub type RawReader<'r> = StreamReader<RawStream<'r>, Bytes>;
 
 /// Raw underlying data stream.
+#[allow(clippy::large_enum_variant)]
 pub enum RawStream<'r> {
     Empty,
     Body(HyperBody),
@@ -96,7 +98,7 @@ impl<'r> DataStream<'r> {
     pub(crate) fn new(
         transformers: Vec<Pin<Box<dyn Transform + Send + Sync + 'r>>>,
         Peekable { buffer, reader, .. }: Peekable<512, RawReader<'r>>,
-        limit: u64
+        limit: u64,
     ) -> Self {
         let mut stream = DataStream::Base(Chain::new(Cursor::new(buffer), reader).take(limit));
         for transformer in transformers {
@@ -148,6 +150,7 @@ impl<'r> DataStream<'r> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::data::{Data, ToByteUnit};
     ///
     /// async fn f(data: Data<'_>) {
@@ -178,6 +181,7 @@ impl<'r> DataStream<'r> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use std::io;
     /// use rocket::data::{Data, ToByteUnit};
     ///
@@ -191,10 +195,14 @@ impl<'r> DataStream<'r> {
     /// ```
     #[inline(always)]
     pub async fn stream_to<W>(mut self, mut writer: W) -> io::Result<N>
-        where W: AsyncWrite + Unpin
+    where
+        W: AsyncWrite + Unpin,
     {
         let written = tokio::io::copy(&mut self, &mut writer).await?;
-        Ok(N { written, complete: !self.limit_exceeded().await? })
+        Ok(N {
+            written,
+            complete: !self.limit_exceeded().await?,
+        })
     }
 
     /// Like [`DataStream::stream_to()`] except that no end-of-stream check is
@@ -203,6 +211,7 @@ impl<'r> DataStream<'r> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use std::io;
     /// use rocket::data::{Data, ToByteUnit};
     ///
@@ -216,7 +225,8 @@ impl<'r> DataStream<'r> {
     /// ```
     #[inline(always)]
     pub async fn stream_precise_to<W>(mut self, mut writer: W) -> io::Result<u64>
-        where W: AsyncWrite + Unpin
+    where
+        W: AsyncWrite + Unpin,
     {
         tokio::io::copy(&mut self, &mut writer).await
     }
@@ -226,6 +236,7 @@ impl<'r> DataStream<'r> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use std::io;
     /// use rocket::data::{Data, ToByteUnit};
     ///
@@ -249,6 +260,7 @@ impl<'r> DataStream<'r> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use std::io;
     /// use rocket::data::{Data, ToByteUnit};
     ///
@@ -264,7 +276,10 @@ impl<'r> DataStream<'r> {
     pub async fn into_string(mut self) -> io::Result<Capped<String>> {
         let mut string = String::with_capacity(self.hint());
         let written = self.read_to_string(&mut string).await?;
-        let n = N { written: written as u64, complete: !self.limit_exceeded().await? };
+        let n = N {
+            written: written as u64,
+            complete: !self.limit_exceeded().await?,
+        };
         Ok(Capped { value: string, n })
     }
 
@@ -275,6 +290,7 @@ impl<'r> DataStream<'r> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use std::io;
     /// use rocket::data::{Data, ToByteUnit};
     ///
@@ -289,7 +305,9 @@ impl<'r> DataStream<'r> {
     /// ```
     pub async fn into_file<P: AsRef<Path>>(self, path: P) -> io::Result<Capped<File>> {
         let mut file = File::create(path).await?;
-        let n = self.stream_to(&mut tokio::io::BufWriter::new(&mut file)).await?;
+        let n = self
+            .stream_to(&mut tokio::io::BufWriter::new(&mut file))
+            .await?;
         Ok(Capped { value: file, n })
     }
 }
@@ -323,7 +341,10 @@ impl AsyncRead for TransformReader<'_> {
             return self.transformer.as_mut().poll_finish(cx, buf);
         }
 
-        let mut tbuf = TransformBuf { buf, cursor: init_fill };
+        let mut tbuf = TransformBuf {
+            buf,
+            cursor: init_fill,
+        };
         self.transformer.as_mut().transform(&mut tbuf)?;
         if buf.filled().len() == init_fill {
             cx.waker().wake_by_ref();
@@ -340,12 +361,10 @@ impl Stream for RawStream<'_> {
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         match self.get_mut() {
             // TODO: Expose trailer headers, somehow.
-            RawStream::Body(body) => {
-                Pin::new(body)
-                    .poll_frame(cx)
-                    .map_ok(|frame| frame.into_data().unwrap_or_else(|_| Bytes::new()))
-                    .map_err(io::Error::other)
-            },
+            RawStream::Body(body) => Pin::new(body)
+                .poll_frame(cx)
+                .map_ok(|frame| frame.into_data().unwrap_or_else(|_| Bytes::new()))
+                .map_err(io::Error::other),
             #[cfg(feature = "http3-preview")]
             RawStream::H3Body(stream) => Pin::new(stream).poll_next(cx),
             RawStream::Multipart(s) => Pin::new(s).poll_next(cx).map_err(io::Error::other),
@@ -359,7 +378,7 @@ impl Stream for RawStream<'_> {
                 let hint = body.size_hint();
                 let (lower, upper) = (hint.lower(), hint.upper());
                 (lower as usize, upper.map(|x| x as usize))
-            },
+            }
             #[cfg(feature = "http3-preview")]
             RawStream::H3Body(_) => (0, Some(0)),
             RawStream::Multipart(mp) => mp.size_hint(),

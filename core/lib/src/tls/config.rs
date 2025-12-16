@@ -1,16 +1,16 @@
 use std::io;
 use std::sync::Arc;
 
-use futures::TryFutureExt;
 use figment::value::magic::{Either, RelativePathBuf};
-use serde::{Deserialize, Serialize};
+use futures::TryFutureExt;
 use indexmap::IndexSet;
 use rustls::crypto::{ring, CryptoProvider};
 use rustls::pki_types::{CertificateDer, PrivateKeyDer};
-use rustls::server::{ServerSessionMemoryCache, ServerConfig, WebPkiClientVerifier};
+use rustls::server::{ServerConfig, ServerSessionMemoryCache, WebPkiClientVerifier};
+use serde::{Deserialize, Serialize};
 
+use crate::tls::error::{Error, KeyError, Result};
 use crate::tls::resolver::DynResolver;
-use crate::tls::error::{Result, Error, KeyError};
 
 /// TLS configuration: certificate chain, key, and ciphersuites.
 ///
@@ -53,7 +53,7 @@ use crate::tls::error::{Result, Error, KeyError};
 /// With a custom programmatic configuration, this might look like:
 ///
 /// ```rust
-/// # #[macro_use] extern crate rocket;
+/// # #[macro_use] extern crate rocket_community as rocket;
 /// use rocket::tls::{TlsConfig, CipherSuite};
 /// use rocket::figment::providers::Serialized;
 ///
@@ -70,6 +70,8 @@ use crate::tls::error::{Result, Error, KeyError};
 /// Or by creating a custom figment:
 ///
 /// ```rust
+/// # extern crate rocket_community as rocket;
+///
 /// use rocket::figment::Figment;
 /// use rocket::tls::TlsConfig;
 ///
@@ -154,12 +156,16 @@ impl TlsConfig {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
+    ///
     /// use rocket::tls::TlsConfig;
     ///
     /// let tls_config = TlsConfig::from_paths("/ssl/certs.pem", "/ssl/key.pem");
     /// ```
     pub fn from_paths<C, K>(certs: C, key: K) -> Self
-        where C: AsRef<std::path::Path>, K: AsRef<std::path::Path>,
+    where
+        C: AsRef<std::path::Path>,
+        K: AsRef<std::path::Path>,
     {
         TlsConfig {
             certs: Either::Left(certs.as_ref().to_path_buf().into()),
@@ -176,6 +182,8 @@ impl TlsConfig {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
+    ///
     /// use rocket::tls::TlsConfig;
     ///
     /// # let certs_buf = &[];
@@ -203,6 +211,8 @@ impl TlsConfig {
     /// Disable TLS v1.2 by selecting only TLS v1.3 cipher suites:
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
+    ///
     /// use rocket::tls::{TlsConfig, CipherSuite};
     ///
     /// # let certs_buf = &[];
@@ -214,6 +224,8 @@ impl TlsConfig {
     /// Enable only ChaCha20-Poly1305 based TLS v1.2 and TLS v1.3 cipher suites:
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
+    ///
     /// use rocket::tls::{TlsConfig, CipherSuite};
     ///
     /// # let certs_buf = &[];
@@ -229,6 +241,8 @@ impl TlsConfig {
     /// Later duplicates are ignored.
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
+    ///
     /// use rocket::tls::{TlsConfig, CipherSuite};
     ///
     /// # let certs_buf = &[];
@@ -250,7 +264,8 @@ impl TlsConfig {
     /// ]);
     /// ```
     pub fn with_ciphers<C>(mut self, ciphers: C) -> Self
-        where C: IntoIterator<Item = CipherSuite>
+    where
+        C: IntoIterator<Item = CipherSuite>,
     {
         self.ciphers = ciphers.into_iter().collect();
         self
@@ -273,6 +288,8 @@ impl TlsConfig {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
+    ///
     /// use rocket::tls::{TlsConfig, CipherSuite};
     ///
     /// # let certs_buf = &[];
@@ -292,6 +309,8 @@ impl TlsConfig {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
+    ///
     /// use rocket::tls::TlsConfig;
     /// use rocket::mtls::MtlsConfig;
     ///
@@ -313,6 +332,8 @@ impl TlsConfig {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
+    ///
     /// # use std::path::Path;
     /// use rocket::tls::TlsConfig;
     /// use rocket::figment::Figment;
@@ -341,6 +362,8 @@ impl TlsConfig {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
+    ///
     /// # use std::path::Path;
     /// use rocket::tls::TlsConfig;
     /// use rocket::figment::Figment;
@@ -370,6 +393,8 @@ impl TlsConfig {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
+    ///
     /// use rocket::tls::{TlsConfig, CipherSuite};
     ///
     /// # let certs_buf = &[];
@@ -395,6 +420,8 @@ impl TlsConfig {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
+    ///
     /// use rocket::tls::TlsConfig;
     ///
     /// # let certs_buf = &[];
@@ -418,6 +445,8 @@ impl TlsConfig {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
+    ///
     /// use std::path::Path;
     ///
     /// use rocket::tls::TlsConfig;
@@ -463,7 +492,7 @@ impl TlsConfig {
                     true => verifier.build()?,
                     false => verifier.allow_unauthenticated().build()?,
                 }
-            },
+            }
             None => WebPkiClientVerifier::no_client_auth(),
         };
 
@@ -505,14 +534,14 @@ impl TlsConfig {
         use rustls_pemfile::Item::*;
 
         let mut keys = rustls_pemfile::read_all(&mut self.key_reader()?)
-            .map(|result| result.map_err(KeyError::Io)
-                .and_then(|item| match item {
+            .map(|result| {
+                result.map_err(KeyError::Io).and_then(|item| match item {
                     Pkcs1Key(key) => Ok(key.into()),
                     Pkcs8Key(key) => Ok(key.into()),
                     Sec1Key(key) => Ok(key.into()),
-                    _ => Err(KeyError::BadItem(item))
+                    _ => Err(KeyError::BadItem(item)),
                 })
-            )
+            })
             .collect::<Result<Vec<PrivateKeyDer<'static>>, _>>()?;
 
         if keys.len() != 1 {
@@ -533,26 +562,38 @@ impl TlsConfig {
         CryptoProvider::get_default()
             .map(|arc| (**arc).clone())
             .unwrap_or_else(|| rustls::crypto::CryptoProvider {
-                cipher_suites: self.ciphers().map(|cipher| match cipher {
-                    CipherSuite::TLS_CHACHA20_POLY1305_SHA256 =>
-                        ring::cipher_suite::TLS13_CHACHA20_POLY1305_SHA256,
-                    CipherSuite::TLS_AES_256_GCM_SHA384 =>
-                        ring::cipher_suite::TLS13_AES_256_GCM_SHA384,
-                    CipherSuite::TLS_AES_128_GCM_SHA256 =>
-                        ring::cipher_suite::TLS13_AES_128_GCM_SHA256,
-                    CipherSuite::TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256 =>
-                        ring::cipher_suite::TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
-                    CipherSuite::TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256 =>
-                        ring::cipher_suite::TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
-                    CipherSuite::TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384 =>
-                        ring::cipher_suite::TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
-                    CipherSuite::TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256 =>
-                        ring::cipher_suite::TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-                    CipherSuite::TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384 =>
-                        ring::cipher_suite::TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-                    CipherSuite::TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 =>
-                        ring::cipher_suite::TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-                }).collect(),
+                cipher_suites: self
+                    .ciphers()
+                    .map(|cipher| match cipher {
+                        CipherSuite::TLS_CHACHA20_POLY1305_SHA256 => {
+                            ring::cipher_suite::TLS13_CHACHA20_POLY1305_SHA256
+                        }
+                        CipherSuite::TLS_AES_256_GCM_SHA384 => {
+                            ring::cipher_suite::TLS13_AES_256_GCM_SHA384
+                        }
+                        CipherSuite::TLS_AES_128_GCM_SHA256 => {
+                            ring::cipher_suite::TLS13_AES_128_GCM_SHA256
+                        }
+                        CipherSuite::TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256 => {
+                            ring::cipher_suite::TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256
+                        }
+                        CipherSuite::TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256 => {
+                            ring::cipher_suite::TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
+                        }
+                        CipherSuite::TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384 => {
+                            ring::cipher_suite::TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+                        }
+                        CipherSuite::TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256 => {
+                            ring::cipher_suite::TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+                        }
+                        CipherSuite::TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384 => {
+                            ring::cipher_suite::TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+                        }
+                        CipherSuite::TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256 => {
+                            ring::cipher_suite::TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+                        }
+                    })
+                    .collect(),
                 ..ring::default_provider()
             })
     }
@@ -566,7 +607,6 @@ impl CipherSuite {
         CipherSuite::TLS_CHACHA20_POLY1305_SHA256,
         CipherSuite::TLS_AES_256_GCM_SHA384,
         CipherSuite::TLS_AES_128_GCM_SHA256,
-
         // TLS v1.2 suites...
         CipherSuite::TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
         CipherSuite::TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
@@ -602,17 +642,16 @@ impl CipherSuite {
 }
 
 pub(crate) fn to_reader(
-    value: &Either<RelativePathBuf, Vec<u8>>
+    value: &Either<RelativePathBuf, Vec<u8>>,
 ) -> io::Result<Box<dyn io::BufRead + Sync + Send>> {
     match value {
         Either::Left(path) => {
             let path = path.relative();
-            let file = std::fs::File::open(&path)
-                .map_err(move |e| {
-                    let source = figment::Source::File(path);
-                    let msg = format!("error reading TLS file `{source}`: {e}");
-                    io::Error::new(e.kind(), msg)
-                })?;
+            let file = std::fs::File::open(&path).map_err(move |e| {
+                let source = figment::Source::File(path);
+                let msg = format!("error reading TLS file `{source}`: {e}");
+                io::Error::new(e.kind(), msg)
+            })?;
 
             Ok(Box::new(io::BufReader::new(file)))
         }
@@ -623,15 +662,20 @@ pub(crate) fn to_reader(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use figment::{Figment, providers::{Toml, Format}};
+    use figment::{
+        providers::{Format, Toml},
+        Figment,
+    };
 
     #[test]
     fn test_tls_config_from_file() {
-        use crate::tls::{TlsConfig, CipherSuite};
+        use crate::tls::{CipherSuite, TlsConfig};
         use pretty_assertions::assert_eq;
 
         figment::Jail::expect_with(|jail| {
-            jail.create_file("Rocket.toml", r#"
+            jail.create_file(
+                "Rocket.toml",
+                r#"
                 [global]
                 shutdown.ctrlc = 0
                 ident = false
@@ -644,24 +688,36 @@ mod tests {
                 forms = "1mib"
                 json = "10mib"
                 stream = "50kib"
-            "#)?;
+            "#,
+            )?;
 
             let config: TlsConfig = crate::Config::figment().extract_inner("tls")?;
-            assert_eq!(config, TlsConfig::from_paths("/ssl/cert.pem", "/ssl/key.pem"));
+            assert_eq!(
+                config,
+                TlsConfig::from_paths("/ssl/cert.pem", "/ssl/key.pem")
+            );
 
-            jail.create_file("Rocket.toml", r#"
+            jail.create_file(
+                "Rocket.toml",
+                r#"
                 [global.tls]
                 certs = "cert.pem"
                 key = "key.pem"
-            "#)?;
+            "#,
+            )?;
 
             let config: TlsConfig = crate::Config::figment().extract_inner("tls")?;
-            assert_eq!(config, TlsConfig::from_paths(
-                jail.directory().join("cert.pem"),
-                jail.directory().join("key.pem")
-            ));
+            assert_eq!(
+                config,
+                TlsConfig::from_paths(
+                    jail.directory().join("cert.pem"),
+                    jail.directory().join("key.pem")
+                )
+            );
 
-            jail.create_file("TLS.toml", r#"
+            jail.create_file(
+                "TLS.toml",
+                r#"
                 certs = "cert.pem"
                 key = "key.pem"
                 prefer_server_cipher_order = true
@@ -673,23 +729,29 @@ mod tests {
                     "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
                     "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
                 ]
-            "#)?;
+            "#,
+            )?;
 
             let config: TlsConfig = Figment::from(Toml::file("TLS.toml")).extract()?;
             let cert_path = jail.directory().join("cert.pem");
             let key_path = jail.directory().join("key.pem");
-            assert_eq!(config, TlsConfig::from_paths(cert_path, key_path)
-                 .with_preferred_server_cipher_order(true)
-                 .with_ciphers([
-                     CipherSuite::TLS_CHACHA20_POLY1305_SHA256,
-                     CipherSuite::TLS_AES_256_GCM_SHA384,
-                     CipherSuite::TLS_AES_128_GCM_SHA256,
-                     CipherSuite::TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
-                     CipherSuite::TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
-                     CipherSuite::TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-                 ]));
+            assert_eq!(
+                config,
+                TlsConfig::from_paths(cert_path, key_path)
+                    .with_preferred_server_cipher_order(true)
+                    .with_ciphers([
+                        CipherSuite::TLS_CHACHA20_POLY1305_SHA256,
+                        CipherSuite::TLS_AES_256_GCM_SHA384,
+                        CipherSuite::TLS_AES_128_GCM_SHA256,
+                        CipherSuite::TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
+                        CipherSuite::TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+                        CipherSuite::TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+                    ])
+            );
 
-            jail.create_file("Rocket.toml", r#"
+            jail.create_file(
+                "Rocket.toml",
+                r#"
                 [global]
                 shutdown.ctrlc = 0
                 ident = false
@@ -702,24 +764,36 @@ mod tests {
                 forms = "1mib"
                 json = "10mib"
                 stream = "50kib"
-            "#)?;
+            "#,
+            )?;
 
             let config: TlsConfig = crate::Config::figment().extract_inner("tls")?;
-            assert_eq!(config, TlsConfig::from_paths("/ssl/cert.pem", "/ssl/key.pem"));
+            assert_eq!(
+                config,
+                TlsConfig::from_paths("/ssl/cert.pem", "/ssl/key.pem")
+            );
 
-            jail.create_file("Rocket.toml", r#"
+            jail.create_file(
+                "Rocket.toml",
+                r#"
                 [global.tls]
                 certs = "cert.pem"
                 key = "key.pem"
-            "#)?;
+            "#,
+            )?;
 
             let config: TlsConfig = crate::Config::figment().extract_inner("tls")?;
-            assert_eq!(config, TlsConfig::from_paths(
-                jail.directory().join("cert.pem"),
-                jail.directory().join("key.pem")
-            ));
+            assert_eq!(
+                config,
+                TlsConfig::from_paths(
+                    jail.directory().join("cert.pem"),
+                    jail.directory().join("key.pem")
+                )
+            );
 
-            jail.create_file("Rocket.toml", r#"
+            jail.create_file(
+                "Rocket.toml",
+                r#"
                 [global.tls]
                 certs = "cert.pem"
                 key = "key.pem"
@@ -732,21 +806,25 @@ mod tests {
                     "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
                     "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
                 ]
-            "#)?;
+            "#,
+            )?;
 
             let config: TlsConfig = crate::Config::figment().extract_inner("tls")?;
             let cert_path = jail.directory().join("cert.pem");
             let key_path = jail.directory().join("key.pem");
-            assert_eq!(config, TlsConfig::from_paths(cert_path, key_path)
-                 .with_preferred_server_cipher_order(true)
-                 .with_ciphers([
-                     CipherSuite::TLS_CHACHA20_POLY1305_SHA256,
-                     CipherSuite::TLS_AES_256_GCM_SHA384,
-                     CipherSuite::TLS_AES_128_GCM_SHA256,
-                     CipherSuite::TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
-                     CipherSuite::TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
-                     CipherSuite::TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-                 ]));
+            assert_eq!(
+                config,
+                TlsConfig::from_paths(cert_path, key_path)
+                    .with_preferred_server_cipher_order(true)
+                    .with_ciphers([
+                        CipherSuite::TLS_CHACHA20_POLY1305_SHA256,
+                        CipherSuite::TLS_AES_256_GCM_SHA384,
+                        CipherSuite::TLS_AES_128_GCM_SHA256,
+                        CipherSuite::TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
+                        CipherSuite::TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+                        CipherSuite::TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+                    ])
+            );
 
             Ok(())
         });
@@ -754,8 +832,12 @@ mod tests {
 
     macro_rules! tls_example_private_pem {
         ($k:expr) => {
-            concat!(env!("CARGO_MANIFEST_DIR"), "/../../examples/tls/private/", $k)
-        }
+            concat!(
+                env!("CARGO_MANIFEST_DIR"),
+                "/../../examples/tls/private/",
+                $k
+            )
+        };
     }
 
     #[test]

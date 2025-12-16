@@ -1,10 +1,11 @@
 mod parse;
 
-use std::ops::Deref;
 use std::hash::Hash;
+use std::ops::Deref;
 
 use crate::name::Name;
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Parameter {
     Static(Name),
@@ -31,14 +32,14 @@ impl Parameter {
     pub fn r#static(&self) -> Option<&Name> {
         match self {
             Parameter::Static(s) => Some(s),
-            _ => None
+            _ => None,
         }
     }
 
     pub fn ignored(&self) -> Option<&Dynamic> {
         match self {
             Parameter::Ignored(d) => Some(d),
-            _ => None
+            _ => None,
         }
     }
 
@@ -46,7 +47,7 @@ impl Parameter {
         match self {
             Parameter::Dynamic(d) => Some(d),
             Parameter::Guard(g) => Some(g.source),
-            _ => None
+            _ => None,
         }
     }
 
@@ -54,7 +55,7 @@ impl Parameter {
         match self {
             Parameter::Dynamic(d) => Some(d),
             Parameter::Guard(g) => Some(&g.source),
-            _ => None
+            _ => None,
         }
     }
 
@@ -62,14 +63,14 @@ impl Parameter {
         match self {
             Parameter::Dynamic(d) => Some(d),
             Parameter::Guard(g) => Some(&mut g.source),
-            _ => None
+            _ => None,
         }
     }
 
     pub fn guard(&self) -> Option<&Guard> {
         match self {
             Parameter::Guard(g) => Some(g),
-            _ => None
+            _ => None,
         }
     }
 }
@@ -83,12 +84,16 @@ impl Dynamic {
 
 impl Guard {
     pub fn from(source: Dynamic, fn_ident: syn::Ident, ty: syn::Type) -> Self {
-        Guard { source, fn_ident, ty }
+        Guard {
+            source,
+            fn_ident,
+            ty,
+        }
     }
 }
 
 macro_rules! impl_derived {
-    ($T:ty => $U:ty = $v:ident) => (
+    ($T:ty => $U:ty = $v:ident) => {
         impl Deref for $T {
             type Target = $U;
 
@@ -103,14 +108,14 @@ macro_rules! impl_derived {
             }
         }
 
-        impl Eq for $T {  }
+        impl Eq for $T {}
 
         impl Hash for $T {
             fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
                 self.$v.hash(state)
             }
         }
-    )
+    };
 }
 
 impl_derived!(Dynamic => Name = name);

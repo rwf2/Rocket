@@ -1,14 +1,14 @@
-use std::{fmt, io};
-use std::task::{Context, Poll};
 use std::pin::Pin;
+use std::task::{Context, Poll};
+use std::{fmt, io};
 
 use futures::stream::Stream;
-use tokio::io::{AsyncRead, ReadBuf};
 use pin_project_lite::pin_project;
+use tokio::io::{AsyncRead, ReadBuf};
 
 use crate::request::Request;
-use crate::response::{self, Response, Responder};
 use crate::response::stream::One;
+use crate::response::{self, Responder, Response};
 
 pin_project! {
     /// An async reader that reads from a stream of async readers.
@@ -27,6 +27,7 @@ pin_project! {
     /// [`Stream`]: https://docs.rs/futures/0.3/futures/stream/trait.Stream.html
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use std::io::Cursor;
     ///
     /// use rocket::{Request, Response};
@@ -57,6 +58,7 @@ pin_project! {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// # use rocket::*;
     /// use rocket::response::stream::ReaderStream;
     /// use rocket::futures::stream::{repeat, StreamExt};
@@ -114,6 +116,7 @@ impl<R: Unpin> ReaderStream<One<R>> {
     /// Stream the bytes from a remote TCP connection:
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// # use rocket::*;
     /// use std::io;
     /// use std::net::SocketAddr;
@@ -135,27 +138,31 @@ impl<R: Unpin> ReaderStream<One<R>> {
 
 impl<S: Stream> From<S> for ReaderStream<S> {
     fn from(stream: S) -> Self {
-        ReaderStream { stream, state: State::Pending }
+        ReaderStream {
+            stream,
+            state: State::Pending,
+        }
     }
 }
 
 impl<'r, S: Stream> Responder<'r, 'r> for ReaderStream<S>
-    where S: Send + 'r, S::Item: AsyncRead + Send,
+where
+    S: Send + 'r,
+    S::Item: AsyncRead + Send,
 {
     fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r> {
-        Response::build()
-            .streamed_body(self)
-            .ok()
+        Response::build().streamed_body(self).ok()
     }
 }
 
 impl<S: Stream> AsyncRead for ReaderStream<S>
-    where S::Item: AsyncRead + Send
+where
+    S::Item: AsyncRead + Send,
 {
     fn poll_read(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-        buf: &mut ReadBuf<'_>
+        buf: &mut ReadBuf<'_>,
     ) -> Poll<io::Result<()>> {
         let mut me = self.project();
         loop {
@@ -170,12 +177,12 @@ impl<S: Stream> AsyncRead for ReaderStream<S>
                     match reader.poll_read(cx, buf) {
                         Poll::Ready(Ok(())) if buf.filled().len() == init => {
                             me.state.set(State::Pending);
-                        },
+                        }
                         Poll::Ready(Ok(())) => return Poll::Ready(Ok(())),
                         Poll::Ready(Err(e)) => return Poll::Ready(Err(e)),
                         Poll::Pending => return Poll::Pending,
                     }
-                },
+                }
                 StateProjection::Done => return Poll::Ready(Ok(())),
             }
         }
@@ -183,7 +190,8 @@ impl<S: Stream> AsyncRead for ReaderStream<S>
 }
 
 impl<S: Stream + fmt::Debug> fmt::Debug for ReaderStream<S>
-    where S::Item: fmt::Debug
+where
+    S::Item: fmt::Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ReaderStream")

@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use crate::{Rocket, Request, Response, Orbit, Config};
 use crate::fairing::{Fairing, Info, Kind};
-use crate::http::{Header, uncased::UncasedStr};
+use crate::http::{uncased::UncasedStr, Header};
 use crate::shield::{Frame, Hsts, NoSniff, Permission, Policy};
 use crate::trace::{Trace, TraceAll};
+use crate::{Config, Orbit, Request, Response, Rocket};
 
 /// A [`Fairing`] that injects browser security and privacy headers into all
 /// outgoing responses.
@@ -19,6 +19,8 @@ use crate::trace::{Trace, TraceAll};
 /// disable a header, use [`disable()`](Shield::disable()):
 ///
 /// ```rust
+/// # extern crate rocket_community as rocket;
+///
 /// use rocket::shield::Shield;
 /// use rocket::shield::{XssFilter, ExpectCt};
 ///
@@ -41,7 +43,7 @@ use crate::trace::{Trace, TraceAll};
 /// `Rocket`:
 ///
 /// ```rust
-/// # extern crate rocket;
+/// # extern crate rocket_community as rocket;
 /// # use rocket::shield::Shield;
 /// # let shield = Shield::default();
 /// rocket::build()
@@ -86,7 +88,8 @@ impl Default for Shield {
     /// # Example
     ///
     /// ```rust
-    /// # extern crate rocket;
+    /// # extern crate rocket_community as rocket;
+    ///
     /// use rocket::shield::Shield;
     ///
     /// let shield = Shield::default();
@@ -105,6 +108,8 @@ impl Shield {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
+    ///
     /// use rocket::shield::Shield;
     ///
     /// let shield = Shield::new();
@@ -124,6 +129,8 @@ impl Shield {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
+    ///
     /// use rocket::shield::Shield;
     /// use rocket::shield::NoSniff;
     ///
@@ -139,6 +146,8 @@ impl Shield {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
+    ///
     /// use rocket::shield::Shield;
     /// use rocket::shield::NoSniff;
     ///
@@ -154,6 +163,8 @@ impl Shield {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
+    ///
     /// use rocket::shield::Shield;
     /// use rocket::shield::{Permission, NoSniff, Frame};
     /// use rocket::shield::{Prefetch, ExpectCt, Referrer};
@@ -215,7 +226,7 @@ impl Fairing for Shield {
                     header.trace_warn();
                 });
 
-                continue
+                continue;
             }
 
             response.set_header(header.clone());

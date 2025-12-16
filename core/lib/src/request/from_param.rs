@@ -1,9 +1,9 @@
-use std::str::FromStr;
 use std::path::PathBuf;
+use std::str::FromStr;
 
-use crate::error::Empty;
 use crate::either::Either;
-use crate::http::uri::{Segments, error::PathError, fmt::Path};
+use crate::error::Empty;
+use crate::http::uri::{error::PathError, fmt::Path, Segments};
 
 /// Trait to convert a dynamic path segment string to a concrete value.
 ///
@@ -24,7 +24,7 @@ use crate::http::uri::{Segments, error::PathError, fmt::Path};
 /// handler for the dynamic `"/<id>"` path:
 ///
 /// ```rust
-/// # #[macro_use] extern crate rocket;
+/// # #[macro_use] extern crate rocket_community as rocket;
 /// #[get("/<id>")]
 /// fn hello(id: usize) -> String {
 /// # let _id = id;
@@ -65,11 +65,11 @@ use crate::http::uri::{Segments, error::PathError, fmt::Path};
 ///
 ///   * **`Either<A, B>`** _where_ **`A: FromParam`** _and_ **`B: FromParam`**
 ///
-///      Fails only when both `A::from_param` and `B::from_param` fail. If one
-///      of the two succeeds, the successful value is returned in
-///      `Either::Left(A)` or `Either::Right(B)` variant, respectively. If both
-///      fail, the error values from both calls are returned in a tuple in the
-///      `Err` variant.
+///     Fails only when both `A::from_param` and `B::from_param` fail. If one
+///     of the two succeeds, the successful value is returned in
+///     `Either::Left(A)` or `Either::Right(B)` variant, respectively. If both
+///     fail, the error values from both calls are returned in a tuple in the
+///     `Err` variant.
 ///
 /// `Either<A, B>` is particularly useful with a `B` type of `&str`, allowing
 /// you to retrieve the invalid path segment. Because `&str`'s implementation of
@@ -79,7 +79,7 @@ use crate::http::uri::{Segments, error::PathError, fmt::Path};
 /// For instance, consider the following route and handler:
 ///
 /// ```rust
-/// # #[macro_use] extern crate rocket;
+/// # #[macro_use] extern crate rocket_community as rocket;
 /// use rocket::either::{Either, Left, Right};
 ///
 /// #[get("/<id>")]
@@ -102,17 +102,17 @@ use crate::http::uri::{Segments, error::PathError, fmt::Path};
 /// behavior is documented here.
 ///
 ///   *
-///       * Primitive types: **f32, f64, isize, i8, i16, i32, i64, i128,
-///         usize, u8, u16, u32, u64, u128, bool**
-///       * `IpAddr` and `SocketAddr` types: **IpAddr, Ipv4Addr, Ipv6Addr,
-///         SocketAddrV4, SocketAddrV6, SocketAddr**
-///       * `NonZero*` types: **NonZeroI8, NonZeroI16, NonZeroI32, NonZeroI64,
-///         NonZeroI128, NonZeroIsize, NonZeroU8, NonZeroU16, NonZeroU32,
-///         NonZeroU64, NonZeroU128, NonZeroUsize**
+///     * Primitive types: **f32, f64, isize, i8, i16, i32, i64, i128,
+///           usize, u8, u16, u32, u64, u128, bool**
+///     * `IpAddr` and `SocketAddr` types: **IpAddr, Ipv4Addr, Ipv6Addr,
+///           SocketAddrV4, SocketAddrV6, SocketAddr**
+///     * `NonZero*` types: **NonZeroI8, NonZeroI16, NonZeroI32, NonZeroI64,
+///           NonZeroI128, NonZeroIsize, NonZeroU8, NonZeroU16, NonZeroU32,
+///           NonZeroU64, NonZeroU128, NonZeroUsize**
 ///
 ///     A value is parsed successfully if the `from_str` method from the given
-///     type returns successfully. Otherwise, the raw path segment is returned
-///     in the `Err` value.
+///         type returns successfully. Otherwise, the raw path segment is returned
+///         in the `Err` value.
 ///
 ///   * **&str, String**
 ///
@@ -157,6 +157,7 @@ use crate::http::uri::{Segments, error::PathError, fmt::Path};
 /// The following implementation accomplishes this:
 ///
 /// ```rust
+/// # extern crate rocket_community as rocket;
 /// use rocket::request::FromParam;
 /// # #[allow(dead_code)]
 /// # struct MyParam<'r> { key: &'r str, value: usize }
@@ -187,7 +188,7 @@ use crate::http::uri::{Segments, error::PathError, fmt::Path};
 /// dynamic path segment:
 ///
 /// ```rust
-/// # #[macro_use] extern crate rocket;
+/// # #[macro_use] extern crate rocket_community as rocket;
 /// # use rocket::request::FromParam;
 /// # #[allow(dead_code)]
 /// # struct MyParam<'r> { key: &'r str, value: usize }
@@ -236,7 +237,8 @@ impl<'a> FromParam<'a> for String {
     #[track_caller]
     #[inline(always)]
     fn from_param(param: &'a str) -> Result<String, Self::Error> {
-        #[cfg(debug_assertions)] {
+        #[cfg(debug_assertions)]
+        {
             let location = std::panic::Location::caller();
             warn!(%location, "`String` as a parameter is inefficient. Use `&str` instead.");
         }
@@ -262,11 +264,11 @@ macro_rules! impl_with_fromstr {
     )+)
 }
 
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6};
 use std::num::{
-    NonZeroI8, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI128, NonZeroIsize,
-    NonZeroU8, NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU128, NonZeroUsize,
+    NonZeroI128, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI8, NonZeroIsize, NonZeroU128,
+    NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU8, NonZeroUsize,
 };
-use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6, SocketAddr};
 
 impl_with_fromstr! {
     i8, i16, i32, i64, i128, isize, u8, u16, u32, u64, u128, usize, f32, f64,
@@ -306,7 +308,7 @@ impl<'a, T: FromParam<'a>> FromParam<'a> for Option<T> {
     fn from_param(param: &'a str) -> Result<Self, Self::Error> {
         match T::from_param(param) {
             Ok(val) => Ok(Some(val)),
-            Err(_) => Ok(None)
+            Err(_) => Ok(None),
         }
     }
 }
@@ -390,7 +392,7 @@ impl<'r, T: FromSegments<'r>> FromSegments<'r> for Option<T> {
     fn from_segments(segments: Segments<'r, Path>) -> Result<Option<T>, Self::Error> {
         match T::from_segments(segments) {
             Ok(val) => Ok(Some(val)),
-            Err(_) => Ok(None)
+            Err(_) => Ok(None),
         }
     }
 }
@@ -410,7 +412,7 @@ impl<'v, A: FromParam<'v>, B: FromParam<'v>> FromParam<'v> for Either<A, B> {
             Err(a) => match B::from_param(param) {
                 Ok(b) => Ok(Either::Right(b)),
                 Err(b) => Err((a, b)),
-            }
+            },
         }
     }
 }

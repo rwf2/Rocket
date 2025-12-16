@@ -1,5 +1,7 @@
+extern crate rocket_sync_db_pools_community as rocket_sync_db_pools;
+
 #[cfg(test)]
-#[cfg(all(feature = "diesel_sqlite_pool"))]
+#[cfg(feature = "diesel_sqlite_pool")]
 mod sqlite_shutdown_test {
     use rocket::{async_test, Build, Rocket};
     use rocket_sync_db_pools::database;
@@ -20,14 +22,12 @@ mod sqlite_shutdown_test {
 
     #[test]
     fn test_shutdown() {
-        let _rocket = async_test(
-            async {
-                let rocket = rocket().await.ignite().await.expect("unable to ignite");
-                // request shutdown
-                rocket.shutdown().notify();
-                rocket.launch().await.expect("unable to launch")
-            }
-        );
+        let _rocket = async_test(async {
+            let rocket = rocket().await.ignite().await.expect("unable to ignite");
+            // request shutdown
+            rocket.shutdown().notify();
+            rocket.launch().await.expect("unable to launch")
+        });
         // _rocket is dropped here after the runtime is dropped
     }
 }

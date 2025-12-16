@@ -1,10 +1,13 @@
 use std::ops::{Deref, DerefMut};
 
-use crate::Request;
-use crate::outcome::try_outcome;
 use crate::data::{Data, FromData, Outcome};
-use crate::http::{RawStr, ext::IntoOwned};
-use crate::form::prelude::{*, parser::{Parser, RawStrParser}};
+use crate::form::prelude::{
+    parser::{Parser, RawStrParser},
+    *,
+};
+use crate::http::{ext::IntoOwned, RawStr};
+use crate::outcome::try_outcome;
+use crate::Request;
 
 /// A data guard for [`FromForm`] types.
 ///
@@ -34,7 +37,7 @@ use crate::form::prelude::{*, parser::{Parser, RawStrParser}};
 /// implements the `FromForm` trait:
 ///
 /// ```rust
-/// # #[macro_use] extern crate rocket;
+/// # #[macro_use] extern crate rocket_community as rocket;
 /// use rocket::form::Form;
 /// use rocket::http::RawStr;
 ///
@@ -141,7 +144,7 @@ impl<T> Form<T> {
     /// # Example
     ///
     /// ```rust
-    /// # #[macro_use] extern crate rocket;
+    /// # #[macro_use] extern crate rocket_community as rocket;
     /// use rocket::form::Form;
     ///
     /// #[derive(FromForm)]
@@ -182,6 +185,7 @@ impl<'r, T: FromForm<'r>> Form<T> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::form::{Form, FromForm};
     ///
     /// #[derive(FromForm)]
@@ -210,6 +214,7 @@ impl<'r, T: FromForm<'r>> Form<T> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::form::{Form, FromForm, ValueField};
     ///
     /// #[derive(FromForm)]
@@ -228,7 +233,8 @@ impl<'r, T: FromForm<'r>> Form<T> {
     /// assert_eq!(pet.wags, false);
     /// ```
     pub fn parse_iter<I>(fields: I) -> Result<'r, T>
-        where I: IntoIterator<Item = ValueField<'r>>
+    where
+        I: IntoIterator<Item = ValueField<'r>>,
     {
         // WHATWG URL Living Standard 5.1 steps 1, 2, 3.1 - 3.3.
         let mut ctxt = T::init(Options::Lenient);
@@ -248,6 +254,7 @@ impl<T: for<'a> FromForm<'a> + 'static> Form<T> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::http::RawStr;
     /// use rocket::form::{Form, FromForm};
     ///
@@ -284,6 +291,7 @@ impl Form<()> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::form::{Form, ValueField};
     ///
     /// let string = "name=Bobby Brown&&&email=me@rocket.rs";
@@ -294,7 +302,8 @@ impl Form<()> {
     /// ```
     pub fn values(string: &str) -> impl Iterator<Item = ValueField<'_>> {
         // WHATWG URL Living Standard 5.1 steps 1, 2, 3.1 - 3.3.
-        string.split('&')
+        string
+            .split('&')
             .filter(|s| !s.is_empty())
             .map(ValueField::parse)
     }

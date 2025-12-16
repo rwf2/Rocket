@@ -15,7 +15,7 @@ pub use macros::*;
 pub use traceable::{Trace, TraceAll};
 
 #[doc(inline)]
-pub use tracing::{Level, level_filters::LevelFilter};
+pub use tracing::{level_filters::LevelFilter, Level};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, serde::Deserialize, serde::Serialize)]
 #[serde(crate = "rocket::serde")]
@@ -26,7 +26,7 @@ pub enum TraceFormat {
     Pretty,
     #[serde(rename = "compact")]
     #[serde(alias = "COMPACT")]
-    Compact
+    Compact,
 }
 
 #[cfg_attr(nightly, doc(cfg(feature = "trace")))]

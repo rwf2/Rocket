@@ -1,10 +1,10 @@
 use std::borrow::Cow;
+use std::fmt;
 use std::ops::Deref;
 use std::str::FromStr;
-use std::fmt;
 
-use crate::{Header, MediaType};
 use crate::parse::parse_accept;
+use crate::{Header, MediaType};
 
 /// The HTTP Accept header.
 ///
@@ -218,7 +218,7 @@ impl Accept {
     /// assert_eq!(iter.next(), None);
     /// ```
     #[inline(always)]
-    pub fn iter(&self) -> impl Iterator<Item=&'_ QMediaType> + '_ {
+    pub fn iter(&self) -> impl Iterator<Item = &'_ QMediaType> + '_ {
         self.0.iter()
     }
 
@@ -244,7 +244,7 @@ impl Accept {
     /// assert_eq!(iter.next(), None);
     /// ```
     #[inline(always)]
-    pub fn media_types(&self) -> impl Iterator<Item=&'_ MediaType> + '_ {
+    pub fn media_types(&self) -> impl Iterator<Item = &'_ MediaType> + '_ {
         self.iter().map(|weighted_mt| weighted_mt.media_type())
     }
 
@@ -387,7 +387,10 @@ mod test {
         let preferred = accept.preferred();
         let actual = preferred.media_type();
         if *actual != expected {
-            panic!("mismatch for {}: expected {}, got {}", string, expected, actual)
+            panic!(
+                "mismatch for {}: expected {}, got {}",
+                string, expected, actual
+            )
         }
     }
 
@@ -420,7 +423,10 @@ mod test {
 
         assert_preference("a/b; v=1, a/b; v=1; c=2", "a/b; v=1; c=2");
         assert_preference("a/b; v=1; c=2, a/b; v=1", "a/b; v=1; c=2");
-        assert_preference("a/b; q=0.5; v=1, a/b; q=0.5; v=1; c=2", "a/b; q=0.5; v=1; c=2");
+        assert_preference(
+            "a/b; q=0.5; v=1, a/b; q=0.5; v=1; c=2",
+            "a/b; q=0.5; v=1; c=2",
+        );
         assert_preference("a/b; q=0.6; v=1, a/b; q=0.5; v=1; c=2", "a/b; q=0.6; v=1");
     }
 }

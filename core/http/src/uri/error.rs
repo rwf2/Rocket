@@ -39,4 +39,4 @@ impl fmt::Display for PathError {
     }
 }
 
-impl std::error::Error for PathError { }
+impl std::error::Error for PathError {}

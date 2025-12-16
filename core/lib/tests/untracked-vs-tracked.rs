@@ -1,4 +1,5 @@
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket_community as rocket;
 
 use rocket::http::CookieJar;
 
@@ -15,12 +16,11 @@ fn get<'a>(jar: &'a CookieJar<'_>) -> Option<&'a str> {
 #[cfg(test)]
 mod many_cookie_jars_tests {
     use super::*;
-    use rocket::{Rocket, local::blocking::Client, Build};
     use rocket::http::Status;
+    use rocket::{local::blocking::Client, Build, Rocket};
 
     fn rocket() -> Rocket<Build> {
-        rocket::custom(rocket::Config::debug_default())
-            .mount("/", routes![add, get])
+        rocket::custom(rocket::Config::debug_default()).mount("/", routes![add, get])
     }
 
     #[test]

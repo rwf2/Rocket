@@ -1,8 +1,8 @@
-use devise::*;
 use devise::ext::SpanDiagnosticExt;
+use devise::*;
 
-use quote::quote;
 use proc_macro2::TokenStream;
+use quote::quote;
 use syn::ext::IdentExt;
 
 use crate::exports::*;
@@ -12,7 +12,9 @@ pub fn derive_from_param(input: proc_macro::TokenStream) -> TokenStream {
         .support(Support::Enum)
         .validator(ValidatorBuild::new().fields_validate(|_, fields| {
             if !fields.is_empty() {
-                return Err(fields.span().error("variants with data fields are not supported"));
+                return Err(fields
+                    .span()
+                    .error("variants with data fields are not supported"));
             }
 
             Ok(())

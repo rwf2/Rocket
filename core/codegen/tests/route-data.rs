@@ -1,16 +1,17 @@
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
-use rocket::{Request, Data};
-use rocket::local::blocking::Client;
 use rocket::data::{self, FromData};
-use rocket::http::ContentType;
 use rocket::form::Form;
+use rocket::http::ContentType;
+use rocket::local::blocking::Client;
+use rocket::{Data, Request};
 
 // Test that the data parameters works as expected.
 
 #[derive(FromForm)]
 struct Inner<'r> {
-    field: &'r str
+    field: &'r str,
 }
 
 struct Simple<'r>(&'r str);
@@ -25,17 +26,22 @@ impl<'r> FromData<'r> for Simple<'r> {
 }
 
 #[post("/f", data = "<form>")]
-fn form<'r>(form: Form<Inner<'r>>) -> &'r str { form.into_inner().field }
+fn form<'r>(form: Form<Inner<'r>>) -> &'r str {
+    form.into_inner().field
+}
 
 #[post("/s", data = "<simple>")]
-fn simple<'r>(simple: Simple<'r>) -> &'r str { simple.0 }
+fn simple<'r>(simple: Simple<'r>) -> &'r str {
+    simple.0
+}
 
 #[test]
 fn test_data() {
     let rocket = rocket::build().mount("/", routes![form, simple]);
     let client = Client::debug(rocket).unwrap();
 
-    let response = client.post("/f")
+    let response = client
+        .post("/f")
         .header(ContentType::Form)
         .body("field=this%20is%20here")
         .dispatch();

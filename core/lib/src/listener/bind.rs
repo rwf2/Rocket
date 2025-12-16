@@ -1,7 +1,9 @@
+#![allow(unexpected_cfgs)]
+
 use std::error::Error;
 
 use crate::listener::{Endpoint, Listener};
-use crate::{Rocket, Ignite};
+use crate::{Ignite, Rocket};
 
 pub trait Bind: Listener + 'static {
     type Error: Error + Send + 'static;

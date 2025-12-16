@@ -1,16 +1,16 @@
 use std::borrow::Cow;
-use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddrV4, SocketAddrV6, SocketAddr};
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6};
 use std::num::{
-    NonZeroIsize, NonZeroI8, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI128,
-    NonZeroUsize, NonZeroU8, NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU128,
+    NonZeroI128, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI8, NonZeroIsize, NonZeroU128,
+    NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU8, NonZeroUsize,
 };
 
-use time::{Date, Time, PrimitiveDateTime};
-use time::{macros::format_description, format_description::FormatItem};
+use time::{format_description::FormatItem, macros::format_description};
+use time::{Date, PrimitiveDateTime, Time};
 
 use crate::data::Capped;
-use crate::http::uncased::AsUncased;
 use crate::form::prelude::*;
+use crate::http::uncased::AsUncased;
 
 /// Implied form guard ([`FromForm`]) for parsing a single form field.
 ///
@@ -20,6 +20,7 @@ use crate::form::prelude::*;
 /// fields:
 ///
 /// ```rust
+/// # extern crate rocket_community as rocket;
 /// # use rocket::form::FromForm;
 /// #[derive(FromForm)]
 /// struct Person<'r> {
@@ -56,6 +57,7 @@ use crate::form::prelude::*;
 /// name of the variant or the value in `field()`.
 ///
 /// ```rust
+/// # extern crate rocket_community as rocket;
 /// # use rocket::form::FromFormField;
 /// /// Fields with value `"simple"` parse as `Kind::Simple`. Fields with value
 /// /// `"fancy"` parse as `Kind::SoFancy`.
@@ -84,7 +86,7 @@ use crate::form::prelude::*;
 /// an attribute of `#[rocket::async_trait]`:
 ///
 /// ```rust
-/// # #[macro_use] extern crate rocket;
+/// # #[macro_use] extern crate rocket_community as rocket;
 /// # struct MyType;
 /// use rocket::form::{self, FromFormField, DataField, ValueField};
 ///
@@ -107,6 +109,7 @@ use crate::form::prelude::*;
 /// to be any slice of bytes.
 ///
 /// ```rust
+/// # extern crate rocket_community as rocket;
 /// # use rocket::post;
 /// use rocket::data::ToByteUnit;
 /// use rocket::form::{self, FromFormField, DataField, ValueField};
@@ -204,7 +207,9 @@ pub trait FromFormField<'v>: Send + Sized {
     /// `default` should be used when a field is missing.
     ///
     /// The default implementation returns `None`.
-    fn default() -> Option<Self> { None }
+    fn default() -> Option<Self> {
+        None
+    }
 }
 
 #[doc(hidden)]
@@ -213,7 +218,7 @@ pub struct FromFieldContext<'v, T: FromFormField<'v>> {
     field_value: Option<&'v str>,
     opts: Options,
     value: Option<Result<'v, T>>,
-    pushes: usize
+    pushes: usize,
 }
 
 impl<'v, T: FromFormField<'v>> FromFieldContext<'v, T> {
@@ -229,7 +234,7 @@ impl<'v, T: FromFormField<'v>> FromFieldContext<'v, T> {
 
         self.field_name = Some(name);
         match result {
-            Err(e) if !self.opts.strict && is_unexpected(&e) => { /* ok */ },
+            Err(e) if !self.opts.strict && is_unexpected(&e) => { /* ok */ }
             result => self.value = Some(result),
         }
     }
@@ -269,7 +274,7 @@ impl<'v, T: FromFormField<'v>> FromForm<'v> for T {
             Some(Err(errors)) => errors,
             None if !ctxt.opts.strict => match <T as FromFormField>::default() {
                 Some(default) => return Ok(default),
-                None => Errors::from(ErrorKind::Missing)
+                None => Errors::from(ErrorKind::Missing),
             },
             None => Errors::from(ErrorKind::Missing),
         };
@@ -293,7 +298,7 @@ impl<'v> FromFormField<'v> for Capped<&'v str> {
     }
 
     async fn from_data(f: DataField<'v, '_>) -> Result<'v, Self> {
-        use crate::data::{Capped, Outcome, FromData};
+        use crate::data::{Capped, FromData, Outcome};
 
         match <Capped<&'v str> as FromData>::from_data(f.request, f.data).await {
             Outcome::Success(p) => Ok(p),
@@ -314,7 +319,7 @@ impl<'v> FromFormField<'v> for Capped<String> {
     }
 
     async fn from_data(f: DataField<'v, '_>) -> Result<'v, Self> {
-        use crate::data::{Capped, Outcome, FromData};
+        use crate::data::{Capped, FromData, Outcome};
 
         match <Capped<String> as FromData>::from_data(f.request, f.data).await {
             Outcome::Success(p) => Ok(p),
@@ -350,7 +355,7 @@ impl<'v> FromFormField<'v> for Capped<&'v [u8]> {
     }
 
     async fn from_data(f: DataField<'v, '_>) -> Result<'v, Self> {
-        use crate::data::{Capped, Outcome, FromData};
+        use crate::data::{Capped, FromData, Outcome};
 
         match <Capped<&'v [u8]> as FromData>::from_data(f.request, f.data).await {
             Outcome::Success(p) => Ok(p),
@@ -392,12 +397,38 @@ macro_rules! impl_with_parse {
 
 impl_with_parse!(
     char,
-    f32, f64,
-    isize, i8, i16, i32, i64, i128,
-    usize, u8, u16, u32, u64, u128,
-    NonZeroIsize, NonZeroI8, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI128,
-    NonZeroUsize, NonZeroU8, NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU128,
-    Ipv4Addr, IpAddr, Ipv6Addr, SocketAddrV4, SocketAddrV6, SocketAddr
+    f32,
+    f64,
+    isize,
+    i8,
+    i16,
+    i32,
+    i64,
+    i128,
+    usize,
+    u8,
+    u16,
+    u32,
+    u64,
+    u128,
+    NonZeroIsize,
+    NonZeroI8,
+    NonZeroI16,
+    NonZeroI32,
+    NonZeroI64,
+    NonZeroI128,
+    NonZeroUsize,
+    NonZeroU8,
+    NonZeroU16,
+    NonZeroU32,
+    NonZeroU64,
+    NonZeroU128,
+    Ipv4Addr,
+    IpAddr,
+    Ipv6Addr,
+    SocketAddrV4,
+    SocketAddrV6,
+    SocketAddr
 );
 
 // Keep formats in sync with 'FromFormField' impls.

@@ -24,6 +24,10 @@ impl Segment {
             }
         }
 
-        Segment { value: value.to_string(), dynamic, dynamic_trail }
+        Segment {
+            value: value.to_string(),
+            dynamic,
+            dynamic_trail,
+        }
     }
 }

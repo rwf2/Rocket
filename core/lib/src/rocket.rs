@@ -1,26 +1,26 @@
+use std::any::Any;
 use std::fmt;
+use std::future::Future;
 use std::ops::{Deref, DerefMut};
+use std::panic::Location;
 use std::sync::Arc;
 use std::time::Duration;
-use std::any::Any;
-use std::future::Future;
-use std::panic::Location;
 
 use either::Either;
 use figment::{Figment, Provider};
 use futures::TryFutureExt;
 
-use crate::shutdown::{Stages, Shutdown};
+use crate::error::{Error, ErrorKind};
+use crate::fairing::{Fairing, Fairings};
+use crate::http::ext::IntoOwned;
+use crate::http::uri::Origin;
+use crate::listener::{Bind, DefaultListener, Endpoint, Listener};
+use crate::phase::{Build, Building, Ignite, Igniting, Orbit, Orbiting, Phase};
+use crate::phase::{State, StateRef, StateRefMut, Stateful};
+use crate::router::Router;
+use crate::shutdown::{Shutdown, Stages};
 use crate::trace::{Trace, TraceAll};
 use crate::{sentinel, shield::Shield, Catcher, Config, Route};
-use crate::listener::{Bind, DefaultListener, Endpoint, Listener};
-use crate::router::Router;
-use crate::fairing::{Fairing, Fairings};
-use crate::phase::{Phase, Build, Building, Ignite, Igniting, Orbit, Orbiting};
-use crate::phase::{Stateful, StateRef, StateRefMut, State};
-use crate::http::uri::Origin;
-use crate::http::ext::IntoOwned;
-use crate::error::{Error, ErrorKind};
 
 /// The application server itself.
 ///
@@ -64,6 +64,7 @@ use crate::error::{Error, ErrorKind};
 /// [`#[launch]`](crate::launch) attribute:
 ///
 ///   ```rust,no_run
+///   # extern crate rocket_community as rocket;
 ///   # use rocket::launch;
 ///   #[launch]
 ///   fn rocket() -> _ {
@@ -83,6 +84,7 @@ use crate::error::{Error, ErrorKind};
 ///   it:
 ///
 ///   ```rust,no_run
+///   # extern crate rocket_community as rocket;
 ///   #[rocket::main]
 ///   async fn main() -> Result<(), rocket::Error> {
 ///       let _rocket = rocket::build()
@@ -97,6 +99,7 @@ use crate::error::{Error, ErrorKind};
 ///   `Rocket` from any phase into orbit:
 ///
 ///   ```rust,no_run
+///   # extern crate rocket_community as rocket;
 ///   #[rocket::main]
 ///   async fn main() -> Result<(), rocket::Error> {
 ///       let _rocket = rocket::build().launch().await?;
@@ -119,6 +122,7 @@ use crate::error::{Error, ErrorKind};
 ///   `async` runtime and launches the function's returned instance:
 ///
 ///   ```rust,no_run
+///   # extern crate rocket_community as rocket;
 ///   # use rocket::launch;
 ///   use rocket::{Rocket, Build};
 ///
@@ -132,6 +136,7 @@ use crate::error::{Error, ErrorKind};
 ///   attribute will infer a return type written as `_` as `Rocket<Build>`:
 ///
 ///   ```rust,no_run
+///   # extern crate rocket_community as rocket;
 ///   # use rocket::launch;
 ///   #[launch]
 ///   fn rocket() -> _ {
@@ -150,6 +155,7 @@ impl Rocket<Build> {
     /// # Examples
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// # use rocket::launch;
     /// #[launch]
     /// fn rocket() -> _ {
@@ -171,6 +177,7 @@ impl Rocket<Build> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// # use rocket::launch;
     /// use rocket::figment::{Figment, providers::{Toml, Env, Format}};
     ///
@@ -199,6 +206,7 @@ impl Rocket<Build> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::config::{Config, Ident};
     /// # use std::net::Ipv4Addr;
     /// # use std::path::{Path, PathBuf};
@@ -241,11 +249,12 @@ impl Rocket<Build> {
 
     #[track_caller]
     fn load<'a, B, T, F, M>(mut self, kind: &str, base: B, items: Vec<T>, m: M, f: F) -> Self
-        where B: TryInto<Origin<'a>> + Clone + fmt::Display,
-              B::Error: fmt::Display,
-              M: Fn(&Origin<'a>, T) -> T,
-              F: Fn(&mut Self, T),
-              T: Clone + Trace,
+    where
+        B: TryInto<Origin<'a>> + Clone + fmt::Display,
+        B::Error: fmt::Display,
+        M: Fn(&Origin<'a>, T) -> T,
+        F: Fn(&mut Self, T),
+        T: Clone + Trace,
     {
         let mut base = match base.clone().try_into() {
             Ok(origin) => origin.into_owned(),
@@ -322,7 +331,7 @@ impl Rocket<Build> {
     /// will be dispatched to the `hi` route.
     ///
     /// ```rust,no_run
-    /// # #[macro_use] extern crate rocket;
+    /// # #[macro_use] extern crate rocket_community as rocket;
     /// #
     /// #[get("/world")]
     /// fn hi() -> &'static str {
@@ -342,7 +351,7 @@ impl Rocket<Build> {
     /// `hi` route.
     ///
     /// ```rust
-    /// # #[macro_use] extern crate rocket;
+    /// # #[macro_use] extern crate rocket_community as rocket;
     /// use rocket::{Request, Route, Data, route};
     /// use rocket::http::Method;
     ///
@@ -359,13 +368,18 @@ impl Rocket<Build> {
     #[must_use]
     #[track_caller]
     pub fn mount<'a, B, R>(self, base: B, routes: R) -> Self
-        where B: TryInto<Origin<'a>> + Clone + fmt::Display,
-              B::Error: fmt::Display,
-              R: Into<Vec<Route>>
+    where
+        B: TryInto<Origin<'a>> + Clone + fmt::Display,
+        B::Error: fmt::Display,
+        R: Into<Vec<Route>>,
     {
-        self.load("route", base, routes.into(),
+        self.load(
+            "route",
+            base,
+            routes.into(),
             |base, route| route.rebase(base.clone()),
-            |r, route| r.0.routes.push(route))
+            |r, route| r.0.routes.push(route),
+        )
     }
 
     /// Registers all of the catchers in the supplied vector, scoped to `base`.
@@ -378,7 +392,7 @@ impl Rocket<Build> {
     /// # Examples
     ///
     /// ```rust,no_run
-    /// # #[macro_use] extern crate rocket;
+    /// # #[macro_use] extern crate rocket_community as rocket;
     /// use rocket::Request;
     ///
     /// #[catch(500)]
@@ -398,13 +412,18 @@ impl Rocket<Build> {
     /// ```
     #[must_use]
     pub fn register<'a, B, C>(self, base: B, catchers: C) -> Self
-        where B: TryInto<Origin<'a>> + Clone + fmt::Display,
-              B::Error: fmt::Display,
-              C: Into<Vec<Catcher>>
+    where
+        B: TryInto<Origin<'a>> + Clone + fmt::Display,
+        B::Error: fmt::Display,
+        C: Into<Vec<Catcher>>,
     {
-        self.load("catcher", base, catchers.into(),
+        self.load(
+            "catcher",
+            base,
+            catchers.into(),
             |base, catcher| catcher.rebase(base.clone()),
-            |r, catcher| r.0.catchers.push(catcher))
+            |r, catcher| r.0.catchers.push(catcher),
+        )
     }
 
     /// Add `state` to the state managed by this instance of Rocket.
@@ -424,7 +443,7 @@ impl Rocket<Build> {
     /// # Example
     ///
     /// ```rust,no_run
-    /// # #[macro_use] extern crate rocket;
+    /// # #[macro_use] extern crate rocket_community as rocket;
     /// use rocket::State;
     ///
     /// struct MyInt(isize);
@@ -450,7 +469,8 @@ impl Rocket<Build> {
     /// ```
     #[must_use]
     pub fn manage<T>(self, state: T) -> Self
-        where T: Send + Sync + 'static
+    where
+        T: Send + Sync + 'static,
     {
         let type_name = std::any::type_name::<T>();
         if !self.state.set(state) {
@@ -473,7 +493,7 @@ impl Rocket<Build> {
     /// # Example
     ///
     /// ```rust,no_run
-    /// # #[macro_use] extern crate rocket;
+    /// # #[macro_use] extern crate rocket_community as rocket;
     /// use rocket::Rocket;
     /// use rocket::fairing::AdHoc;
     ///
@@ -514,6 +534,7 @@ impl Rocket<Build> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::fairing::AdHoc;
     ///
     /// #[rocket::main]
@@ -535,7 +556,9 @@ impl Rocket<Build> {
     /// ```
     pub async fn ignite(mut self) -> Result<Rocket<Ignite>, Error> {
         self = Fairings::handle_ignite(self).await;
-        self.fairings.audit().map_err(|f| ErrorKind::FailedFairings(f.to_vec()))?;
+        self.fairings
+            .audit()
+            .map_err(|f| ErrorKind::FailedFairings(f.to_vec()))?;
 
         // Extract the configuration; initialize default trace subscriber.
         #[allow(unused_mut)]
@@ -546,7 +569,9 @@ impl Rocket<Build> {
         #[cfg(feature = "secrets")]
         if !config.secret_key.is_provided() {
             if config.profile != Config::DEBUG_PROFILE {
-                return Err(Error::new(ErrorKind::InsecureSecretKey(config.profile.clone())));
+                return Err(Error::new(ErrorKind::InsecureSecretKey(
+                    config.profile.clone(),
+                )));
             }
 
             if config.secret_key.is_zero() {
@@ -557,10 +582,18 @@ impl Rocket<Build> {
 
         // Initialize the router; check for collisions.
         let mut router = Router::new();
-        self.routes.clone().into_iter().for_each(|r| router.routes.push(r));
-        self.catchers.clone().into_iter().for_each(|c| router.catchers.push(c));
-        let router = router.finalize()
-            .map_err(|(r, c)| ErrorKind::Collisions { routes: r, catchers: c, })?;
+        self.routes
+            .clone()
+            .into_iter()
+            .for_each(|r| router.routes.push(r));
+        self.catchers
+            .clone()
+            .into_iter()
+            .for_each(|c| router.catchers.push(c));
+        let router = router.finalize().map_err(|(r, c)| ErrorKind::Collisions {
+            routes: r,
+            catchers: c,
+        })?;
 
         // Finally, freeze managed state for faster access later.
         self.state.freeze();
@@ -583,7 +616,8 @@ impl Rocket<Build> {
             figment: self.0.figment,
             fairings: self.0.fairings,
             state: self.0.state,
-            router, config,
+            router,
+            config,
         });
 
         // Query the sentinels, abort if requested.
@@ -601,6 +635,7 @@ impl Rocket<Ignite> {
     /// # Example
     ///
     /// ```rust,no_run
+    /// # extern crate rocket_community as rocket;
     /// #[rocket::main]
     /// async fn main() -> Result<(), rocket::Error> {
     ///     let rocket = rocket::build().ignite().await?;
@@ -624,6 +659,7 @@ impl Rocket<Ignite> {
     /// # Example
     ///
     /// ```rust,no_run
+    /// # extern crate rocket_community as rocket;
     /// # use std::time::Duration;
     /// use rocket::tokio::{self, time};
     ///
@@ -667,19 +703,24 @@ impl Rocket<Ignite> {
     }
 
     async fn _launch<L: Listener + 'static>(self, listener: L) -> Result<Rocket<Ignite>, Error> {
-        let rocket = self.listen_and_serve(listener, |rocket| async move {
-            let rocket = Arc::new(rocket);
+        let rocket = self
+            .listen_and_serve(listener, |rocket| async move {
+                let rocket = Arc::new(rocket);
 
-            rocket.shutdown.spawn_listener(&rocket.config.shutdown);
-            if let Err(e) = tokio::spawn(Rocket::liftoff(rocket.clone())).await {
-                let rocket = rocket.try_wait_shutdown().await.map(Box::new);
-                return Err(ErrorKind::Liftoff(rocket, e).into());
-            }
+                rocket.shutdown.spawn_listener(&rocket.config.shutdown);
+                if let Err(e) = tokio::spawn(Rocket::liftoff(rocket.clone())).await {
+                    let rocket = rocket.try_wait_shutdown().await.map(Box::new);
+                    return Err(ErrorKind::Liftoff(rocket, e).into());
+                }
 
-            Ok(rocket)
-        }).await?;
+                Ok(rocket)
+            })
+            .await?;
 
-        Ok(rocket.try_wait_shutdown().await.map_err(ErrorKind::Shutdown)?)
+        Ok(rocket
+            .try_wait_shutdown()
+            .await
+            .map_err(ErrorKind::Shutdown)?)
     }
 }
 
@@ -714,7 +755,9 @@ impl Rocket<Orbit> {
         let config = &self.config.shutdown;
         let wait = Duration::from_micros(250);
         for period in [wait, config.grace(), wait, config.mercy(), wait * 4] {
-            if Arc::strong_count(&self) == 1 { break }
+            if Arc::strong_count(&self) == 1 {
+                break;
+            }
             tokio::time::sleep(period).await;
         }
 
@@ -763,7 +806,7 @@ impl Rocket<Orbit> {
     /// # Example
     ///
     /// ```rust,no_run
-    /// # #[macro_use] extern crate rocket;
+    /// # #[macro_use] extern crate rocket_community as rocket;
     /// use rocket::fairing::AdHoc;
     ///
     /// #[launch]
@@ -793,7 +836,7 @@ impl Rocket<Orbit> {
     /// # Example
     ///
     /// ```rust,no_run
-    /// # #[macro_use] extern crate rocket;
+    /// # #[macro_use] extern crate rocket_community as rocket;
     /// use rocket::tokio::{self, time};
     /// use rocket::fairing::AdHoc;
     ///
@@ -821,6 +864,7 @@ impl<P: Phase> Rocket<P> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// # use rocket::*;
     /// use rocket::Rocket;
     /// use rocket::fairing::AdHoc;
@@ -852,6 +896,7 @@ impl<P: Phase> Rocket<P> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// # use rocket::*;
     /// use rocket::Rocket;
     /// use rocket::fairing::AdHoc;
@@ -883,6 +928,7 @@ impl<P: Phase> Rocket<P> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// #[derive(PartialEq, Debug)]
     /// struct MyState(&'static str);
     ///
@@ -906,6 +952,7 @@ impl<P: Phase> Rocket<P> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// # use rocket::{Rocket, Request, Data, Response, Build, Orbit};
     /// # use rocket::fairing::{self, Fairing, Info, Kind};
     /// #
@@ -963,6 +1010,7 @@ impl<P: Phase> Rocket<P> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// # use rocket::{Rocket, Request, Data, Response, Build, Orbit};
     /// # use rocket::fairing::{self, Fairing, Info, Kind};
     /// #
@@ -1018,6 +1066,7 @@ impl<P: Phase> Rocket<P> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// # use rocket::{Rocket, Request, Data, Response, Build, Orbit};
     /// # use rocket::fairing::{self, Fairing, Info, Kind};
     /// #
@@ -1061,6 +1110,7 @@ impl<P: Phase> Rocket<P> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// # use rocket::{Rocket, Request, Data, Response, Build, Orbit};
     /// # use rocket::fairing::{self, Fairing, Info, Kind};
     /// #
@@ -1114,6 +1164,7 @@ impl<P: Phase> Rocket<P> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// let rocket = rocket::build();
     /// let figment = rocket.figment();
     /// ```
@@ -1173,6 +1224,7 @@ impl<P: Phase> Rocket<P> {
     /// # Example
     ///
     /// ```rust,no_run
+    /// # extern crate rocket_community as rocket;
     /// #[rocket::main]
     /// async fn main() {
     ///     let result = rocket::build().launch().await;
@@ -1188,7 +1240,8 @@ impl<P: Phase> Rocket<P> {
     pub async fn launch_with<B: Bind>(self) -> Result<Rocket<Ignite>, Error> {
         let rocket = self.into_ignite().await?;
         let bind_endpoint = B::bind_endpoint(&rocket).ok();
-        let listener: B = B::bind(&rocket).await
+        let listener: B = B::bind(&rocket)
+            .await
             .map_err(|e| ErrorKind::Bind(bind_endpoint, Box::new(e)))?;
 
         let any: Box<dyn Any + Send + Sync> = Box::new(listener);
@@ -1209,16 +1262,20 @@ impl<P: Phase> Rocket<P> {
     }
 
     pub async fn try_launch_on<L, F, E>(self, listener: F) -> Result<Rocket<Ignite>, Error>
-        where L: Listener + 'static,
-              F: Future<Output = Result<L, E>>,
-              E: std::error::Error + Send + 'static
+    where
+        L: Listener + 'static,
+        F: Future<Output = Result<L, E>>,
+        E: std::error::Error + Send + 'static,
     {
-        let listener = listener.map_err(|e| ErrorKind::Bind(None, Box::new(e))).await?;
+        let listener = listener
+            .map_err(|e| ErrorKind::Bind(None, Box::new(e)))
+            .await?;
         self.into_ignite().await?._launch(listener).await
     }
 
     pub async fn launch_on<L>(self, listener: L) -> Result<Rocket<Ignite>, Error>
-        where L: Listener + 'static,
+    where
+        L: Listener + 'static,
     {
         self.into_ignite().await?._launch(listener).await
     }

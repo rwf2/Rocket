@@ -3,21 +3,21 @@ use std::pin::pin;
 use std::sync::Arc;
 use std::time::Duration;
 
+use futures::{Future, TryFutureExt};
 use hyper::service::service_fn;
 use hyper_util::rt::{TokioExecutor, TokioIo, TokioTimer};
 use hyper_util::server::conn::auto::Builder;
-use futures::{Future, TryFutureExt};
 use tokio::io::{AsyncRead, AsyncWrite};
 
-use crate::{Ignite, Orbit, Request, Rocket};
-use crate::request::ConnectionMeta;
-use crate::erased::{ErasedRequest, ErasedResponse, ErasedIoHandler};
-use crate::listener::{Listener, Connection, BouncedExt, CancellableExt};
-use crate::error::log_server_error;
 use crate::data::{IoStream, RawStream};
-use crate::util::{spawn_inspect, FutureExt, ReaderStream};
+use crate::erased::{ErasedIoHandler, ErasedRequest, ErasedResponse};
+use crate::error::log_server_error;
 use crate::http::Status;
+use crate::listener::{BouncedExt, CancellableExt, Connection, Listener};
+use crate::request::ConnectionMeta;
 use crate::trace::{Trace, TraceAll};
+use crate::util::{spawn_inspect, FutureExt, ReaderStream};
+use crate::{Ignite, Orbit, Request, Rocket};
 
 type Result<T, E = crate::Error> = std::result::Result<T, E>;
 
@@ -40,17 +40,21 @@ impl Rocket<Orbit> {
         });
 
         span_debug!("request headers" => request.inner().headers().iter().trace_all_debug());
-        let mut response = request.into_response(
-            stream,
-            |rocket, request, data| Box::pin(rocket.preprocess(request, data)),
-            |token, rocket, request, data| Box::pin(async move {
-                if !request.errors.is_empty() {
-                    return rocket.dispatch_error(Status::BadRequest, request).await;
-                }
+        let mut response = request
+            .into_response(
+                stream,
+                |rocket, request, data| Box::pin(rocket.preprocess(request, data)),
+                |token, rocket, request, data| {
+                    Box::pin(async move {
+                        if !request.errors.is_empty() {
+                            return rocket.dispatch_error(Status::BadRequest, request).await;
+                        }
 
-                rocket.dispatch(token, request, data).await
-            })
-        ).await;
+                        rocket.dispatch(token, request, data).await
+                    })
+                },
+            )
+            .await;
 
         // TODO: Should upgrades be handled in dispatch?
         response.inner().trace_info();
@@ -75,17 +79,20 @@ impl Rocket<Orbit> {
         cfg!(feature = "http3-preview").then(|| {
             static ALT_SVC: state::InitCell<Option<String>> = state::InitCell::new();
 
-            ALT_SVC.get_or_init(|| {
-                let addr = self.endpoints().find_map(|v| v.quic())?;
-                Some(format!("h3=\":{}\"", addr.port()))
-            }).as_deref()
+            ALT_SVC
+                .get_or_init(|| {
+                    let addr = self.endpoints().find_map(|v| v.quic())?;
+                    Some(format!("h3=\":{}\"", addr.port()))
+                })
+                .as_deref()
         })?
     }
 }
 
 #[tracing::instrument("upgrade", skip_all, fields(protocol = proto))]
 async fn io_handler_task<S>(proto: String, stream: S, mut handler: ErasedIoHandler)
-    where S: Future<Output = io::Result<IoStream>>
+where
+    S: Future<Output = io::Result<IoStream>>,
 {
     let stream = match stream.await {
         Ok(stream) => stream,
@@ -107,8 +114,9 @@ impl Rocket<Ignite> {
         listener: L,
         orbit_callback: impl FnOnce(Rocket<Orbit>) -> R,
     ) -> Result<Arc<Rocket<Orbit>>>
-        where L: Listener + 'static,
-              R: Future<Output = Result<Arc<Rocket<Orbit>>>>
+    where
+        L: Listener + 'static,
+        R: Future<Output = Result<Arc<Rocket<Orbit>>>>,
     {
         let endpoint = listener.endpoint()?;
 
@@ -132,8 +140,10 @@ impl Rocket<Ignite> {
         }
 
         if cfg!(feature = "http3-preview") {
-            warn!("HTTP/3 cannot start without a valid TCP + TLS configuration.\n\
-                Falling back to HTTP/1 + HTTP/2 server.");
+            warn!(
+                "HTTP/3 cannot start without a valid TCP + TLS configuration.\n\
+                Falling back to HTTP/1 + HTTP/2 server."
+            );
         }
 
         let rocket = self.into_orbit(vec![endpoint]);
@@ -145,22 +155,26 @@ impl Rocket<Ignite> {
 
 impl Rocket<Orbit> {
     pub(crate) async fn serve12<L>(self: Arc<Self>, listener: L) -> Result<()>
-        where L: Listener + 'static,
-              L::Connection: AsyncRead + AsyncWrite
+    where
+        L: Listener + 'static,
+        L::Connection: AsyncRead + AsyncWrite,
     {
         let mut builder = Builder::new(TokioExecutor::new());
         let keep_alive = Duration::from_secs(self.config.keep_alive.into());
-        builder.http1()
+        builder
+            .http1()
             .half_close(true)
             .timer(TokioTimer::new())
             .keep_alive(keep_alive > Duration::ZERO)
             .preserve_header_case(true)
             .header_read_timeout(Duration::from_secs(15));
 
-        #[cfg(feature = "http2")] {
+        #[cfg(feature = "http2")]
+        {
             builder.http2().timer(TokioTimer::new());
             if keep_alive > Duration::ZERO {
-                builder.http2()
+                builder
+                    .http2()
                     .timer(TokioTimer::new())
                     .keep_alive_interval(keep_alive / 4)
                     .keep_alive_timeout(keep_alive);
@@ -168,7 +182,13 @@ impl Rocket<Orbit> {
         }
 
         let (listener, server) = (Arc::new(listener.bounced()), Arc::new(builder));
-        while let Some(accept) = listener.accept().race(self.shutdown()).await.left().transpose()? {
+        while let Some(accept) = listener
+            .accept()
+            .race(self.shutdown())
+            .await
+            .left()
+            .transpose()?
+        {
             let (listener, rocket, server) = (listener.clone(), self.clone(), server.clone());
             spawn_inspect(|e| log_server_error(&**e), async move {
                 let conn = listener.connect(accept).race_io(rocket.shutdown()).await?;
@@ -176,7 +196,9 @@ impl Rocket<Orbit> {
                 let service = service_fn(|mut req| {
                     let upgrade = hyper::upgrade::on(&mut req);
                     let (parts, incoming) = req.into_parts();
-                    rocket.clone().service(parts, incoming, Some(upgrade), meta.clone())
+                    rocket
+                        .clone()
+                        .service(parts, incoming, Some(upgrade), meta.clone())
                 });
 
                 let io = TokioIo::new(conn.cancellable(rocket.shutdown.clone()));
@@ -186,7 +208,7 @@ impl Rocket<Orbit> {
                     None => {
                         server.as_mut().graceful_shutdown();
                         server.await
-                    },
+                    }
                 }
             });
         }
@@ -207,7 +229,8 @@ impl Rocket<Orbit> {
                     spawn_inspect(|e: &io::Error| log_server_error(e), async move {
                         let meta = ConnectionMeta::new(conn.endpoint(), None);
                         let rx = conn.rx.cancellable(rocket.shutdown.clone());
-                        let response = rocket.clone()
+                        let response = rocket
+                            .clone()
                             .service(conn.parts, rx, None, meta)
                             .map_err(io::Error::other)
                             .race_io(rocket.shutdown.mercy.clone())

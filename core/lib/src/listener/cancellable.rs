@@ -1,11 +1,11 @@
 use std::io;
-use std::task::{Poll, Context};
 use std::pin::Pin;
+use std::task::{Context, Poll};
 
-use futures::Stream;
-use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 use futures::future::FutureExt;
+use futures::Stream;
 use pin_project_lite::pin_project;
+use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 
 use crate::shutdown::Stages;
 
@@ -40,7 +40,7 @@ pub trait CancellableExt: Sized {
     }
 }
 
-impl<T> CancellableExt for T { }
+impl<T> CancellableExt for T {}
 
 fn time_out() -> io::Error {
     io::Error::new(io::ErrorKind::TimedOut, "shutdown grace period elapsed")
@@ -107,7 +107,7 @@ impl<I: AsyncCancel> Cancellable<I> {
                             Err(e) => Poll::Ready(Err(e)),
                         };
                     }
-                },
+                }
             }
         }
     }
@@ -132,17 +132,11 @@ impl<I: AsyncWrite> AsyncWrite for Cancellable<I> {
         self.poll_with(cx, |io, cx| io.poll_write(cx, buf))
     }
 
-    fn poll_flush(
-        self: Pin<&mut Self>,
-        cx: &mut Context<'_>
-    ) -> Poll<io::Result<()>> {
+    fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
         self.poll_with(cx, |io, cx| io.poll_flush(cx))
     }
 
-    fn poll_shutdown(
-        self: Pin<&mut Self>,
-        cx: &mut Context<'_>
-    ) -> Poll<io::Result<()>> {
+    fn poll_shutdown(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
         self.poll_with(cx, |io, cx| io.poll_shutdown(cx))
     }
 
@@ -155,7 +149,9 @@ impl<I: AsyncWrite> AsyncWrite for Cancellable<I> {
     }
 
     fn is_write_vectored(&self) -> bool {
-        self.inner().map(|io| io.is_write_vectored()).unwrap_or(false)
+        self.inner()
+            .map(|io| io.is_write_vectored())
+            .unwrap_or(false)
     }
 }
 

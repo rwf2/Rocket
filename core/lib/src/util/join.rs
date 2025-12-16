@@ -1,10 +1,10 @@
 use std::pin::Pin;
-use std::task::{Poll, Context};
+use std::task::{Context, Poll};
 
 use pin_project_lite::pin_project;
 
-use futures::stream::Stream;
 use futures::ready;
+use futures::stream::Stream;
 
 /// Join two streams, `a` and `b`, into a new `Join` stream that returns items
 /// from both streams, biased to `a`, until `a` finishes. The joined stream
@@ -15,7 +15,11 @@ use futures::ready;
 /// emitted before a value provided by `b`. In other words, values from `b` are
 /// emitted when and only when `a` is not producing a value.
 pub fn join<A: Stream, B: Stream>(a: A, b: B) -> Join<A, B> {
-    Join { a, b: Some(b), done: false, }
+    Join {
+        a,
+        b: Some(b),
+        done: false,
+    }
 }
 
 pin_project! {
@@ -31,8 +35,9 @@ pin_project! {
 }
 
 impl<T, U> Stream for Join<T, U>
-    where T: Stream,
-          U: Stream<Item = T::Item>,
+where
+    T: Stream,
+    U: Stream<Item = T::Item>,
 {
     type Item = T::Item;
 
@@ -46,7 +51,7 @@ impl<T, U> Stream for Join<T, U>
             Poll::Ready(opt) => {
                 *me.done = opt.is_none();
                 Poll::Ready(opt)
-            },
+            }
             Poll::Pending => match me.b.as_pin_mut() {
                 None => Poll::Pending,
                 Some(b) => match ready!(b.poll_next(cx)) {
@@ -55,16 +60,14 @@ impl<T, U> Stream for Join<T, U>
                         self.as_mut().project().b.set(None);
                         Poll::Pending
                     }
-                }
-            }
+                },
+            },
         }
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
         let (left_low, left_high) = self.a.size_hint();
-        let (right_low, right_high) = self.b.as_ref()
-            .map(|b| b.size_hint())
-            .unwrap_or_default();
+        let (right_low, right_high) = self.b.as_ref().map(|b| b.size_hint()).unwrap_or_default();
 
         let low = left_low.saturating_add(right_low);
         let high = match (left_high, right_high) {

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use crate::request::{Request, ConnectionMeta};
 use crate::local::blocking::Client;
+use crate::request::{ConnectionMeta, Request};
 
 macro_rules! assert_headers {
     ($($key:expr => [$($value:expr),+]),+) => ({

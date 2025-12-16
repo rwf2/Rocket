@@ -6,7 +6,7 @@ error: named structs are not supported
 6 | | }
   | |_^
 
-error: [note] error occurred while deriving `FromParam`
+error: ␛[1;34m[␛[0m␛[1;32mnote␛[0m␛[1;34m] ␛[0m␛[1;39merror occurred while deriving `FromParam`␛[0m
  --> tests/ui-fail-stable/from_param.rs:3:10
   |
 3 | #[derive(FromParam)]
@@ -20,7 +20,7 @@ error: named structs are not supported
 9 | struct Foo2 {}
   | ^^^^^^^^^^^^^^
 
-error: [note] error occurred while deriving `FromParam`
+error: ␛[1;34m[␛[0m␛[1;32mnote␛[0m␛[1;34m] ␛[0m␛[1;39merror occurred while deriving `FromParam`␛[0m
  --> tests/ui-fail-stable/from_param.rs:8:10
   |
 8 | #[derive(FromParam)]
@@ -34,7 +34,7 @@ error: variants with data fields are not supported
 13 |     A(String),
    |      ^^^^^^^^
 
-error: [note] error occurred while deriving `FromParam`
+error: ␛[1;34m[␛[0m␛[1;32mnote␛[0m␛[1;34m] ␛[0m␛[1;39merror occurred while deriving `FromParam`␛[0m
   --> tests/ui-fail-stable/from_param.rs:11:10
    |
 11 | #[derive(FromParam)]
@@ -48,7 +48,7 @@ error: tuple structs are not supported
 18 | struct Foo4(usize);
    | ^^^^^^^^^^^^^^^^^^^
 
-error: [note] error occurred while deriving `FromParam`
+error: ␛[1;34m[␛[0m␛[1;32mnote␛[0m␛[1;34m] ␛[0m␛[1;39merror occurred while deriving `FromParam`␛[0m
   --> tests/ui-fail-stable/from_param.rs:17:10
    |
 17 | #[derive(FromParam)]

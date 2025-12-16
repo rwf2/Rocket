@@ -1,6 +1,6 @@
-use crate::{Request, Data};
-use crate::response::{Response, Responder};
 use crate::http::Status;
+use crate::response::{Responder, Response};
+use crate::{Data, Request};
 
 /// Type alias for the return type of a [`Route`](crate::Route)'s
 /// [`Handler::handle()`].
@@ -43,6 +43,7 @@ pub type BoxFuture<'r, T = Outcome<'r>> = futures::future::BoxFuture<'r, T>;
 /// Such a handler might be written and used as follows:
 ///
 /// ```rust,no_run
+/// # extern crate rocket_community as rocket;
 /// # #[derive(Copy, Clone)] enum Kind { Simple, Intermediate, Complex, }
 /// use rocket::{Request, Data};
 /// use rocket::route::{Handler, Route, Outcome};
@@ -91,7 +92,7 @@ pub type BoxFuture<'r, T = Outcome<'r>> = futures::future::BoxFuture<'r, T>;
 /// managed state and a static route, as follows:
 ///
 /// ```rust,no_run
-/// # #[macro_use] extern crate rocket;
+/// # #[macro_use] extern crate rocket_community as rocket;
 /// #
 /// # #[derive(Copy, Clone)]
 /// # enum Kind {
@@ -150,7 +151,8 @@ pub trait Handler: Cloneable + Send + Sync + 'static {
 
 // We write this manually to avoid double-boxing.
 impl<F: Clone + Sync + Send + 'static> Handler for F
-    where for<'x> F: Fn(&'x Request<'_>, Data<'x>) -> BoxFuture<'x>,
+where
+    for<'x> F: Fn(&'x Request<'_>, Data<'x>) -> BoxFuture<'x>,
 {
     #[inline(always)]
     fn handle<'r, 'life0, 'life1, 'async_trait>(
@@ -158,10 +160,11 @@ impl<F: Clone + Sync + Send + 'static> Handler for F
         req: &'r Request<'life1>,
         data: Data<'r>,
     ) -> BoxFuture<'r>
-        where 'r: 'async_trait,
-              'life0: 'async_trait,
-              'life1: 'async_trait,
-              Self: 'async_trait,
+    where
+        'r: 'async_trait,
+        'life0: 'async_trait,
+        'life1: 'async_trait,
+        Self: 'async_trait,
     {
         self(req, data)
     }
@@ -177,6 +180,7 @@ impl<'r, 'o: 'r> Outcome<'o> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::{Request, Data, route};
     ///
     /// fn str_responder<'r>(req: &'r Request, _: Data<'r>) -> route::Outcome<'r> {
@@ -187,7 +191,7 @@ impl<'r, 'o: 'r> Outcome<'o> {
     pub fn from<R: Responder<'r, 'o>>(req: &'r Request<'_>, responder: R) -> Outcome<'r> {
         match responder.respond_to(req) {
             Ok(response) => Outcome::Success(response),
-            Err(status) => Outcome::Error(status)
+            Err(status) => Outcome::Error(status),
         }
     }
 
@@ -200,6 +204,7 @@ impl<'r, 'o: 'r> Outcome<'o> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::{Request, Data, route};
     ///
     /// fn str_responder<'r>(req: &'r Request, _: Data<'r>) -> route::Outcome<'r> {
@@ -208,12 +213,14 @@ impl<'r, 'o: 'r> Outcome<'o> {
     /// ```
     #[inline]
     pub fn try_from<R, E>(req: &'r Request<'_>, result: Result<R, E>) -> Outcome<'r>
-        where R: Responder<'r, 'o>, E: std::fmt::Debug
+    where
+        R: Responder<'r, 'o>,
+        E: std::fmt::Debug,
     {
         let responder = result.map_err(crate::response::Debug);
         match responder.respond_to(req) {
             Ok(response) => Outcome::Success(response),
-            Err(status) => Outcome::Error(status)
+            Err(status) => Outcome::Error(status),
         }
     }
 
@@ -225,6 +232,7 @@ impl<'r, 'o: 'r> Outcome<'o> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::{Request, Data, route};
     /// use rocket::http::Status;
     ///
@@ -245,6 +253,7 @@ impl<'r, 'o: 'r> Outcome<'o> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::{Request, Data, route};
     /// use rocket::http::Status;
     ///

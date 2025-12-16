@@ -20,7 +20,8 @@ impl AtomicMethod {
 
     #[inline]
     pub fn store(&self, new: Method) {
-        self.0.store(new.as_ref(), std::sync::atomic::Ordering::Release)
+        self.0
+            .store(new.as_ref(), std::sync::atomic::Ordering::Release)
     }
 }
 

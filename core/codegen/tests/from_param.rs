@@ -21,5 +21,4 @@ fn derive_from_param() {
     let err = Test::from_param("not_test").unwrap_err();
     assert_eq!(err.value, "not_test");
     assert_eq!(err.options, &["Test1", "Test2", "for"]);
-
 }

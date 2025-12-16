@@ -38,6 +38,7 @@
 //!
 //!      ```rust
 //!      # #[macro_use] extern crate rocket;
+//!      # extern crate rocket_dyn_templates_community as rocket_dyn_templates;
 //!      use rocket_dyn_templates::{Template, context};
 //!
 //!      #[get("/")]
@@ -57,9 +58,9 @@
 //!
 //!   * `template_dir` (**default: `templates/`**)
 //!
-//!      A path to a directory to search for template files in. Relative paths
-//!      are considered relative to the configuration file, or there is no file,
-//!      the current working directory.
+//!     A path to a directory to search for template files in. Relative paths
+//!     are considered relative to the configuration file, or there is no file,
+//!     the current working directory.
 //!
 //! For example, to change the default and set `template_dir` to different
 //! values based on whether the application was compiled for debug or release
@@ -121,6 +122,7 @@
 //!
 //! ```rust
 //! # #[macro_use] extern crate rocket;
+//! # extern crate rocket_dyn_templates_community as rocket_dyn_templates;
 //! use rocket::serde::Serialize;
 //! use rocket_dyn_templates::{Template, context};
 //!
@@ -180,7 +182,8 @@
 #![doc(html_favicon_url = "https://rocket.rs/images/favicon.ico")]
 #![doc(html_logo_url = "https://rocket.rs/images/logo-boxed.png")]
 
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 
 #[doc(inline)]
 #[cfg(feature = "tera")]
@@ -200,9 +203,9 @@ pub use minijinja;
 #[doc(hidden)]
 pub use rocket::serde;
 
+mod context;
 mod engine;
 mod fairing;
-mod context;
 mod metadata;
 mod template;
 

@@ -15,9 +15,8 @@ members = [
 
 [workspace.lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(nightly)'] }
-rust_2018_idioms = "warn"
 async_fn_in_trait = "allow"
-refining_impl_trait = "allow"
+#refining_impl_trait = "allow"
 # unreachable_pub = "warn"
 # single_use_lifetimes = "warn"
 # missing_docs = "warn"
@@ -27,3 +26,5 @@ type_complexity = "allow"
 module_inception = "allow"
 multiple_bound_locations = "allow"
 manual_range_contains = "allow"
+result_large_err = "allow"
+needless_borrow = "allow"

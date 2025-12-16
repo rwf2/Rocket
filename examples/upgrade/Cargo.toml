@@ -6,5 +6,5 @@ edition = "2021"
 publish = false
 
 [dependencies]
-rocket = { path = "../../core/lib" }
-ws = { package = "rocket_ws", path = "../../contrib/ws" }
+rocket = { package = "rocket-community", path = "../../core/lib" }
+ws = { package = "rocket_ws-community", path = "../../contrib/ws" }

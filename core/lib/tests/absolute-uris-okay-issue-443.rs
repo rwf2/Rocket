@@ -1,4 +1,5 @@
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket_community as rocket;
 
 use rocket::response::Redirect;
 

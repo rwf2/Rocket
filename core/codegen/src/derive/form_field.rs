@@ -1,13 +1,16 @@
 use std::collections::HashSet;
 
-use devise::{*, ext::{TypeExt, SpanDiagnosticExt}};
+use devise::{
+    ext::{SpanDiagnosticExt, TypeExt},
+    *,
+};
 
-use syn::{visit_mut::VisitMut, visit::Visit};
-use proc_macro2::{TokenStream, TokenTree, Span};
+use proc_macro2::{Span, TokenStream, TokenTree};
 use quote::{ToTokens, TokenStreamExt};
+use syn::{visit::Visit, visit_mut::VisitMut};
 
-use crate::syn_ext::IdentExt;
 use crate::name::Name;
+use crate::syn_ext::IdentExt;
 
 macro_rules! quote_spanned {
     ($span:expr => $($token:tt)*) => (
@@ -92,11 +95,12 @@ impl FromMeta for FieldName {
         fn is_valid_field_name(s: &str) -> bool {
             // The HTML5 spec (4.10.18.1) says 'isindex' is not allowed.
             if s == "isindex" || s.is_empty() {
-                return false
+                return false;
             }
 
             // We allow all visible ASCII characters except `CONTROL_CHARS`.
-            s.chars().all(|c| c.is_ascii_graphic() && !CONTROL_CHARS.contains(&c))
+            s.chars()
+                .all(|c| c.is_ascii_graphic() && !CONTROL_CHARS.contains(&c))
         }
 
         let field_name = match Name::from_meta(meta) {
@@ -105,7 +109,7 @@ impl FromMeta for FieldName {
                 #[derive(FromMeta)]
                 struct Inner {
                     #[meta(naked)]
-                    uncased: Name
+                    uncased: Name,
                 }
 
                 let expr = meta.expr()?;
@@ -116,14 +120,19 @@ impl FromMeta for FieldName {
         };
 
         if !is_valid_field_name(field_name.as_str()) {
-            let chars = CONTROL_CHARS.iter()
+            let chars = CONTROL_CHARS
+                .iter()
                 .map(|c| format!("{:?}", c))
                 .collect::<Vec<_>>()
                 .join(", ");
 
-            return Err(meta.value_span()
+            return Err(meta
+                .value_span()
                 .error("invalid form field name")
-                .help(format!("field name cannot be `isindex` or contain {}", chars)));
+                .help(format!(
+                    "field name cannot be `isindex` or contain {}",
+                    chars
+                )));
         }
 
         Ok(field_name)
@@ -175,8 +184,8 @@ impl FieldExt for Field<'_> {
             Some(ident) => syn::Member::Named(ident),
             None => syn::Member::Unnamed(syn::Index {
                 index: self.index as u32,
-                span: self.ty.span()
-            })
+                span: self.ty.span(),
+            }),
         }
     }
 
@@ -214,7 +223,8 @@ impl FieldExt for Field<'_> {
         let (span, field_names) = (self.span(), self.field_names()?);
         define_spanned_export!(span => _form);
 
-        Ok(field_names.first()
+        Ok(field_names
+            .first()
             .map(|name| quote_spanned!(span => Some(#_form::NameBuf::from((__c.__parent, #name)))))
             .unwrap_or_else(|| quote_spanned!(span => None::<#_form::NameBuf>)))
     }
@@ -258,16 +268,14 @@ impl ValidationMutator<'_> {
         let mut stream = TokenStream::new();
         while let Some(tt) = iter.next() {
             match tt {
-                Ident(s3lf) if s3lf == "self" => {
-                    match (iter.next(), iter.next()) {
-                        (Some(Punct(p)), Some(Ident(i))) if p.as_char() == '.' => {
-                            let field = syn::parse_quote!(#s3lf #p #i);
-                            let mut expr = syn::Expr::Field(field);
-                            self.visit_expr_mut(&mut expr);
-                            expr.to_tokens(&mut stream);
-                        },
-                        (tt1, tt2) => stream.append_all(&[Some(Ident(s3lf)), tt1, tt2]),
+                Ident(s3lf) if s3lf == "self" => match (iter.next(), iter.next()) {
+                    (Some(Punct(p)), Some(Ident(i))) if p.as_char() == '.' => {
+                        let field = syn::parse_quote!(#s3lf #p #i);
+                        let mut expr = syn::Expr::Field(field);
+                        self.visit_expr_mut(&mut expr);
+                        expr.to_tokens(&mut stream);
                     }
+                    (tt1, tt2) => stream.append_all(&[Some(Ident(s3lf)), tt1, tt2]),
                 },
                 TokenTree::Group(group) => {
                     let tt = self.visit_token_stream(group.stream());
@@ -346,23 +354,31 @@ impl VisitMut for ValidationMutator<'_> {
 pub fn validators(field: Field<'_>) -> Result<impl Iterator<Item = syn::Expr> + '_> {
     Ok(FieldAttr::from_attrs(FieldAttr::NAME, &field.attrs)?
         .into_iter()
-        .chain(FieldAttr::from_attrs(FieldAttr::NAME, field.parent.attrs())?)
+        .chain(FieldAttr::from_attrs(
+            FieldAttr::NAME,
+            field.parent.attrs(),
+        )?)
         .filter_map(|a| a.validate)
         .map(move |mut expr| {
             let mut record = RecordMemberAccesses::default();
             record.accesses.insert((field.context_ident(), true));
             record.visit_expr(&expr);
 
-            let mut v = ValidationMutator { field, visited: false };
+            let mut v = ValidationMutator {
+                field,
+                visited: false,
+            };
             v.visit_expr_mut(&mut expr);
 
             let span = expr.key_span.unwrap_or(field.ty.span());
             let matchers = record.accesses.iter().map(|(member, _)| member);
-            let values = record.accesses.iter()
-                .map(|(member, is_ref)| {
-                    if *is_ref { quote_spanned!(span => &#member) }
-                    else { quote_spanned!(span => #member) }
-                });
+            let values = record.accesses.iter().map(|(member, is_ref)| {
+                if *is_ref {
+                    quote_spanned!(span => &#member)
+                } else {
+                    quote_spanned!(span => #member)
+                }
+            });
 
             let matchers = quote_spanned!(span => (#(Some(#matchers)),*));
             let values = quote_spanned!(span => (#(#values),*));
@@ -393,11 +409,17 @@ pub fn validators(field: Field<'_>) -> Result<impl Iterator<Item = syn::Expr> + 
 /// expressions: integer literals and the bare `None`. As a result, we cheat: if
 /// the expr matches either condition, we pass them through unchanged.
 fn default_expr(expr: &syn::Expr) -> TokenStream {
-    use syn::{Expr, Lit, ExprLit};
+    use syn::{Expr, ExprLit, Lit};
 
     if matches!(expr, Expr::Path(e) if e.path.is_ident("None")) {
         quote!(#expr)
-    } else if matches!(expr, Expr::Lit(ExprLit { lit: Lit::Int(_), .. })) {
+    } else if matches!(
+        expr,
+        Expr::Lit(ExprLit {
+            lit: Lit::Int(_),
+            ..
+        })
+    ) {
         quote_spanned!(expr.span() => Some(#expr))
     } else {
         quote_spanned!(expr.span() => Some({ #expr }.into()))
@@ -409,12 +431,15 @@ pub fn default(field: Field<'_>) -> Result<Option<TokenStream>> {
     let parent_attrs = FieldAttr::from_attrs(FieldAttr::NAME, field.parent.attrs())?;
 
     // Expressions in `default = `, except for `None`, are wrapped in `Some()`.
-    let mut expr = field_attrs.iter()
+    let mut expr = field_attrs
+        .iter()
         .chain(parent_attrs.iter())
-        .filter_map(|a| a.default.as_ref()).map(default_expr);
+        .filter_map(|a| a.default.as_ref())
+        .map(default_expr);
 
     // Expressions in `default_with` are passed through directly.
-    let mut expr_with = field_attrs.iter()
+    let mut expr_with = field_attrs
+        .iter()
         .chain(parent_attrs.iter())
         .filter_map(|a| a.default_with.as_ref())
         .map(|e| e.to_token_stream());
@@ -424,7 +449,8 @@ pub fn default(field: Field<'_>) -> Result<Option<TokenStream>> {
 
     // If there are any more of either, emit an error.
     if let (Some(e), _) | (_, Some(e)) = (expr.next(), expr_with.next()) {
-        return Err(e.span()
+        return Err(e
+            .span()
             .error("duplicate default field expression")
             .help("at most one `default` or `default_with` is allowed"));
     }
@@ -433,24 +459,21 @@ pub fn default(field: Field<'_>) -> Result<Option<TokenStream>> {
     // `default_with` were provided in which case we error.
     let ty = field.stripped_ty();
     match (default, default_with) {
-        (Some(e1), Some(e2)) => {
-            Err(e1.span()
-                .error("duplicate default expressions")
-                .help("only one of `default` or `default_with` must be used")
-                .span_note(e2.span(), "other default expression is here"))
-        },
-        (Some(e), None) | (None, Some(e)) => {
-            Ok(Some(quote_spanned!(e.span() => {
-                let __default: Option<#ty> = if __opts.strict {
-                    None
-                } else {
-                    #e
-                };
+        (Some(e1), Some(e2)) => Err(e1
+            .span()
+            .error("duplicate default expressions")
+            .help("only one of `default` or `default_with` must be used")
+            .span_note(e2.span(), "other default expression is here")),
+        (Some(e), None) | (None, Some(e)) => Ok(Some(quote_spanned!(e.span() => {
+            let __default: Option<#ty> = if __opts.strict {
+                None
+            } else {
+                #e
+            };
 
-                __default
-            })))
-        },
-        (None, None) => Ok(None)
+            __default
+        }))),
+        (None, None) => Ok(None),
     }
 }
 

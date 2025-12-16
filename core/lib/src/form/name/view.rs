@@ -15,6 +15,7 @@ use crate::form::name::*;
 /// This is best illustrated via an example:
 ///
 /// ```rust
+/// # extern crate rocket_community as rocket;
 /// use rocket::form::name::NameView;
 ///
 /// // The view begins at the first key. Illustrated: `(a).b[c:d]` where
@@ -56,6 +57,7 @@ use crate::form::name::*;
 /// Again, illustrated via examples:
 ///
 /// ```rust
+/// # extern crate rocket_community as rocket;
 /// use rocket::form::name::NameView;
 ///
 /// let mut view = NameView::new("a.b[c:d]");
@@ -88,6 +90,7 @@ impl<'v> NameView<'v> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::form::name::NameView;
     ///
     /// let mut view = NameView::new("a.b[c:d]");
@@ -96,7 +99,11 @@ impl<'v> NameView<'v> {
     /// assert_eq!(view.parent(), None);
     /// ```
     pub fn new<N: Into<&'v Name>>(name: N) -> Self {
-        let mut view = NameView { name: name.into(), start: 0, end: 0 };
+        let mut view = NameView {
+            name: name.into(),
+            start: 0,
+            end: 0,
+        };
         view.shift();
         view
     }
@@ -106,6 +113,7 @@ impl<'v> NameView<'v> {
     /// # Examples
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::form::name::NameView;
     ///
     /// let mut view = NameView::new("a.b[c:d][d.e]");
@@ -124,6 +132,7 @@ impl<'v> NameView<'v> {
     /// Malformed strings can have interesting results:
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::form::name::NameView;
     ///
     /// let mut view = NameView::new("a[c.d");
@@ -170,8 +179,8 @@ impl<'v> NameView<'v> {
             },
             _ => match string.find(START_DELIMS) {
                 Some(j) => j,
-                None => bytes.len()
-            }
+                None => bytes.len(),
+            },
         };
 
         debug_assert!(self.end + shift <= self.name.len());
@@ -194,6 +203,7 @@ impl<'v> NameView<'v> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::form::name::NameView;
     ///
     /// let mut view = NameView::new("a[b]");
@@ -228,6 +238,7 @@ impl<'v> NameView<'v> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::form::name::NameView;
     ///
     /// let mut view = NameView::new("a[b]");
@@ -247,7 +258,7 @@ impl<'v> NameView<'v> {
             Some(b'.') => &view[1..],
             Some(b'[') if view.ends_with(']') => &view[1..view.len() - 1],
             Some(b'[') if self.is_at_last() => &view[1..],
-            _ => view
+            _ => view,
         };
 
         key.as_str().into()
@@ -258,6 +269,7 @@ impl<'v> NameView<'v> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::form::name::NameView;
     ///
     /// let mut view = NameView::new("a[b]");
@@ -277,6 +289,7 @@ impl<'v> NameView<'v> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::form::name::NameView;
     ///
     /// let mut view = NameView::new("a[b]");
@@ -303,6 +316,7 @@ impl<'v> NameView<'v> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::form::name::NameView;
     ///
     /// let mut view = NameView::new("a[b]");
@@ -356,7 +370,7 @@ impl<B: PartialEq<Name>> PartialEq<B> for NameView<'_> {
     }
 }
 
-impl Eq for NameView<'_> {  }
+impl Eq for NameView<'_> {}
 
 impl std::hash::Hash for NameView<'_> {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {

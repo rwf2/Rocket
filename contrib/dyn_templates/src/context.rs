@@ -1,12 +1,12 @@
-use std::path::{Path, PathBuf};
 use std::collections::HashMap;
 use std::error::Error;
+use std::path::{Path, PathBuf};
 
 use crate::engine::Engines;
 use crate::template::TemplateInfo;
 
-use rocket::http::ContentType;
 use normpath::PathExt;
+use rocket::http::ContentType;
 
 pub(crate) type Callback =
     Box<dyn Fn(&mut Engines) -> Result<(), Box<dyn Error>> + Send + Sync + 'static>;
@@ -29,7 +29,7 @@ impl Context {
     pub fn initialize(root: &Path, callback: &Callback) -> Option<Context> {
         fn is_file_with_ext(entry: &walkdir::DirEntry, ext: &str) -> bool {
             let is_file = entry.file_type().is_file();
-            let has_ext = entry.path().extension().map_or(false, |e| e == ext);
+            let has_ext = entry.path().extension().is_some_and(|e| e == ext);
             is_file && has_ext
         }
 
@@ -63,15 +63,19 @@ impl Context {
                     continue;
                 }
 
-                let data_type = data_type_str.as_ref()
+                let data_type = data_type_str
+                    .as_ref()
                     .and_then(|ext| ContentType::from_extension(ext))
                     .unwrap_or(ContentType::Text);
 
-                templates.insert(template, TemplateInfo {
-                    path: Some(entry.into_path()),
-                    engine_ext: ext,
-                    data_type,
-                });
+                templates.insert(
+                    template,
+                    TemplateInfo {
+                        path: Some(entry.into_path()),
+                        engine_ext: ext,
+                        data_type,
+                    },
+                );
             }
         }
 
@@ -83,24 +87,33 @@ impl Context {
 
         for (name, engine_ext) in engines.templates() {
             if !templates.contains_key(name) {
-                let data_type = Path::new(name).extension()
+                let data_type = Path::new(name)
+                    .extension()
                     .and_then(|osstr| osstr.to_str())
                     .and_then(ContentType::from_extension)
                     .unwrap_or(ContentType::Text);
 
-                let info = TemplateInfo { path: None, engine_ext, data_type };
+                let info = TemplateInfo {
+                    path: None,
+                    engine_ext,
+                    data_type,
+                };
                 templates.insert(name.to_string(), info);
             }
         }
 
-        Some(Context { root, templates, engines })
+        Some(Context {
+            root,
+            templates,
+            engines,
+        })
     }
 }
 
 #[cfg(not(debug_assertions))]
 mod manager {
-    use std::ops::Deref;
     use super::Context;
+    use std::ops::Deref;
 
     /// Wraps a Context. With `cfg(debug_assertions)` active, this structure
     /// additionally provides a method to reload the context at runtime.
@@ -111,7 +124,7 @@ mod manager {
             ContextManager(ctxt)
         }
 
-        pub fn context<'a>(&'a self) -> impl Deref<Target=Context> + 'a {
+        pub fn context<'a>(&'a self) -> impl Deref<Target = Context> + 'a {
             &self.0
         }
 
@@ -124,8 +137,8 @@ mod manager {
 #[cfg(debug_assertions)]
 mod manager {
     use std::ops::{Deref, DerefMut};
-    use std::sync::{RwLock, Mutex};
     use std::sync::mpsc::{channel, Receiver};
+    use std::sync::{Mutex, RwLock};
 
     use notify::{recommended_watcher, Error, Event, RecommendedWatcher, RecursiveMode, Watcher};
 
@@ -151,16 +164,21 @@ mod manager {
             let watcher = match watcher {
                 Ok(watcher) => Some((watcher, Mutex::new(rx))),
                 Err(e) => {
-                    warn!("live template reloading initialization failed: {e}\n\
-                        live template reloading is unavailable");
+                    warn!(
+                        "live template reloading initialization failed: {e}\n\
+                        live template reloading is unavailable"
+                    );
                     None
                 }
             };
 
-            ContextManager { watcher, context: RwLock::new(ctxt), }
+            ContextManager {
+                watcher,
+                context: RwLock::new(ctxt),
+            }
         }
 
-        pub fn context(&self) -> impl Deref<Target=Context> + '_ {
+        pub fn context(&self) -> impl Deref<Target = Context> + '_ {
             self.context.read().unwrap()
         }
 
@@ -168,7 +186,7 @@ mod manager {
             self.watcher.is_some()
         }
 
-        fn context_mut(&self) -> impl DerefMut<Target=Context> + '_ {
+        fn context_mut(&self) -> impl DerefMut<Target = Context> + '_ {
             self.context.write().unwrap()
         }
 
@@ -177,7 +195,9 @@ mod manager {
         /// reinitialized from disk and the user's customization callback is run
         /// again.
         pub fn reload_if_needed(&self, callback: &Callback) {
-            let templates_changes = self.watcher.as_ref()
+            let templates_changes = self
+                .watcher
+                .as_ref()
                 .map(|(_, rx)| rx.lock().expect("fsevents lock").try_iter().count() > 0);
 
             if let Some(true) = templates_changes {
@@ -186,8 +206,10 @@ mod manager {
                 if let Some(new_ctxt) = Context::initialize(&root, callback) {
                     *self.context_mut() = new_ctxt;
                 } else {
-                    warn!("error while reloading template\n\
-                        existing templates will remain active.")
+                    warn!(
+                        "error while reloading template\n\
+                        existing templates will remain active."
+                    )
                 };
             }
         }
@@ -198,12 +220,12 @@ mod manager {
 fn remove_extension(path: &Path) -> PathBuf {
     let stem = match path.file_stem() {
         Some(stem) => stem,
-        None => return path.to_path_buf()
+        None => return path.to_path_buf(),
     };
 
     match path.parent() {
         Some(parent) => parent.join(stem),
-        None => PathBuf::from(stem)
+        None => PathBuf::from(stem),
     }
 }
 
@@ -213,7 +235,9 @@ fn split_path(root: &Path, path: &Path) -> (String, Option<String>) {
     let rel_path = path.strip_prefix(root).unwrap().to_path_buf();
     let path_no_ext = remove_extension(&rel_path);
     let data_type = path_no_ext.extension();
-    let mut name = remove_extension(&path_no_ext).to_string_lossy().into_owned();
+    let mut name = remove_extension(&path_no_ext)
+        .to_string_lossy()
+        .into_owned();
 
     // Ensure template name consistency on Windows systems
     if cfg!(windows) {
@@ -268,6 +292,9 @@ mod tests {
         assert_eq!(name_for("dir/index.hbs"), "dir/index");
         assert_eq!(name_for("dir/index.html.tera"), "dir/index");
         assert_eq!(name_for("index.template.html.hbs"), "index.template");
-        assert_eq!(name_for("subdir/index.template.html.hbs"), "subdir/index.template");
+        assert_eq!(
+            name_for("subdir/index.template.html.hbs"),
+            "subdir/index.template"
+        );
     }
 }

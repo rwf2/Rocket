@@ -1,5 +1,7 @@
-#[cfg(any(test, doctest))] mod guide;
-#[cfg(any(test, doctest))] mod readme;
+#[cfg(any(test, doctest))]
+mod guide;
+#[cfg(any(test, doctest))]
+mod readme;
 
 #[macro_export]
 macro_rules! map {

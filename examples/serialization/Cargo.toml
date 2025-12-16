@@ -6,5 +6,6 @@ edition = "2021"
 publish = false
 
 [dependencies.rocket]
+package = "rocket-community"
 path = "../../core/lib"
 features = ["json", "msgpack", "uuid"]

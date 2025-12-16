@@ -1,5 +1,5 @@
 use crate::catcher::Catcher;
-use crate::route::{Route, Segment, RouteUri};
+use crate::route::{Route, RouteUri, Segment};
 
 use crate::http::{MediaType, Method};
 
@@ -40,6 +40,8 @@ impl Route {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
+    ///
     /// use rocket::Route;
     /// use rocket::http::{Method, MediaType};
     /// # use rocket::route::dummy_handler as handler;
@@ -113,6 +115,8 @@ impl Catcher {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
+    ///
     /// use rocket::Catcher;
     /// # use rocket::catcher::dummy_handler as handler;
     ///
@@ -199,14 +203,17 @@ fn methods_collide(route: &Route, other: &Route) -> bool {
 
 fn formats_collide(route: &Route, other: &Route) -> bool {
     let payload_support = |m: &Option<Method>| m.and_then(|m| m.allows_request_body());
-    match (payload_support(&route.method), payload_support(&other.method)) {
+    match (
+        payload_support(&route.method),
+        payload_support(&other.method),
+    ) {
         // Payload supporting methods match against `Content-Type` which must be
         // fully specified, so the request cannot contain a format that matches
         // more than one route format as long as those formats don't collide.
         (Some(true), Some(true)) => match (route.format.as_ref(), other.format.as_ref()) {
             (Some(a), Some(b)) => a.collides_with(b),
             // A route without a `format` accepts all `Content-Type`s.
-            _ => true
+            _ => true,
         },
         // When a request method may not support a payload, the `Accept` header
         // is considered during matching. The header can always be `*/*`, which
@@ -220,12 +227,12 @@ mod tests {
     use std::str::FromStr;
 
     use super::*;
-    use crate::route::dummy_handler;
     use crate::http::{Method, Method::*};
+    use crate::route::dummy_handler;
 
     fn dummy_route(ranked: bool, method: impl Into<Option<Method>>, uri: &'static str) -> Route {
         let method = method.into().unwrap_or(Get);
-        Route::ranked((!ranked).then(|| 0), method, uri, dummy_handler)
+        Route::ranked((!ranked).then_some(0), method, uri, dummy_handler)
     }
 
     macro_rules! assert_collision {
@@ -424,7 +431,9 @@ mod tests {
     }
 
     fn r_mt_mt_collide<S1, S2>(m: Method, mt1: S1, mt2: S2) -> bool
-        where S1: Into<Option<&'static str>>, S2: Into<Option<&'static str>>
+    where
+        S1: Into<Option<&'static str>>,
+        S2: Into<Option<&'static str>>,
     {
         let mut route_a = Route::new(m, "/", dummy_handler);
         if let Some(mt_str) = mt1.into() {
@@ -461,7 +470,11 @@ mod tests {
         assert!(r_mt_mt_collide(Get, "text/html", "text/html"));
 
         // payload bearing routes collide if the media types collide
-        assert!(r_mt_mt_collide(Post, "application/json", "application/json"));
+        assert!(r_mt_mt_collide(
+            Post,
+            "application/json",
+            "application/json"
+        ));
         assert!(r_mt_mt_collide(Post, "*/json", "application/json"));
         assert!(r_mt_mt_collide(Post, "*/json", "application/*"));
         assert!(r_mt_mt_collide(Post, "text/html", "text/*"));
@@ -482,7 +495,9 @@ mod tests {
     }
 
     fn catchers_collide<A, B>(a: A, ap: &str, b: B, bp: &str) -> bool
-        where A: Into<Option<u16>>, B: Into<Option<u16>>
+    where
+        A: Into<Option<u16>>,
+        B: Into<Option<u16>>,
     {
         use crate::catcher::dummy_handler as handler;
 

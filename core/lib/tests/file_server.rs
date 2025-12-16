@@ -1,10 +1,12 @@
-use std::{io::Read, fs};
-use std::path::Path;
+extern crate rocket_community as rocket;
 
-use rocket::{Rocket, Route, Build};
+use std::path::Path;
+use std::{fs, io::Read};
+
+use rocket::fs::{relative, rewrite::*, FileServer};
 use rocket::http::Status;
 use rocket::local::blocking::Client;
-use rocket::fs::{FileServer, relative, rewrite::*};
+use rocket::{Build, Rocket, Route};
 
 fn static_root() -> &'static Path {
     Path::new(relative!("/tests/static"))
@@ -13,65 +15,64 @@ fn static_root() -> &'static Path {
 fn rocket() -> Rocket<Build> {
     let root = static_root();
     rocket::build()
-        .mount("/default", FileServer::new(&root))
+        .mount("/default", FileServer::new(root))
         .mount(
             "/no_index",
             FileServer::identity()
                 .filter(|f, _| f.is_visible())
-                .rewrite(Prefix::checked(&root))
+                .rewrite(Prefix::checked(root)),
         )
         .mount(
             "/dots",
-            FileServer::identity()
-                .rewrite(Prefix::checked(&root))
+            FileServer::identity().rewrite(Prefix::checked(root)),
         )
         .mount(
             "/index",
             FileServer::identity()
                 .filter(|f, _| f.is_visible())
-                .rewrite(Prefix::checked(&root))
-                .rewrite(DirIndex::unconditional("index.html"))
+                .rewrite(Prefix::checked(root))
+                .rewrite(DirIndex::unconditional("index.html")),
         )
         .mount(
             "/try_index",
             FileServer::identity()
                 .filter(|f, _| f.is_visible())
-                .rewrite(Prefix::checked(&root))
+                .rewrite(Prefix::checked(root))
                 .rewrite(DirIndex::if_exists("index.html"))
-                .rewrite(DirIndex::if_exists("index.htm"))
+                .rewrite(DirIndex::if_exists("index.htm")),
         )
         .mount(
             "/both",
             FileServer::identity()
-                .rewrite(Prefix::checked(&root))
-                .rewrite(DirIndex::unconditional("index.html"))
+                .rewrite(Prefix::checked(root))
+                .rewrite(DirIndex::unconditional("index.html")),
         )
         .mount(
             "/redir",
             FileServer::identity()
                 .filter(|f, _| f.is_visible())
-                .rewrite(Prefix::checked(&root))
-                .rewrite(TrailingDirs)
+                .rewrite(Prefix::checked(root))
+                .rewrite(TrailingDirs),
         )
         .mount(
             "/redir_index",
             FileServer::identity()
                 .filter(|f, _| f.is_visible())
-                .rewrite(Prefix::checked(&root))
+                .rewrite(Prefix::checked(root))
                 .rewrite(TrailingDirs)
-                .rewrite(DirIndex::unconditional("index.html"))
+                .rewrite(DirIndex::unconditional("index.html")),
         )
         .mount(
             "/index_file",
             FileServer::identity()
                 .filter(|f, _| f.is_visible())
-                .rewrite(File::checked(root.join("other/hello.txt")))
+                .rewrite(File::checked(root.join("other/hello.txt"))),
         )
         .mount(
             "/missing_root",
             FileServer::identity()
                 .filter(|f, _| f.is_visible())
-                .rewrite(File::new(root.join("no_file")))
+                .rewrite(File::new(root.join("no_file"))),
         )
 }
 
@@ -83,15 +84,9 @@ static REGULAR_FILES: &[&str] = &[
     "other/index.htm",
 ];
 
-static HIDDEN_FILES: &[&str] = &[
-    ".hidden",
-    "inner/.hideme",
-];
+static HIDDEN_FILES: &[&str] = &[".hidden", "inner/.hideme"];
 
-static INDEXED_DIRECTORIES: &[&str] = &[
-    "",
-    "inner/",
-];
+static INDEXED_DIRECTORIES: &[&str] = &["", "inner/"];
 
 fn assert_file_matches(client: &Client, prefix: &str, path: &str, disk_path: Option<&str>) {
     let full_path = format!("/{}/{}", prefix, path);
@@ -106,7 +101,8 @@ fn assert_file_matches(client: &Client, prefix: &str, path: &str, disk_path: Opt
 
         let mut file = fs::File::open(path).expect("open file");
         let mut expected_contents = String::new();
-        file.read_to_string(&mut expected_contents).expect("read file");
+        file.read_to_string(&mut expected_contents)
+            .expect("read file");
         assert_eq!(response.into_string(), Some(expected_contents));
     } else {
         assert_eq!(response.status(), Status::NotFound);
@@ -175,7 +171,12 @@ fn test_allow_special_dotpaths() {
     let client = Client::debug(rocket()).expect("valid rocket");
     assert_file_matches(&client, "no_index", "./index.html", Some("index.html"));
     assert_file_matches(&client, "no_index", "foo/../index.html", Some("index.html"));
-    assert_file_matches(&client, "no_index", "inner/./index.html", Some("inner/index.html"));
+    assert_file_matches(
+        &client,
+        "no_index",
+        "inner/./index.html",
+        Some("inner/index.html"),
+    );
     assert_file_matches(&client, "no_index", "../index.html", Some("index.html"));
 }
 
@@ -190,10 +191,10 @@ fn test_try_index() {
 fn test_ranking() {
     let root = static_root();
     for rank in -128..128 {
-        let a = FileServer::new(&root).rank(rank);
-        let b = FileServer::new(&root).rank(rank);
+        let a = FileServer::new(root).rank(rank);
+        let b = FileServer::new(root).rank(rank);
 
-        for handler in vec![a, b] {
+        for handler in [a, b] {
             let routes: Vec<Route> = handler.into();
             assert!(routes.iter().all(|route| route.rank == rank), "{}", rank);
         }
@@ -205,10 +206,14 @@ fn test_forwarding() {
     use rocket::{get, routes};
 
     #[get("/<value>", rank = 20)]
-    fn catch_one(value: String) -> String { value }
+    fn catch_one(value: String) -> String {
+        value
+    }
 
     #[get("/<a>/<b>", rank = 20)]
-    fn catch_two(a: &str, b: &str) -> String { format!("{}/{}", a, b) }
+    fn catch_two(a: &str, b: &str) -> String {
+        format!("{}/{}", a, b)
+    }
 
     let rocket = rocket().mount("/default", routes![catch_one, catch_two]);
     let client = Client::debug(rocket).expect("valid rocket");
@@ -239,15 +244,24 @@ fn test_redirection() {
 
     let response = client.get("/redir/inner").dispatch();
     assert_eq!(response.status(), Status::TemporaryRedirect);
-    assert_eq!(response.headers().get("Location").next(), Some("/redir/inner/"));
+    assert_eq!(
+        response.headers().get("Location").next(),
+        Some("/redir/inner/")
+    );
 
     let response = client.get("/redir/inner?foo=bar").dispatch();
     assert_eq!(response.status(), Status::TemporaryRedirect);
-    assert_eq!(response.headers().get("Location").next(), Some("/redir/inner/?foo=bar"));
+    assert_eq!(
+        response.headers().get("Location").next(),
+        Some("/redir/inner/?foo=bar")
+    );
 
     let response = client.get("/redir_index/inner").dispatch();
     assert_eq!(response.status(), Status::TemporaryRedirect);
-    assert_eq!(response.headers().get("Location").next(), Some("/redir_index/inner/"));
+    assert_eq!(
+        response.headers().get("Location").next(),
+        Some("/redir_index/inner/")
+    );
 
     // Paths with trailing slash are unaffected.
     let response = client.get("/redir/inner/").dispatch();
@@ -265,15 +279,24 @@ fn test_redirection() {
 
     let response = client.get("/redir/inner").dispatch();
     assert_eq!(response.status(), Status::TemporaryRedirect);
-    assert_eq!(response.headers().get("Location").next(), Some("/redir/inner/"));
+    assert_eq!(
+        response.headers().get("Location").next(),
+        Some("/redir/inner/")
+    );
 
     let response = client.get("/redir/other").dispatch();
     assert_eq!(response.status(), Status::TemporaryRedirect);
-    assert_eq!(response.headers().get("Location").next(), Some("/redir/other/"));
+    assert_eq!(
+        response.headers().get("Location").next(),
+        Some("/redir/other/")
+    );
 
     let response = client.get("/redir_index/other").dispatch();
     assert_eq!(response.status(), Status::TemporaryRedirect);
-    assert_eq!(response.headers().get("Location").next(), Some("/redir_index/other/"));
+    assert_eq!(
+        response.headers().get("Location").next(),
+        Some("/redir_index/other/")
+    );
 }
 
 #[test]

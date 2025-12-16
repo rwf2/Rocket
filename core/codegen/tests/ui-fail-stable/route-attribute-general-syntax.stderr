@@ -7,28 +7,28 @@ error: missing expected parameter: `uri`
   = note: this error originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: expected `fn`
-       = help: #[get] can only be used on functions
+       ␛[1;34m= ␛[0m␛[1;36mhelp␛[0m␛[39m: ␛[0m␛[1;39m#[get] can only be used on functions␛[0m
  --> tests/ui-fail-stable/route-attribute-general-syntax.rs:9:1
   |
 9 | struct S;
   | ^^^^^^
 
 error: expected `fn`
-       = help: #[get] can only be used on functions
+       ␛[1;34m= ␛[0m␛[1;36mhelp␛[0m␛[39m: ␛[0m␛[1;39m#[get] can only be used on functions␛[0m
   --> tests/ui-fail-stable/route-attribute-general-syntax.rs:12:1
    |
 12 | enum A {  }
    | ^^^^
 
 error: expected `fn`
-       = help: #[get] can only be used on functions
+       ␛[1;34m= ␛[0m␛[1;36mhelp␛[0m␛[39m: ␛[0m␛[1;39m#[get] can only be used on functions␛[0m
   --> tests/ui-fail-stable/route-attribute-general-syntax.rs:15:1
    |
 15 | trait Foo {  }
    | ^^^^^
 
 error: expected `fn`
-       = help: #[get] can only be used on functions
+       ␛[1;34m= ␛[0m␛[1;36mhelp␛[0m␛[39m: ␛[0m␛[1;39m#[get] can only be used on functions␛[0m
   --> tests/ui-fail-stable/route-attribute-general-syntax.rs:18:1
    |
 18 | impl S {  }
@@ -65,7 +65,7 @@ error: expected key/value `key = value`
    |            ^^^
 
 error: handler arguments must be named
-       = help: to name an ignored handler argument, use `_name`
+       ␛[1;34m= ␛[0m␛[1;36mhelp␛[0m␛[39m: ␛[0m␛[1;39mto name an ignored handler argument, use `_name`␛[0m
   --> tests/ui-fail-stable/route-attribute-general-syntax.rs:39:7
    |
 39 | fn c1(_: usize) {}
@@ -167,34 +167,33 @@ error: invalid or unknown media type
 90 | #[get("/", format = "text//foo")]
    |                     ^^^^^^^^^^^
 
-error: expected key/value `key = value`
-  --> tests/ui-fail-stable/route-attribute-general-syntax.rs:95:18
+error: expected literal, found bare path "CONNECT"
+  --> tests/ui-fail-stable/route-attribute-general-syntax.rs:95:9
    |
 95 | #[route(CONNECT, "/")]
-   |                  ^^^
+   |         ^^^^^^^
 
-error: invalid or unknown HTTP method
-       = help: known methods: GET, HEAD, POST, PUT, DELETE, CONNECT, OPTIONS, TRACE, PATCH, ACL, BASELINE-CONTROL, BIND, CHECKIN, CHECKOUT, COPY, LABEL, LINK, LOCK, MERGE, MKACTIVITY, MKCALENDAR, MKCOL, MKREDIRECTREF, MKWORKSPACE, MOVE, ORDERPATCH, PROPFIND, PROPPATCH, REBIND, REPORT, SEARCH, UNBIND, UNCHECKOUT, UNLINK, UNLOCK, UPDATE, UPDATEREDIRECTREF, VERSION-CONTROL
+error: expected literal, found bare path "FIX"
   --> tests/ui-fail-stable/route-attribute-general-syntax.rs:98:9
    |
 98 | #[route(FIX, "/")]
    |         ^^^
 
-error: invalid or unknown HTTP method
-       = help: known methods: GET, HEAD, POST, PUT, DELETE, CONNECT, OPTIONS, TRACE, PATCH, ACL, BASELINE-CONTROL, BIND, CHECKIN, CHECKOUT, COPY, LABEL, LINK, LOCK, MERGE, MKACTIVITY, MKCALENDAR, MKCOL, MKREDIRECTREF, MKWORKSPACE, MOVE, ORDERPATCH, PROPFIND, PROPPATCH, REBIND, REPORT, SEARCH, UNBIND, UNCHECKOUT, UNLINK, UNLOCK, UPDATE, UPDATEREDIRECTREF, VERSION-CONTROL
-   --> tests/ui-fail-stable/route-attribute-general-syntax.rs:101:9
+error: invalid route URI: expected token '/' but found 'h' at index 0
+       ␛[1;34m= ␛[0m␛[1;36mhelp␛[0m␛[39m: ␛[0m␛[1;39mexpected URI in origin form: "/path/<param>"␛[0m
+   --> tests/ui-fail-stable/route-attribute-general-syntax.rs:101:10
     |
 101 | #[route("hi", "/")]
-    |         ^^^^
+    |          ^
 
-error: expected key/value `key = value`
-   --> tests/ui-fail-stable/route-attribute-general-syntax.rs:104:16
+error: invalid route URI: expected token '/' but found 'G' at index 0
+       ␛[1;34m= ␛[0m␛[1;36mhelp␛[0m␛[39m: ␛[0m␛[1;39mexpected URI in origin form: "/path/<param>"␛[0m
+   --> tests/ui-fail-stable/route-attribute-general-syntax.rs:104:10
     |
 104 | #[route("GET", "/")]
-    |                ^^^
+    |          ^
 
-error: expected method ident or string, found integer literal
-       = help: known methods: GET, HEAD, POST, PUT, DELETE, CONNECT, OPTIONS, TRACE, PATCH, ACL, BASELINE-CONTROL, BIND, CHECKIN, CHECKOUT, COPY, LABEL, LINK, LOCK, MERGE, MKACTIVITY, MKCALENDAR, MKCOL, MKREDIRECTREF, MKWORKSPACE, MOVE, ORDERPATCH, PROPFIND, PROPPATCH, REBIND, REPORT, SEARCH, UNBIND, UNCHECKOUT, UNLINK, UNLOCK, UPDATE, UPDATEREDIRECTREF, VERSION-CONTROL
+error: invalid value: expected string literal
    --> tests/ui-fail-stable/route-attribute-general-syntax.rs:107:9
     |
 107 | #[route(120, "/")]

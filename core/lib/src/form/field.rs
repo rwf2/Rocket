@@ -1,7 +1,10 @@
-use crate::form::{name::NameView, error::{Error, ErrorKind, Entity}};
-use crate::http::{ContentType, RawStr};
-use crate::{Request, Data};
+use crate::form::{
+    error::{Entity, Error, ErrorKind},
+    name::NameView,
+};
 use crate::fs::FileName;
+use crate::http::{ContentType, RawStr};
+use crate::{Data, Request};
 
 /// A form field with a string value.
 ///
@@ -47,6 +50,7 @@ impl<'v> ValueField<'v> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::form::ValueField;
     ///
     /// let parsed = ValueField::parse("a cat=an A+ pet");
@@ -78,6 +82,7 @@ impl<'v> ValueField<'v> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::form::ValueField;
     ///
     /// let parsed = ValueField::from_value("A+=kitten");
@@ -95,6 +100,7 @@ impl<'v> ValueField<'v> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::form::ValueField;
     ///
     /// let parsed = ValueField::parse("cat.food=yum?");
@@ -122,6 +128,7 @@ impl<'v> ValueField<'v> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::form::ValueField;
     /// use rocket::form::error::{ErrorKind, Entity};
     ///
@@ -151,6 +158,7 @@ impl<'v> ValueField<'v> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::form::ValueField;
     /// use rocket::form::error::{ErrorKind, Entity};
     ///
@@ -179,6 +187,7 @@ impl<'v> DataField<'v, '_> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::form::DataField;
     ///
     /// fn push_data(field: DataField<'_, '_>) {
@@ -201,6 +210,7 @@ impl<'v> DataField<'v, '_> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::form::DataField;
     ///
     /// fn push_data(field: DataField<'_, '_>) {
@@ -216,7 +226,10 @@ impl<'v> DataField<'v, '_> {
 
 impl<'a> From<(&'a str, &'a str)> for ValueField<'a> {
     fn from((name, value): (&'a str, &'a str)) -> Self {
-        ValueField { name: NameView::new(name), value }
+        ValueField {
+            name: NameView::new(name),
+            value,
+        }
     }
 }
 

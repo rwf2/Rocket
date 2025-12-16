@@ -6,7 +6,7 @@ error: attribute can only be applied to `async` functions
   |
   = note: this error originates in the attribute macro `rocket::main` (in Nightly builds, run with -Z macro-backtrace for more info)
 
-error: [note] this function must be `async`
+error: ␛[1;34m[␛[0m␛[1;32mnote␛[0m␛[1;34m] ␛[0m␛[1;39mthis function must be `async`␛[0m
  --> tests/ui-fail-stable/async-entry.rs:5:5
   |
 5 |     fn foo() { }
@@ -20,14 +20,14 @@ error: attribute can only be applied to `async` functions
    |
    = note: this error originates in the attribute macro `rocket::main` (in Nightly builds, run with -Z macro-backtrace for more info)
 
-error: [note] this function must be `async`
+error: ␛[1;34m[␛[0m␛[1;32mnote␛[0m␛[1;34m] ␛[0m␛[1;39mthis function must be `async`␛[0m
   --> tests/ui-fail-stable/async-entry.rs:17:5
    |
 17 |     fn main() {
    |     ^^^^^^^^^
 
 error: attribute cannot be applied to `main` function
-       = note: this attribute generates a `main` function
+       ␛[1;34m= ␛[0m␛[1;32mnote␛[0m␛[39m: ␛[0m␛[1;39mthis attribute generates a `main` function␛[0m
   --> tests/ui-fail-stable/async-entry.rs:49:5
    |
 49 |     #[rocket::launch]
@@ -35,7 +35,7 @@ error: attribute cannot be applied to `main` function
    |
    = note: this error originates in the attribute macro `rocket::launch` (in Nightly builds, run with -Z macro-backtrace for more info)
 
-error: [note] this function cannot be `main`
+error: ␛[1;34m[␛[0m␛[1;32mnote␛[0m␛[1;34m] ␛[0m␛[1;39mthis function cannot be `main`␛[0m
   --> tests/ui-fail-stable/async-entry.rs:50:8
    |
 50 |     fn main() -> rocket::Rocket<rocket::Build> {
@@ -49,7 +49,7 @@ error: attribute can only be applied to functions that return a value
    |
    = note: this error originates in the attribute macro `rocket::launch` (in Nightly builds, run with -Z macro-backtrace for more info)
 
-error: [note] this function must return a value
+error: ␛[1;34m[␛[0m␛[1;32mnote␛[0m␛[1;34m] ␛[0m␛[1;39mthis function must return a value␛[0m
   --> tests/ui-fail-stable/async-entry.rs:57:5
    |
 57 |     async fn rocket() {
@@ -63,14 +63,14 @@ error: attribute can only be applied to functions that return a value
    |
    = note: this error originates in the attribute macro `rocket::launch` (in Nightly builds, run with -Z macro-backtrace for more info)
 
-error: [note] this function must return a value
+error: ␛[1;34m[␛[0m␛[1;32mnote␛[0m␛[1;34m] ␛[0m␛[1;39mthis function must return a value␛[0m
   --> tests/ui-fail-stable/async-entry.rs:65:5
    |
 65 |     fn rocket() {
    |     ^^^^^^^^^^^
 
 error: attribute cannot be applied to `main` function
-       = note: this attribute generates a `main` function
+       ␛[1;34m= ␛[0m␛[1;32mnote␛[0m␛[39m: ␛[0m␛[1;39mthis attribute generates a `main` function␛[0m
   --> tests/ui-fail-stable/async-entry.rs:79:5
    |
 79 |     #[rocket::launch]
@@ -78,14 +78,14 @@ error: attribute cannot be applied to `main` function
    |
    = note: this error originates in the attribute macro `rocket::launch` (in Nightly builds, run with -Z macro-backtrace for more info)
 
-error: [note] this function cannot be `main`
+error: ␛[1;34m[␛[0m␛[1;32mnote␛[0m␛[1;34m] ␛[0m␛[1;39mthis function cannot be `main`␛[0m
   --> tests/ui-fail-stable/async-entry.rs:80:8
    |
 80 |     fn main() -> &'static str {
    |        ^^^^
 
 error: attribute cannot be applied to `main` function
-       = note: this attribute generates a `main` function
+       ␛[1;34m= ␛[0m␛[1;32mnote␛[0m␛[39m: ␛[0m␛[1;39mthis attribute generates a `main` function␛[0m
   --> tests/ui-fail-stable/async-entry.rs:87:5
    |
 87 |     #[rocket::launch]
@@ -93,7 +93,7 @@ error: attribute cannot be applied to `main` function
    |
    = note: this error originates in the attribute macro `rocket::launch` (in Nightly builds, run with -Z macro-backtrace for more info)
 
-error: [note] this function cannot be `main`
+error: ␛[1;34m[␛[0m␛[1;32mnote␛[0m␛[1;34m] ␛[0m␛[1;39mthis function cannot be `main`␛[0m
   --> tests/ui-fail-stable/async-entry.rs:88:14
    |
 88 |     async fn main() -> _ {
@@ -106,14 +106,6 @@ error[E0728]: `await` is only allowed inside `async` functions and blocks
    |     ---------------- this is not `async`
 73 |         let _ = rocket::build().launch().await;
    |                                          ^^^^^ only allowed inside `async` functions and blocks
-
-error[E0277]: `main` has invalid return type `Rocket<Build>`
-  --> tests/ui-fail-stable/async-entry.rs:94:20
-   |
-94 | async fn main() -> rocket::Rocket<rocket::Build> {
-   |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `main` can only return types that implement `Termination`
-   |
-   = help: consider using `()`, or a `Result`
 
 error[E0308]: mismatched types
   --> tests/ui-fail-stable/async-entry.rs:35:9
@@ -138,6 +130,14 @@ error[E0308]: mismatched types
    |
    = note: expected struct `Rocket<Build>`
               found struct `std::string::String`
+
+error[E0277]: `main` has invalid return type `Rocket<Build>`
+  --> tests/ui-fail-stable/async-entry.rs:94:20
+   |
+94 | async fn main() -> rocket::Rocket<rocket::Build> {
+   |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `main` can only return types that implement `Termination`
+   |
+   = help: consider using `()`, or a `Result`
 
 error[E0308]: mismatched types
   --> tests/ui-fail-stable/async-entry.rs:24:21

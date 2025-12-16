@@ -1,5 +1,5 @@
 use devise::ext::SpanDiagnosticExt;
-use devise::{MetaItem, Spanned, Result, FromMeta, Diagnostic};
+use devise::{Diagnostic, FromMeta, MetaItem, Result, Spanned};
 use proc_macro2::TokenStream;
 
 use crate::{http, http_codegen};
@@ -35,7 +35,10 @@ impl FromMeta for Code {
                 Err(meta.span().error("expected `default`"))
             }
         } else {
-            let msg = format!("expected integer or `default`, found {}", meta.description());
+            let msg = format!(
+                "expected integer or `default`, found {}",
+                meta.description()
+            );
             Err(meta.span().error(msg))
         }
     }
@@ -50,8 +53,12 @@ impl Attribute {
         let attr: MetaItem = syn::parse2(quote!(catch(#args)))?;
         let status = Meta::from_meta(&attr)
             .map(|meta| meta.code.0)
-            .map_err(|diag| diag.help("`#[catch]` expects a status code int or `default`: \
-                        `#[catch(404)]` or `#[catch(default)]`"))?;
+            .map_err(|diag| {
+                diag.help(
+                    "`#[catch]` expects a status code int or `default`: \
+                        `#[catch(404)]` or `#[catch(default)]`",
+                )
+            })?;
 
         Ok(Attribute { status, function })
     }

@@ -1,12 +1,12 @@
 use std::io;
-use std::path::{Path, PathBuf};
 use std::ops::{Deref, DerefMut};
+use std::path::{Path, PathBuf};
 
 use tokio::fs::{File, OpenOptions};
 
+use crate::http::ContentType;
 use crate::request::Request;
 use crate::response::{self, Responder};
-use crate::http::ContentType;
 
 /// A [`Responder`] that sends file data with a Content-Type based on its
 /// file extension.
@@ -16,6 +16,7 @@ use crate::http::ContentType;
 /// A simple static file server mimicking [`FileServer`]:
 ///
 /// ```rust
+/// # extern crate rocket_community as rocket;
 /// # use rocket::get;
 /// use std::path::{PathBuf, Path};
 ///
@@ -51,6 +52,7 @@ impl NamedFile {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// # use rocket::get;
     /// use rocket::fs::NamedFile;
     ///
@@ -78,6 +80,7 @@ impl NamedFile {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::fs::NamedFile;
     ///
     /// # async fn f() -> std::io::Result<()> {
@@ -96,6 +99,7 @@ impl NamedFile {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::fs::NamedFile;
     ///
     /// # async fn f() -> std::io::Result<()> {
@@ -114,6 +118,7 @@ impl NamedFile {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::fs::NamedFile;
     ///
     /// # async fn f() -> std::io::Result<()> {
@@ -132,6 +137,7 @@ impl NamedFile {
     /// # Examples
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::fs::NamedFile;
     ///
     /// # async fn demo_path() -> std::io::Result<()> {

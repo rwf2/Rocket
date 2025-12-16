@@ -1,12 +1,12 @@
-use std::hash::Hash;
 use std::borrow::Cow;
+use std::hash::Hash;
 
 use state::InitCell;
 
-use crate::{RawStr, ext::IntoOwned};
-use crate::uri::Segments;
+use crate::parse::{Extent, IndexedStr};
 use crate::uri::fmt::{self, Part};
-use crate::parse::{IndexedStr, Extent};
+use crate::uri::Segments;
+use crate::{ext::IntoOwned, RawStr};
 
 // INTERNAL DATA STRUCTURE.
 #[doc(hidden)]
@@ -18,7 +18,10 @@ pub struct Data<'a, P: Part> {
 
 impl<'a, P: Part> Data<'a, P> {
     pub(crate) fn raw(value: Extent<&'a [u8]>) -> Self {
-        Data { value: value.into(), decoded_segments: InitCell::new() }
+        Data {
+            value: value.into(),
+            decoded_segments: InitCell::new(),
+        }
     }
 
     // INTERNAL METHOD.
@@ -47,7 +50,7 @@ pub struct Query<'a> {
 
 fn decode_to_indexed_str<P: fmt::Part>(
     value: &RawStr,
-    (indexed, source): (&IndexedStr<'_>, &RawStr)
+    (indexed, source): (&IndexedStr<'_>, &RawStr),
 ) -> IndexedStr<'static> {
     let decoded = match P::KIND {
         fmt::Kind::Path => value.percent_decode_lossy(),
@@ -57,7 +60,13 @@ fn decode_to_indexed_str<P: fmt::Part>(
     match decoded {
         Cow::Borrowed(b) if indexed.is_indexed() => {
             let checked = IndexedStr::checked_from(b, source.as_str());
-            debug_assert!(checked.is_some(), "\nunindexed {:?} in {:?} {:?}", b, indexed, source);
+            debug_assert!(
+                checked.is_some(),
+                "\nunindexed {:?} in {:?} {:?}",
+                b,
+                indexed,
+                source
+            );
             checked.unwrap_or_else(|| IndexedStr::from(Cow::Borrowed("")))
         }
         cow => IndexedStr::from(Cow::Owned(cow.into_owned())),
@@ -102,10 +111,7 @@ impl<'a> Path<'a> {
             return false;
         }
 
-        self.raw_segments()
-            .rev()
-            .skip(1)
-            .all(|s| !s.is_empty())
+        self.raw_segments().rev().skip(1).all(|s| !s.is_empty())
     }
 
     /// Normalizes `self`. If `absolute`, a starting  `/` is required. If
@@ -119,7 +125,9 @@ impl<'a> Path<'a> {
         }
 
         for (i, segment) in self.raw_segments().filter(|s| !s.is_empty()).enumerate() {
-            if i != 0 { path.push('/'); }
+            if i != 0 {
+                path.push('/');
+            }
             path.push_str(segment.as_str());
         }
 
@@ -224,7 +232,10 @@ impl<'a> Path<'a> {
                     continue;
                 }
 
-                segments.push(decode_to_indexed_str::<fmt::Path>(s, (&self.data.value, raw)));
+                segments.push(decode_to_indexed_str::<fmt::Path>(
+                    s,
+                    (&self.data.value, raw),
+                ));
             }
 
             segments
@@ -272,7 +283,9 @@ impl<'a> Query<'a> {
     pub(crate) fn to_normalized(self) -> Data<'static, fmt::Query> {
         let mut query = String::with_capacity(self.raw().trim().len());
         for (i, seg) in self.raw_segments().filter(|s| !s.is_empty()).enumerate() {
-            if i != 0 { query.push('&'); }
+            if i != 0 {
+                query.push('&');
+            }
             query.push_str(seg.as_str());
         }
 
@@ -325,10 +338,11 @@ impl<'a> Query<'a> {
     pub fn raw_segments(&self) -> impl Iterator<Item = &'a RawStr> {
         let query = match self.raw().trim() {
             q if q.is_empty() => None,
-            q => Some(q)
+            q => Some(q),
         };
 
-        query.map(|p| p.split(fmt::Query::DELIMITER))
+        query
+            .map(|p| p.split(fmt::Query::DELIMITER))
             .into_iter()
             .flatten()
     }
@@ -369,7 +383,7 @@ impl<'a> Query<'a> {
 }
 
 macro_rules! impl_partial_eq {
-    ($A:ty = $B:ty) => (
+    ($A:ty = $B:ty) => {
         impl PartialEq<$A> for $B {
             #[inline(always)]
             fn eq(&self, other: &$A) -> bool {
@@ -378,7 +392,7 @@ macro_rules! impl_partial_eq {
                 left == right
             }
         }
-    )
+    };
 }
 
 macro_rules! impl_traits {

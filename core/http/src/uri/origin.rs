@@ -1,8 +1,8 @@
 use std::borrow::Cow;
 
 use crate::ext::IntoOwned;
-use crate::parse::{Extent, IndexedStr, uri::tables::is_pchar};
-use crate::uri::{Error, Path, Query, Data, as_utf8_unchecked, fmt};
+use crate::parse::{uri::tables::is_pchar, Extent, IndexedStr};
+use crate::uri::{as_utf8_unchecked, fmt, Data, Error, Path, Query};
 use crate::{RawStr, RawStrBuf};
 
 /// A URI with an absolute path and optional query: `/path?query`.
@@ -131,12 +131,12 @@ impl<'a> Origin<'a> {
     pub(crate) unsafe fn raw(
         source: Cow<'a, [u8]>,
         path: Extent<&'a [u8]>,
-        query: Option<Extent<&'a [u8]>>
+        query: Option<Extent<&'a [u8]>>,
     ) -> Origin<'a> {
         Origin {
             source: Some(as_utf8_unchecked(source)),
             path: Data::raw(path),
-            query: query.map(Data::raw)
+            query: query.map(Data::raw),
         }
     }
 
@@ -145,7 +145,9 @@ impl<'a> Origin<'a> {
     // resulting `Origin's` are not guaranteed to be valid origin URIs!
     #[doc(hidden)]
     pub fn new<P, Q>(path: P, query: Option<Q>) -> Origin<'a>
-        where P: Into<Cow<'a, str>>, Q: Into<Cow<'a, str>>
+    where
+        P: Into<Cow<'a, str>>,
+        Q: Into<Cow<'a, str>>,
     {
         Origin {
             source: None,
@@ -226,7 +228,8 @@ impl<'a> Origin<'a> {
             });
         }
 
-        let (path, query) = string.split_once('?')
+        let (path, query) = string
+            .split_once('?')
             .map(|(path, query)| (path, Some(query)))
             .unwrap_or((string, None));
 
@@ -258,7 +261,7 @@ impl<'a> Origin<'a> {
         Ok(Origin {
             path: origin.path.into_owned(),
             query: origin.query.into_owned(),
-            source: Some(Cow::Owned(string))
+            source: Some(Cow::Owned(string)),
         })
     }
 
@@ -276,7 +279,10 @@ impl<'a> Origin<'a> {
     /// ```
     #[inline]
     pub fn path(&self) -> Path<'_> {
-        Path { source: &self.source, data: &self.path }
+        Path {
+            source: &self.source,
+            data: &self.path,
+        }
     }
 
     /// Returns the query part of this URI without the question mark, if there
@@ -294,7 +300,10 @@ impl<'a> Origin<'a> {
     /// ```
     #[inline]
     pub fn query(&self) -> Option<Query<'_>> {
-        self.query.as_ref().map(|data| Query { source: &self.source, data })
+        self.query.as_ref().map(|data| Query {
+            source: &self.source,
+            data,
+        })
     }
 
     /// Applies the function `f` to the internal `path` and returns a new
@@ -329,7 +338,9 @@ impl<'a> Origin<'a> {
     /// ```
     #[inline]
     pub fn map_path<'s, F, P>(&'s self, f: F) -> Option<Self>
-        where F: FnOnce(&'s RawStr) -> P, P: Into<RawStrBuf> + 's
+    where
+        F: FnOnce(&'s RawStr) -> P,
+        P: Into<RawStrBuf> + 's,
     {
         let path = f(self.path().raw()).into();
         if !path.starts_with('/') || !path.as_bytes().iter().all(is_pchar) {
@@ -382,7 +393,7 @@ impl<'a> Origin<'a> {
     /// assert!(uri!("/a?q&&b").is_normalized());
     /// ```
     pub fn is_normalized(&self) -> bool {
-        self.path().is_normalized(true) && self.query().map_or(true, |q| q.is_normalized())
+        self.path().is_normalized(true) && self.query().is_none_or(|q| q.is_normalized())
     }
 
     fn _normalize(&mut self, allow_trail: bool) {
@@ -531,8 +542,11 @@ impl<'a> Origin<'a> {
                     IndexedStr::Indexed(i, j) => IndexedStr::Indexed(i, j - 1),
                     IndexedStr::Concrete(cow) => IndexedStr::Concrete(match cow {
                         Cow::Borrowed(s) => Cow::Borrowed(&s[..s.len() - 1]),
-                        Cow::Owned(mut s) => Cow::Owned({ s.pop(); s }),
-                    })
+                        Cow::Owned(mut s) => Cow::Owned({
+                            s.pop();
+                            s
+                        }),
+                    }),
                 };
 
                 self.path = Data {
@@ -545,13 +559,12 @@ impl<'a> Origin<'a> {
         }
 
         self
-
     }
 }
 
 impl_serde!(Origin<'a>, "an origin-form URI");
 
-impl_traits!(Origin [parse_route], path, query);
+impl_traits!(Origin[parse_route], path, query);
 
 impl std::fmt::Display for Origin<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -574,7 +587,14 @@ mod tests {
         let actual = segments.num();
         if actual != expected {
             eprintln!("Count mismatch: expected {}, got {}.", expected, actual);
-            eprintln!("{}", if actual != expected { "lifetime" } else { "buf" });
+            eprintln!(
+                "{}",
+                if actual != expected {
+                    "lifetime"
+                } else {
+                    "buf"
+                }
+            );
             eprintln!("Segments (for {}):", path);
             for (i, segment) in segments.enumerate() {
                 eprintln!("{}: {}", i, segment);
@@ -587,7 +607,7 @@ mod tests {
     fn eq_segments(path: &str, expected: &[&str]) -> bool {
         let uri = match Origin::parse(path) {
             Ok(uri) => uri,
-            Err(e) => panic!("failed to parse {}: {}", path, e)
+            Err(e) => panic!("failed to parse {}: {}", path, e),
         };
 
         let actual: Vec<&str> = uri.path().segments().collect();

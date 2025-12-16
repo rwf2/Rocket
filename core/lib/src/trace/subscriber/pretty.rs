@@ -1,16 +1,16 @@
 use std::fmt;
 
 use tracing::field::Field;
-use tracing::{Event, Level, Metadata, Subscriber};
 use tracing::span::{Attributes, Id, Record};
-use tracing_subscriber::layer::{Layer, Context};
-use tracing_subscriber::registry::LookupSpan;
+use tracing::{Event, Level, Metadata, Subscriber};
 use tracing_subscriber::field::RecordFields;
+use tracing_subscriber::layer::{Context, Layer};
+use tracing_subscriber::registry::LookupSpan;
 
 use yansi::{Paint, Painted};
 
-use crate::util::Formatter;
 use crate::trace::subscriber::{Data, RecordDisplay, RocketFmt};
+use crate::util::Formatter;
 
 #[derive(Debug, Default, Copy, Clone)]
 pub struct Pretty {
@@ -20,17 +20,29 @@ pub struct Pretty {
 impl RocketFmt<Pretty> {
     fn indent(&self) -> &'static str {
         static INDENT: &[&str] = &["", "   ", "      "];
-        INDENT.get(self.state().depth as usize).copied().unwrap_or("         ")
+        INDENT
+            .get(self.state().depth as usize)
+            .copied()
+            .unwrap_or("         ")
     }
 
     fn marker(&self) -> &'static str {
         static MARKER: &[&str] = &["", ">> ", ":: "];
-        MARKER.get(self.state().depth as usize).copied().unwrap_or("-- ")
+        MARKER
+            .get(self.state().depth as usize)
+            .copied()
+            .unwrap_or("-- ")
     }
 
     fn emoji(&self, _emoji: &'static str) -> Painted<&'static str> {
-        #[cfg(windows)] { "".paint(self.style).mask() }
-        #[cfg(not(windows))] { _emoji.paint(self.style).mask() }
+        #[cfg(windows)]
+        {
+            "".paint(self.style).mask()
+        }
+        #[cfg(not(windows))]
+        {
+            _emoji.paint(self.style).mask()
+        }
     }
 
     fn prefix<'a>(&self, meta: &'a Metadata<'_>) -> impl fmt::Display + 'a {
@@ -54,13 +66,18 @@ impl RocketFmt<Pretty> {
     }
 
     fn print_fields<F>(&self, metadata: &Metadata<'_>, fields: F)
-        where F: RecordFields
+    where
+        F: RecordFields,
     {
         let style = self.style(metadata);
         let prefix = self.prefix(metadata);
         fields.record_display(|key: &Field, value: &dyn fmt::Display| {
             if key.name() != "message" {
-                println!("{prefix}{}: {}", key.paint(style), value.paint(style).primary());
+                println!(
+                    "{prefix}{}: {}",
+                    key.paint(style),
+                    value.paint(style).primary()
+                );
             }
         })
     }
@@ -68,7 +85,8 @@ impl RocketFmt<Pretty> {
 
 impl<S: Subscriber + for<'a> LookupSpan<'a>> Layer<S> for RocketFmt<Pretty> {
     fn enabled(&self, metadata: &Metadata<'_>, _: Context<'_, S>) -> bool {
-        self.filter.would_enable(metadata.target(), metadata.level())
+        self.filter
+            .would_enable(metadata.target(), metadata.level())
     }
 
     fn on_event(&self, event: &Event<'_>, _: Context<'_, S>) {
@@ -78,65 +96,94 @@ impl<S: Subscriber + for<'a> LookupSpan<'a>> Layer<S> for RocketFmt<Pretty> {
             "config" => self.print_fields(meta, event),
             "liftoff" => {
                 let prefix = self.prefix(meta);
-                println!("{prefix}{}{} {}", self.emoji("🚀 "),
+                println!(
+                    "{prefix}{}{} {}",
+                    self.emoji("🚀 "),
                     "Rocket has launched on".paint(style).primary().bold(),
-                    &data["endpoint"].paint(style).primary().bold().underline());
-            },
-            "route" => println!("{}", Formatter(|f| {
-                write!(f, "{}{}{}: ", self.indent(), self.marker(), "route".paint(style))?;
+                    &data["endpoint"].paint(style).primary().bold().underline()
+                );
+            }
+            "route" => println!(
+                "{}",
+                Formatter(|f| {
+                    write!(
+                        f,
+                        "{}{}{}: ",
+                        self.indent(),
+                        self.marker(),
+                        "route".paint(style)
+                    )?;
 
-                let (base, mut relative) = (&data["uri.base"], &data["uri.unmounted"]);
-                if base.ends_with('/') && relative.starts_with('/') {
-                    relative = &relative[1..];
-                }
-
-                write!(f, "{:>3} {} {}{}",
-                    &data["rank"].paint(style.bright().dim()),
-                    &data["method"].paint(style.bold()),
-                    base.paint(style.primary().underline()),
-                    relative.paint(style.primary()),
-                )?;
-
-                if let Some(name) = data.get("name") {
-                    write!(f, " ({}", name.paint(style.bold().bright()))?;
-
-                    if let Some(location) = data.get("location") {
-                        write!(f, " {}", location.paint(style.dim()))?;
+                    let (base, mut relative) = (&data["uri.base"], &data["uri.unmounted"]);
+                    if base.ends_with('/') && relative.starts_with('/') {
+                        relative = &relative[1..];
                     }
 
-                    write!(f, ")")?;
-                }
+                    write!(
+                        f,
+                        "{:>3} {} {}{}",
+                        &data["rank"].paint(style.bright().dim()),
+                        &data["method"].paint(style.bold()),
+                        base.paint(style.primary().underline()),
+                        relative.paint(style.primary()),
+                    )?;
 
-                Ok(())
-            })),
-            "catcher" => println!("{}", Formatter(|f| {
-                write!(f, "{}{}{}: ", self.indent(), self.marker(), "catcher".paint(style))?;
+                    if let Some(name) = data.get("name") {
+                        write!(f, " ({}", name.paint(style.bold().bright()))?;
 
-                match data.get("code") {
-                    Some(code) => write!(f, "{} ", code.paint(style.bold()))?,
-                    None => write!(f, "{} ", "default".paint(style.bold()))?,
-                }
+                        if let Some(location) = data.get("location") {
+                            write!(f, " {}", location.paint(style.dim()))?;
+                        }
 
-                write!(f, "{}", &data["uri.base"].paint(style.primary()))?;
-                if let Some(name) = data.get("name") {
-                    write!(f, " ({}", name.paint(style.bold().bright()))?;
-
-                    if let Some(location) = data.get("location") {
-                        write!(f, " {}", location.paint(style.dim()))?;
+                        write!(f, ")")?;
                     }
 
-                    write!(f, ")")?;
-                }
+                    Ok(())
+                })
+            ),
+            "catcher" => println!(
+                "{}",
+                Formatter(|f| {
+                    write!(
+                        f,
+                        "{}{}{}: ",
+                        self.indent(),
+                        self.marker(),
+                        "catcher".paint(style)
+                    )?;
 
-                Ok(())
-            })),
-            "header" => println!("{}{}{}: {}: {}",
-                self.indent(), self.marker(), "header".paint(style),
+                    match data.get("code") {
+                        Some(code) => write!(f, "{} ", code.paint(style.bold()))?,
+                        None => write!(f, "{} ", "default".paint(style.bold()))?,
+                    }
+
+                    write!(f, "{}", &data["uri.base"].paint(style.primary()))?;
+                    if let Some(name) = data.get("name") {
+                        write!(f, " ({}", name.paint(style.bold().bright()))?;
+
+                        if let Some(location) = data.get("location") {
+                            write!(f, " {}", location.paint(style.dim()))?;
+                        }
+
+                        write!(f, ")")?;
+                    }
+
+                    Ok(())
+                })
+            ),
+            "header" => println!(
+                "{}{}{}: {}: {}",
+                self.indent(),
+                self.marker(),
+                "header".paint(style),
                 &data["name"].paint(style.bold()),
                 &data["value"].paint(style.primary()),
             ),
-            "fairing" => println!("{}{}{}: {} {}",
-                self.indent(), self.marker(), "fairing".paint(style),
+            "fairing" => println!(
+                "{}{}{}: {} {}",
+                self.indent(),
+                self.marker(),
+                "fairing".paint(style),
                 &data["name"].paint(style.bold()),
                 &data["kind"].paint(style.primary().dim()),
             ),
@@ -171,9 +218,15 @@ impl<S: Subscriber + for<'a> LookupSpan<'a>> Layer<S> for RocketFmt<Pretty> {
             let field_prefix = Formatter(|f| write!(f, "{prefix}{emoji}{name} ({fields}) "));
 
             if self.has_message(meta) && self.has_data_fields(meta) {
-                print!("{}", self.message(&field_prefix, &fieldless_prefix, meta, attrs));
+                print!(
+                    "{}",
+                    self.message(&field_prefix, &fieldless_prefix, meta, attrs)
+                );
             } else if self.has_message(meta) {
-                print!("{}", self.message(&fieldless_prefix, &fieldless_prefix, meta, attrs));
+                print!(
+                    "{}",
+                    self.message(&fieldless_prefix, &fieldless_prefix, meta, attrs)
+                );
             } else if self.has_data_fields(meta) {
                 println!("{field_prefix}");
             } else {

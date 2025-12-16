@@ -14,13 +14,13 @@ macro_rules! map {
     });
 }
 
-macro_rules! vec {
-    ($($value:expr),* $(,)?) => ({
-        let mut vec = Vec::new();
-        $(vec.push($value.into());)*
-        vec
-    });
-}
+//macro_rules! vec {
+//    ($($value:expr),* $(,)?) => ({
+//        let mut vec = Vec::new();
+//        $(vec.push($value.into());)*
+//        vec
+//    });
+//}
 
 macro_rules! assert_values_parse_eq {
     ($($v:expr => $T:ty = $expected:expr),* $(,)?) => (
@@ -64,7 +64,10 @@ macro_rules! assert_parse_fails {
 
 #[test]
 fn time() {
-    use time::{macros::{date, time}, Date, Time, PrimitiveDateTime as DateTime};
+    use time::{
+        macros::{date, time},
+        Date, PrimitiveDateTime as DateTime, Time,
+    };
 
     assert_values_parse_eq! {
         &["=2010-10-20"] => Date = date!(2010-10-20),
@@ -155,8 +158,8 @@ fn potpourri() {
             "[k:b].1=hi", "[a]=hey", "[k:a]1=3"
         ] => HashMap<(usize, &str), Vec<&str>>
             = map![
-                (5, "3".into()) => vec!["hi", "hey"],
-                (1, "hi".into()) => vec!["10"]
+                (5, "3") => vec!["hi", "hey"],
+                (1, "hi") => vec!["10"]
             ],
         &[
             "[0][hi]=10", "[0][hey]=12", "[1][bob]=0", "[1].blam=58", "[].0=1",

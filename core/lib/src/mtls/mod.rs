@@ -10,8 +10,8 @@ pub mod oid {
     //! [`oid_registry`](https://docs.rs/oid-registry/0.4) and
     //! [`der-parser`](https://docs.rs/der-parser/7).
 
-    pub use x509_parser::oid_registry::*;
     pub use x509_parser::objects::*;
+    pub use x509_parser::oid_registry::*;
 }
 
 pub mod bigint {
@@ -31,14 +31,14 @@ pub mod x509 {
 }
 
 mod certificate;
+mod config;
 mod error;
 mod name;
-mod config;
 
+pub use certificate::{Certificate, CertificateDer};
+pub use config::MtlsConfig;
 pub use error::Error;
 pub use name::Name;
-pub use config::MtlsConfig;
-pub use certificate::{Certificate, CertificateDer};
 
 /// A type alias for `Result` with the error type set to [`Error`].
 pub type Result<T, E = Error> = std::result::Result<T, E>;

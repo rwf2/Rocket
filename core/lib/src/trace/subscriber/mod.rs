@@ -1,14 +1,14 @@
-mod visit;
-mod pretty;
+mod common;
 mod compact;
 mod dynamic;
-mod common;
+mod pretty;
 mod request_id;
+mod visit;
 
-pub use pretty::Pretty;
-pub use compact::Compact;
 pub use common::RocketFmt;
-pub use request_id::{RequestId, RequestIdLayer};
+pub use compact::Compact;
 pub use dynamic::RocketDynFmt;
+pub use pretty::Pretty;
+pub use request_id::{RequestId, RequestIdLayer};
 
-pub(crate) use visit::{RecordDisplay, Data};
+pub(crate) use visit::{Data, RecordDisplay};

@@ -2,10 +2,10 @@ use std::fmt;
 
 use parking_lot::Mutex;
 
-use crate::{Rocket, Orbit};
+use crate::{Orbit, Rocket};
 
 #[doc(inline)]
-pub use cookie::{Cookie, SameSite, Iter};
+pub use cookie::{Cookie, Iter, SameSite};
 
 /// Collection of one or more HTTP cookies.
 ///
@@ -22,7 +22,7 @@ pub use cookie::{Cookie, SameSite, Iter};
 /// always returns the latest changes.
 ///
 /// ```rust
-/// # #[macro_use] extern crate rocket;
+/// # #[macro_use] extern crate rocket_community as rocket;
 /// use rocket::http::{CookieJar, Cookie};
 ///
 /// #[get("/message")]
@@ -78,7 +78,7 @@ pub use cookie::{Cookie, SameSite, Iter};
 /// handler to retrieve the value of a "message" cookie.
 ///
 /// ```rust
-/// # #[macro_use] extern crate rocket;
+/// # #[macro_use] extern crate rocket_community as rocket;
 /// use rocket::http::CookieJar;
 ///
 /// #[get("/message")]
@@ -97,7 +97,7 @@ pub use cookie::{Cookie, SameSite, Iter};
 /// [private cookie]: #method.add_private
 ///
 /// ```rust
-/// # #[macro_use] extern crate rocket;
+/// # extern crate rocket_community as rocket;
 /// # #[cfg(feature = "secrets")] {
 /// use rocket::http::Status;
 /// use rocket::request::{self, Request, FromRequest};
@@ -178,7 +178,7 @@ impl<'a> CookieJar<'a> {
                 // This is updated dynamically when headers are received.
                 secure: rocket.endpoints().all(|e| e.is_tls()),
                 config: rocket.config(),
-            }
+            },
         }
     }
 
@@ -192,7 +192,7 @@ impl<'a> CookieJar<'a> {
     /// # Example
     ///
     /// ```rust
-    /// # #[macro_use] extern crate rocket;
+    /// # #[macro_use] extern crate rocket_community as rocket;
     /// use rocket::http::CookieJar;
     ///
     /// #[get("/")]
@@ -216,7 +216,7 @@ impl<'a> CookieJar<'a> {
     /// # Example
     ///
     /// ```rust
-    /// # #[macro_use] extern crate rocket;
+    /// # #[macro_use] extern crate rocket_community as rocket;
     /// use rocket::http::CookieJar;
     ///
     /// #[get("/")]
@@ -227,7 +227,9 @@ impl<'a> CookieJar<'a> {
     #[cfg(feature = "secrets")]
     #[cfg_attr(nightly, doc(cfg(feature = "secrets")))]
     pub fn get_private(&self, name: &str) -> Option<Cookie<'static>> {
-        self.jar.private(&self.state.config.secret_key.key).get(name)
+        self.jar
+            .private(&self.state.config.secret_key.key)
+            .get(name)
     }
 
     /// Returns a reference to the _original or pending_ `Cookie` inside this
@@ -242,7 +244,7 @@ impl<'a> CookieJar<'a> {
     /// # Example
     ///
     /// ```rust
-    /// # #[macro_use] extern crate rocket;
+    /// # #[macro_use] extern crate rocket_community as rocket;
     /// use rocket::http::CookieJar;
     ///
     /// #[get("/")]
@@ -261,11 +263,13 @@ impl<'a> CookieJar<'a> {
 
         drop(ops);
 
-        #[cfg(feature = "secrets")] {
+        #[cfg(feature = "secrets")]
+        {
             self.get_private(name).or_else(|| self.get(name).cloned())
         }
 
-        #[cfg(not(feature = "secrets"))] {
+        #[cfg(not(feature = "secrets"))]
+        {
             self.get(name).cloned()
         }
     }
@@ -287,7 +291,7 @@ impl<'a> CookieJar<'a> {
     /// # Example
     ///
     /// ```rust
-    /// # #[macro_use] extern crate rocket;
+    /// # #[macro_use] extern crate rocket_community as rocket;
     /// use rocket::http::{Cookie, SameSite, CookieJar};
     ///
     /// #[get("/")]
@@ -332,7 +336,7 @@ impl<'a> CookieJar<'a> {
     /// # Example
     ///
     /// ```rust
-    /// # #[macro_use] extern crate rocket;
+    /// # #[macro_use] extern crate rocket_community as rocket;
     /// use rocket::http::CookieJar;
     ///
     /// #[get("/")]
@@ -370,7 +374,7 @@ impl<'a> CookieJar<'a> {
     /// # Example
     ///
     /// ```rust
-    /// # #[macro_use] extern crate rocket;
+    /// # #[macro_use] extern crate rocket_community as rocket;
     /// use rocket::http::{Cookie, CookieJar};
     ///
     /// #[get("/")]
@@ -410,7 +414,7 @@ impl<'a> CookieJar<'a> {
     /// # Example
     ///
     /// ```rust
-    /// # #[macro_use] extern crate rocket;
+    /// # #[macro_use] extern crate rocket_community as rocket;
     /// use rocket::http::{CookieJar, Cookie};
     ///
     /// #[get("/")]
@@ -443,7 +447,7 @@ impl<'a> CookieJar<'a> {
     /// # Example
     ///
     /// ```rust
-    /// # #[macro_use] extern crate rocket;
+    /// # #[macro_use] extern crate rocket_community as rocket;
     /// use rocket::http::CookieJar;
     ///
     /// #[get("/")]
@@ -453,7 +457,7 @@ impl<'a> CookieJar<'a> {
     ///     }
     /// }
     /// ```
-    pub fn iter(&self) -> impl Iterator<Item=&Cookie<'static>> {
+    pub fn iter(&self) -> impl Iterator<Item = &Cookie<'static>> {
         self.jar.iter()
     }
 
@@ -485,7 +489,7 @@ impl<'a> CookieJar<'a> {
                     }
                 }
                 #[allow(unreachable_patterns)]
-                _ => unreachable!()
+                _ => unreachable!(),
             }
         }
 
@@ -503,7 +507,9 @@ impl<'a> CookieJar<'a> {
     #[cfg_attr(nightly, doc(cfg(feature = "secrets")))]
     #[inline(always)]
     pub(crate) fn add_original_private(&mut self, cookie: Cookie<'static>) {
-        self.jar.private_mut(&self.state.config.secret_key.key).add_original(cookie);
+        self.jar
+            .private_mut(&self.state.config.secret_key.key)
+            .add_original(cookie);
     }
 
     /// For each property mentioned below, this method checks if there is a
@@ -568,7 +574,9 @@ impl<'a> CookieJar<'a> {
 
 impl fmt::Debug for CookieJar<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let pending: Vec<_> = self.ops.lock()
+        let pending: Vec<_> = self
+            .ops
+            .lock()
             .iter()
             .map(|c| c.cookie())
             .cloned()
@@ -594,7 +602,7 @@ impl<'a> Clone for CookieJar<'a> {
 impl Op {
     fn cookie(&self) -> &Cookie<'static> {
         match self {
-            Op::Add(c, _) | Op::Remove(c) => c
+            Op::Add(c, _) | Op::Remove(c) => c,
         }
     }
 }

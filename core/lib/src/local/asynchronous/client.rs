@@ -2,10 +2,10 @@ use std::fmt;
 
 use parking_lot::RwLock;
 
-use crate::{Rocket, Phase, Orbit, Ignite, Error};
-use crate::local::asynchronous::{LocalRequest, LocalResponse};
-use crate::http::{Method, uri::Origin};
+use crate::http::{uri::Origin, Method};
 use crate::listener::Endpoint;
+use crate::local::asynchronous::{LocalRequest, LocalResponse};
+use crate::{Error, Ignite, Orbit, Phase, Rocket};
 
 /// An `async` client to construct and dispatch local requests.
 ///
@@ -36,6 +36,7 @@ use crate::listener::Endpoint;
 /// dispatches a local `POST /` request with a body of `Hello, world!`.
 ///
 /// ```rust,no_run
+/// # extern crate rocket_community as rocket;
 /// use rocket::local::asynchronous::Client;
 ///
 /// # rocket::async_test(async {
@@ -50,7 +51,7 @@ use crate::listener::Endpoint;
 pub struct Client {
     rocket: Rocket<Orbit>,
     cookies: RwLock<cookie::CookieJar>,
-    pub(in super) tracked: bool,
+    pub(super) tracked: bool,
 }
 
 impl Client {
@@ -66,14 +67,19 @@ impl Client {
 
         let rocket = rocket.local_launch(endpoint).await?;
         let cookies = RwLock::new(cookie::CookieJar::new());
-        Ok(Client { rocket, cookies, tracked })
+        Ok(Client {
+            rocket,
+            cookies,
+            tracked,
+        })
     }
 
     // WARNING: This is unstable! Do not use this method outside of Rocket!
     // This is used by the `Client` doctests.
     #[doc(hidden)]
     pub fn _test<T, F>(f: F) -> T
-        where F: FnOnce(&Self, LocalRequest<'_>, LocalResponse<'_>) -> T + Send
+    where
+        F: FnOnce(&Self, LocalRequest<'_>, LocalResponse<'_>) -> T + Send,
     {
         crate::async_test(async {
             let client = Client::debug(crate::build()).await.unwrap();
@@ -90,21 +96,24 @@ impl Client {
 
     #[inline(always)]
     pub(crate) fn _with_raw_cookies<F, T>(&self, f: F) -> T
-        where F: FnOnce(&cookie::CookieJar) -> T
+    where
+        F: FnOnce(&cookie::CookieJar) -> T,
     {
         f(&self.cookies.read())
     }
 
     #[inline(always)]
     pub(crate) fn _with_raw_cookies_mut<F, T>(&self, f: F) -> T
-        where F: FnOnce(&mut cookie::CookieJar) -> T
+    where
+        F: FnOnce(&mut cookie::CookieJar) -> T,
     {
         f(&mut self.cookies.write())
     }
 
     #[inline(always)]
     fn _req<'c, 'u: 'c, U>(&'c self, method: Method, uri: U) -> LocalRequest<'c>
-        where U: TryInto<Origin<'u>> + fmt::Display
+    where
+        U: TryInto<Origin<'u>> + fmt::Display,
     {
         LocalRequest::new(self, method, uri)
     }

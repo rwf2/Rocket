@@ -1,7 +1,8 @@
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket_community as rocket;
 
 use rocket::http::Status;
-use rocket::request::{self, Request, FromRequest};
+use rocket::request::{self, FromRequest, Request};
 
 struct Authenticated;
 
@@ -57,15 +58,16 @@ fn catcher() -> &'static str {
 mod tests {
     use super::*;
 
-    use rocket::routes;
-    use rocket::local::blocking::Client;
     use rocket::http::Header;
+    use rocket::local::blocking::Client;
+    use rocket::routes;
 
     #[test]
     fn authorized_forwards() {
         let client = Client::debug_with(routes![auth, public, auth_needed]).unwrap();
 
-        let response = client.get("/auth")
+        let response = client
+            .get("/auth")
             .header(Header::new("Authenticated", "true"))
             .dispatch();
 
@@ -76,7 +78,8 @@ mod tests {
         assert_eq!(response.status(), Status::Ok);
         assert_eq!(response.into_string().unwrap(), "Public");
 
-        let response = client.get("/need-auth")
+        let response = client
+            .get("/need-auth")
             .header(Header::new("Authenticated", "true"))
             .dispatch();
 

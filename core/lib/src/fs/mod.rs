@@ -1,16 +1,16 @@
 //! File serving, file accepting, and file metadata types.
 
-mod server;
-mod named_file;
-mod temp_file;
 mod file_name;
+mod named_file;
+mod server;
+mod temp_file;
 
 pub mod rewrite;
 
-pub use server::*;
-pub use named_file::*;
-pub use temp_file::*;
 pub use file_name::*;
+pub use named_file::*;
+pub use server::*;
+pub use temp_file::*;
 
 crate::export! {
     /// Generates a crate-relative version of a path.
@@ -28,7 +28,7 @@ crate::export! {
     /// Serve files from the crate-relative `static/` directory:
     ///
     /// ```rust
-    /// # #[macro_use] extern crate rocket;
+    /// # #[macro_use] extern crate rocket_community as rocket;
     /// use rocket::fs::{FileServer, relative};
     ///
     /// #[launch]
@@ -40,6 +40,7 @@ crate::export! {
     /// Path equivalences:
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use std::path::Path;
     ///
     /// use rocket::fs::relative;

@@ -1,11 +1,11 @@
-use proc_macro2::TokenStream;
-use devise::ext::{TypeExt, SpanDiagnosticExt, GenericsExt, quote_respanned};
-use syn::parse::Parser;
+use devise::ext::{quote_respanned, GenericsExt, SpanDiagnosticExt, TypeExt};
 use devise::*;
+use proc_macro2::TokenStream;
+use syn::parse::Parser;
 
-use crate::exports::*;
 use crate::derive::form_field::FieldName::*;
-use crate::derive::form_field::{FieldExt, default, first_duplicate, validators};
+use crate::derive::form_field::{default, first_duplicate, validators, FieldExt};
+use crate::exports::*;
 use crate::syn_ext::{GenericsExt as _, TypeExt as _};
 
 type WherePredicates = syn::punctuated::Punctuated<syn::WherePredicate, syn::Token![,]>;
@@ -20,7 +20,8 @@ macro_rules! quote_spanned {
 
 // F: fn(field_ty: Ty, field_context: Expr)
 fn fields_map<F>(fields: Fields<'_>, map_f: F) -> Result<TokenStream>
-    where F: Fn(&syn::Type, &syn::Expr) -> TokenStream
+where
+    F: Fn(&syn::Type, &syn::Expr) -> TokenStream,
 {
     let mut matchers = vec![];
     for field in fields.iter() {
@@ -28,7 +29,8 @@ fn fields_map<F>(fields: Fields<'_>, map_f: F) -> Result<TokenStream>
         let field_context: syn::Expr = syn::parse2(quote_spanned!(ty.span() => {
             let __o = __c.__opts;
             __c.#ident.get_or_insert_with(|| <#ty as #_form::FromForm<'r>>::init(__o))
-        })).expect("form context expression");
+        }))
+        .expect("form context expression");
 
         let push = map_f(&ty, &field_context);
         if fields.are_unnamed() {
@@ -63,9 +65,12 @@ fn generic_bounds_tokens(input: Input<'_>) -> Result<TokenStream> {
         .try_fields_map(|_, fields| {
             let generic_idents = fields.parent.input().generics().type_idents();
 
-            let bounds = fields.iter()
+            let bounds = fields
+                .iter()
                 .filter(|f| !f.ty.is_concrete(&generic_idents))
-                .map(|f| f.ty.with_replaced_lifetimes(syn::Lifetime::new("'r", f.ty.span())))
+                .map(|f| {
+                    f.ty.with_replaced_lifetimes(syn::Lifetime::new("'r", f.ty.span()))
+                })
                 .map(|ty| quote_spanned!(ty.span() => #ty: #_form::FromForm<'r>));
 
             Ok(quote!(#(#bounds),*))

@@ -1,7 +1,7 @@
-use std::fmt;
 use std::any::TypeId;
+use std::fmt;
 
-use crate::{Rocket, Ignite};
+use crate::{Ignite, Rocket};
 
 /// An automatic last line of defense against launching an invalid [`Rocket`].
 ///
@@ -27,6 +27,8 @@ use crate::{Rocket, Ignite};
 /// As an example, consider the following simple application:
 ///
 /// ```rust
+/// extern crate rocket_community as rocket;
+///
 /// # use rocket::*;
 /// # type Response = ();
 /// #[get("/<id>")]
@@ -60,6 +62,8 @@ use crate::{Rocket, Ignite};
 /// nominally, a value of type `String` must be managed:
 ///
 /// ```rust
+/// extern crate rocket_community as rocket;
+///
 /// # use rocket::*;
 /// # type Response = ();
 /// # #[get("/<id>")]
@@ -86,6 +90,8 @@ use crate::{Rocket, Ignite};
 /// eligible to be sentinels. Consider the following route:
 ///
 /// ```rust
+/// extern crate rocket_community as rocket;
+///
 /// # use rocket::*;
 /// # use either::Either;
 /// # type Inner<T> = Option<T>;
@@ -145,6 +151,8 @@ use crate::{Rocket, Ignite};
 /// Occasionally an existential `impl Trait` may find its way into return types:
 ///
 /// ```rust
+/// extern crate rocket_community as rocket;
+///
 /// # use rocket::*;
 /// # use either::Either;
 /// use rocket::response::Responder;
@@ -173,6 +181,8 @@ use crate::{Rocket, Ignite};
 /// When possible, prefer to name all types:
 ///
 /// ```rust
+/// extern crate rocket_community as rocket;
+///
 /// # use rocket::*;
 /// # use either::Either;
 /// # type AbortingSentinel = ();
@@ -192,6 +202,8 @@ use crate::{Rocket, Ignite};
 /// will not.
 ///
 /// ```rust
+/// extern crate rocket_community as rocket;
+///
 /// # use rocket::get;
 /// # type Foo = ();
 /// # type Bar = ();
@@ -219,6 +231,8 @@ use crate::{Rocket, Ignite};
 /// Even approximations are impossible. For example, consider the following:
 ///
 /// ```rust
+/// extern crate rocket_community as rocket;
+///
 /// # use rocket::*;
 /// macro_rules! MyType {
 ///     (State<'_, u32>) => (&'_ rocket::Config)
@@ -253,6 +267,8 @@ use crate::{Rocket, Ignite};
 ///   * a catcher for status code `400` at base `/`
 ///
 /// ```rust
+/// extern crate rocket_community as rocket;
+///
 /// use rocket::{Rocket, Ignite, Sentinel};
 /// # struct MyResponder;
 /// # struct T;
@@ -358,6 +374,8 @@ impl Sentry {
     /// # Example
     ///
     /// ```rust
+    /// extern crate rocket_community as rocket;
+    ///
     /// use rocket::Sentry;
     ///
     /// fn handle_error(sentry: &Sentry) {
@@ -373,6 +391,8 @@ impl Sentry {
     /// # Example
     ///
     /// ```rust
+    /// extern crate rocket_community as rocket;
+    ///
     /// use rocket::Sentry;
     ///
     /// fn handle_error(sentry: &Sentry) {
@@ -410,7 +430,10 @@ pub(crate) fn query<'s>(
     let mut aborted = vec![];
     while let Some(sentinel) = remaining.pop_front() {
         if sentinel.specialized {
-            if *visited.entry(sentinel.type_id).or_insert_with(|| (sentinel.abort)(rocket)) {
+            if *visited
+                .entry(sentinel.type_id)
+                .or_insert_with(|| (sentinel.abort)(rocket))
+            {
                 aborted.push(sentinel);
             }
         } else if let Some(mut children) = map.remove(&sentinel.type_id) {
@@ -420,7 +443,7 @@ pub(crate) fn query<'s>(
 
     match aborted.is_empty() {
         true => Ok(()),
-        false => Err(aborted.into_iter().cloned().collect())
+        false => Err(aborted.into_iter().cloned().collect()),
     }
 }
 
@@ -476,7 +499,9 @@ pub mod resolution {
     pub trait DefaultSentinel {
         const SPECIALIZED: bool = false;
 
-        fn abort(_: &Rocket<Ignite>) -> bool { false }
+        fn abort(_: &Rocket<Ignite>) -> bool {
+            false
+        }
     }
 
     impl<T: ?Sized> DefaultSentinel for T {}
@@ -522,7 +547,10 @@ mod test {
     fn parent_works() {
         let child = resolve!(YesASentinel, HasSentinel<YesASentinel>);
         assert!(child.type_name.ends_with("YesASentinel"));
-        assert_eq!(child.parent.unwrap(), TypeId::of::<HasSentinel<YesASentinel>>());
+        assert_eq!(
+            child.parent.unwrap(),
+            TypeId::of::<HasSentinel<YesASentinel>>()
+        );
         assert!(child.specialized);
 
         let not_a_direct_sentinel = resolve!(HasSentinel<YesASentinel>);

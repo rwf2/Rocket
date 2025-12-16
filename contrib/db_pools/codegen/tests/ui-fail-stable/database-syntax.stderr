@@ -4,7 +4,7 @@ error: invalid value: expected string literal
 4 | #[database(123)]
   |            ^^^
 
-error: [note] error occurred while deriving `Database`
+error: ␛[1;34m[␛[0m␛[1;32mnote␛[0m␛[1;34m] ␛[0m␛[1;39merror occurred while deriving `Database`␛[0m
  --> tests/ui-fail-stable/database-syntax.rs:3:10
   |
 3 | #[derive(Database)]
@@ -18,7 +18,7 @@ error: expected key/value `key = value`
 8 | #[database("some-name", "another")]
   |                         ^^^^^^^^^
 
-error: [note] error occurred while deriving `Database`
+error: ␛[1;34m[␛[0m␛[1;32mnote␛[0m␛[1;34m] ␛[0m␛[1;39merror occurred while deriving `Database`␛[0m
  --> tests/ui-fail-stable/database-syntax.rs:7:10
   |
 7 | #[derive(Database)]
@@ -32,7 +32,7 @@ error: unexpected attribute parameter: `name`
 12 | #[database("some-name", name = "another")]
    |                         ^^^^^^^^^^^^^^^^
 
-error: [note] error occurred while deriving `Database`
+error: ␛[1;34m[␛[0m␛[1;32mnote␛[0m␛[1;34m] ␛[0m␛[1;39merror occurred while deriving `Database`␛[0m
   --> tests/ui-fail-stable/database-syntax.rs:11:10
    |
 11 | #[derive(Database)]
@@ -47,7 +47,7 @@ error: enums are not supported
 17 | | enum D {  }
    | |___________^
 
-error: [note] error occurred while deriving `Database`
+error: ␛[1;34m[␛[0m␛[1;32mnote␛[0m␛[1;34m] ␛[0m␛[1;39merror occurred while deriving `Database`␛[0m
   --> tests/ui-fail-stable/database-syntax.rs:15:10
    |
 15 | #[derive(Database)]
@@ -61,7 +61,7 @@ error: missing `#[database("name")]` attribute
 20 | struct E(deadpool_postgres::Pool);
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-error: [note] error occurred while deriving `Database`
+error: ␛[1;34m[␛[0m␛[1;32mnote␛[0m␛[1;34m] ␛[0m␛[1;39merror occurred while deriving `Database`␛[0m
   --> tests/ui-fail-stable/database-syntax.rs:19:10
    |
 19 | #[derive(Database)]
@@ -76,7 +76,7 @@ error: struct must have exactly one unnamed field
 24 | | struct F;
    | |_________^
 
-error: [note] error occurred while deriving `Database`
+error: ␛[1;34m[␛[0m␛[1;32mnote␛[0m␛[1;34m] ␛[0m␛[1;39merror occurred while deriving `Database`␛[0m
   --> tests/ui-fail-stable/database-syntax.rs:22:10
    |
 22 | #[derive(Database)]
@@ -91,7 +91,7 @@ error: struct must have exactly one unnamed field
 28 | | struct G(deadpool_postgres::Pool, deadpool_postgres::Pool);
    | |___________________________________________________________^
 
-error: [note] error occurred while deriving `Database`
+error: ␛[1;34m[␛[0m␛[1;32mnote␛[0m␛[1;34m] ␛[0m␛[1;39merror occurred while deriving `Database`␛[0m
   --> tests/ui-fail-stable/database-syntax.rs:26:10
    |
 26 | #[derive(Database)]
@@ -108,7 +108,7 @@ error: named structs are not supported
 34 | | }
    | |_^
 
-error: [note] error occurred while deriving `Database`
+error: ␛[1;34m[␛[0m␛[1;32mnote␛[0m␛[1;34m] ␛[0m␛[1;39merror occurred while deriving `Database`␛[0m
   --> tests/ui-fail-stable/database-syntax.rs:30:10
    |
 30 | #[derive(Database)]

@@ -1,12 +1,12 @@
 //! Shutdown configuration and notification handle.
 
-mod tripwire;
+mod config;
 mod handle;
 mod sig;
-mod config;
+mod tripwire;
 
-pub(crate) use tripwire::TripWire;
 pub(crate) use handle::Stages;
+pub(crate) use tripwire::TripWire;
 
 pub use config::ShutdownConfig;
 pub use handle::Shutdown;

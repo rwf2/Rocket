@@ -2,8 +2,13 @@ error[E0277]: the trait bound `Unknown: FromFormField<'_>` is not satisfied
  --> tests/ui-fail-stable/from_form_type_errors.rs:7:12
   |
 7 |     field: Unknown,
-  |            ^^^^^^^ the trait `FromFormField<'_>` is not implemented for `Unknown`, which is required by `Unknown: FromForm<'r>`
+  |            ^^^^^^^ unsatisfied trait bound
   |
+help: the trait `FromFormField<'_>` is not implemented for `Unknown`
+ --> tests/ui-fail-stable/from_form_type_errors.rs:3:1
+  |
+3 | struct Unknown;
+  | ^^^^^^^^^^^^^^
   = help: the following other types implement trait `FromFormField<'v>`:
             &'v [u8]
             &'v str
@@ -25,8 +30,13 @@ error[E0277]: the trait bound `Unknown: FromFormField<'_>` is not satisfied
   |  __________in this derive macro expansion
   | |
 6 | | struct BadType3 {
-  | |_______________^ the trait `FromFormField<'_>` is not implemented for `Unknown`, which is required by `_::FromFormGeneratedContext<'r>: std::marker::Send`
+  | |_______________^ unsatisfied trait bound
   |
+help: the trait `FromFormField<'_>` is not implemented for `Unknown`
+ --> tests/ui-fail-stable/from_form_type_errors.rs:3:1
+  |
+3 | struct Unknown;
+  | ^^^^^^^^^^^^^^
   = help: the following other types implement trait `FromFormField<'v>`:
             &'v [u8]
             &'v str
@@ -56,8 +66,13 @@ error[E0277]: the trait bound `Foo<usize>: FromFormField<'_>` is not satisfied
   --> tests/ui-fail-stable/from_form_type_errors.rs:14:12
    |
 14 |     field: Foo<usize>,
-   |            ^^^^^^^^^^ the trait `FromFormField<'_>` is not implemented for `Foo<usize>`, which is required by `Foo<usize>: FromForm<'r>`
+   |            ^^^^^^^^^^ unsatisfied trait bound
    |
+help: the trait `FromFormField<'_>` is not implemented for `Foo<usize>`
+  --> tests/ui-fail-stable/from_form_type_errors.rs:10:1
+   |
+10 | struct Foo<T>(T);
+   | ^^^^^^^^^^^^^
    = help: the following other types implement trait `FromFormField<'v>`:
              &'v [u8]
              &'v str
@@ -79,8 +94,13 @@ error[E0277]: the trait bound `Foo<usize>: FromFormField<'_>` is not satisfied
    |  __________in this derive macro expansion
    | |
 13 | | struct Other {
-   | |____________^ the trait `FromFormField<'_>` is not implemented for `Foo<usize>`, which is required by `_::FromFormGeneratedContext<'r>: std::marker::Send`
+   | |____________^ unsatisfied trait bound
    |
+help: the trait `FromFormField<'_>` is not implemented for `Foo<usize>`
+  --> tests/ui-fail-stable/from_form_type_errors.rs:10:1
+   |
+10 | struct Foo<T>(T);
+   | ^^^^^^^^^^^^^
    = help: the following other types implement trait `FromFormField<'v>`:
              &'v [u8]
              &'v str
@@ -110,8 +130,13 @@ error[E0277]: the trait bound `Unknown: FromFormField<'_>` is not satisfied
  --> tests/ui-fail-stable/from_form_type_errors.rs:5:10
   |
 5 | #[derive(FromForm)]
-  |          ^^^^^^^^ the trait `FromFormField<'_>` is not implemented for `Unknown`, which is required by `Unknown: FromForm<'r>`
+  |          ^^^^^^^^ unsatisfied trait bound
   |
+help: the trait `FromFormField<'_>` is not implemented for `Unknown`
+ --> tests/ui-fail-stable/from_form_type_errors.rs:3:1
+  |
+3 | struct Unknown;
+  | ^^^^^^^^^^^^^^
   = help: the following other types implement trait `FromFormField<'v>`:
             &'v [u8]
             &'v str
@@ -129,17 +154,22 @@ error[E0277]: the trait bound `Unknown: FromForm<'r>` is not satisfied
  --> tests/ui-fail-stable/from_form_type_errors.rs:7:12
   |
 7 |     field: Unknown,
-  |            ^^^^^^^ the trait `FromFormField<'_>` is not implemented for `Unknown`, which is required by `Unknown: FromForm<'r>`
+  |            ^^^^^^^ unsatisfied trait bound
   |
-  = help: the following other types implement trait `FromForm<'r>`:
-            <(A, B) as FromForm<'v>>
-            <Arc<T> as FromForm<'v>>
-            <BTreeMap<K, V> as FromForm<'v>>
-            <BadType3 as FromForm<'r>>
-            <Contextual<'v, T> as FromForm<'v>>
-            <HashMap<K, V> as FromForm<'v>>
-            <Lenient<T> as FromForm<'v>>
-            <Other as FromForm<'r>>
+help: the trait `FromFormField<'_>` is not implemented for `Unknown`
+ --> tests/ui-fail-stable/from_form_type_errors.rs:3:1
+  |
+3 | struct Unknown;
+  | ^^^^^^^^^^^^^^
+  = help: the following other types implement trait `FromFormField<'v>`:
+            &'v [u8]
+            &'v str
+            Capped<&'v [u8]>
+            Capped<&'v str>
+            Capped<Cow<'v, str>>
+            Capped<TempFile<'v>>
+            Capped<std::string::String>
+            Cow<'v, str>
           and $N others
   = note: required for `Unknown` to implement `FromForm<'r>`
 
@@ -150,8 +180,13 @@ error[E0277]: the trait bound `Unknown: FromFormField<'_>` is not satisfied
   |          -------- in this derive macro expansion
 6 | struct BadType3 {
 7 |     field: Unknown,
-  |            ^^^^^^^ the trait `FromFormField<'_>` is not implemented for `Unknown`, which is required by `Unknown: FromForm<'r>`
+  |            ^^^^^^^ unsatisfied trait bound
   |
+help: the trait `FromFormField<'_>` is not implemented for `Unknown`
+ --> tests/ui-fail-stable/from_form_type_errors.rs:3:1
+  |
+3 | struct Unknown;
+  | ^^^^^^^^^^^^^^
   = help: the following other types implement trait `FromFormField<'v>`:
             &'v [u8]
             &'v str
@@ -169,8 +204,13 @@ error[E0277]: the trait bound `Foo<usize>: FromFormField<'_>` is not satisfied
   --> tests/ui-fail-stable/from_form_type_errors.rs:12:10
    |
 12 | #[derive(FromForm)]
-   |          ^^^^^^^^ the trait `FromFormField<'_>` is not implemented for `Foo<usize>`, which is required by `Foo<usize>: FromForm<'r>`
+   |          ^^^^^^^^ unsatisfied trait bound
    |
+help: the trait `FromFormField<'_>` is not implemented for `Foo<usize>`
+  --> tests/ui-fail-stable/from_form_type_errors.rs:10:1
+   |
+10 | struct Foo<T>(T);
+   | ^^^^^^^^^^^^^
    = help: the following other types implement trait `FromFormField<'v>`:
              &'v [u8]
              &'v str
@@ -188,17 +228,22 @@ error[E0277]: the trait bound `Foo<usize>: FromForm<'r>` is not satisfied
   --> tests/ui-fail-stable/from_form_type_errors.rs:14:12
    |
 14 |     field: Foo<usize>,
-   |            ^^^^^^^^^^ the trait `FromFormField<'_>` is not implemented for `Foo<usize>`, which is required by `Foo<usize>: FromForm<'r>`
+   |            ^^^^^^^^^^ unsatisfied trait bound
    |
-   = help: the following other types implement trait `FromForm<'r>`:
-             <(A, B) as FromForm<'v>>
-             <Arc<T> as FromForm<'v>>
-             <BTreeMap<K, V> as FromForm<'v>>
-             <BadType3 as FromForm<'r>>
-             <Contextual<'v, T> as FromForm<'v>>
-             <HashMap<K, V> as FromForm<'v>>
-             <Lenient<T> as FromForm<'v>>
-             <Other as FromForm<'r>>
+help: the trait `FromFormField<'_>` is not implemented for `Foo<usize>`
+  --> tests/ui-fail-stable/from_form_type_errors.rs:10:1
+   |
+10 | struct Foo<T>(T);
+   | ^^^^^^^^^^^^^
+   = help: the following other types implement trait `FromFormField<'v>`:
+             &'v [u8]
+             &'v str
+             Capped<&'v [u8]>
+             Capped<&'v str>
+             Capped<Cow<'v, str>>
+             Capped<TempFile<'v>>
+             Capped<std::string::String>
+             Cow<'v, str>
            and $N others
    = note: required for `Foo<usize>` to implement `FromForm<'r>`
 
@@ -209,8 +254,13 @@ error[E0277]: the trait bound `Foo<usize>: FromFormField<'_>` is not satisfied
    |          -------- in this derive macro expansion
 13 | struct Other {
 14 |     field: Foo<usize>,
-   |            ^^^^^^^^^^ the trait `FromFormField<'_>` is not implemented for `Foo<usize>`, which is required by `Foo<usize>: FromForm<'r>`
+   |            ^^^^^^^^^^ unsatisfied trait bound
    |
+help: the trait `FromFormField<'_>` is not implemented for `Foo<usize>`
+  --> tests/ui-fail-stable/from_form_type_errors.rs:10:1
+   |
+10 | struct Foo<T>(T);
+   | ^^^^^^^^^^^^^
    = help: the following other types implement trait `FromFormField<'v>`:
              &'v [u8]
              &'v str

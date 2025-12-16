@@ -1,10 +1,10 @@
+use serde::ser::{Serialize, SerializeStruct, Serializer};
 use time::Duration;
-use serde::ser::{Serialize, Serializer, SerializeStruct};
 
+use crate::http::{Cookie, CookieJar, Status};
 use crate::outcome::IntoOutcome;
+use crate::request::{self, FromRequest, Request};
 use crate::response::{self, Responder};
-use crate::request::{self, Request, FromRequest};
-use crate::http::{Status, Cookie, CookieJar};
 use std::sync::atomic::{AtomicBool, Ordering};
 
 // The name of the actual flash cookie.
@@ -47,7 +47,7 @@ const FLASH_COOKIE_DELIM: char = ':';
 /// request and response sides.
 ///
 /// ```rust
-/// # #[macro_use] extern crate rocket;
+/// # #[macro_use] extern crate rocket_community as rocket;
 /// use rocket::response::{Flash, Redirect};
 /// use rocket::request::FlashMessage;
 ///
@@ -106,6 +106,7 @@ impl<R> Flash<R> {
     /// redirects to "/".
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::response::{Redirect, Flash};
     ///
     /// # #[allow(unused_variables)]
@@ -129,6 +130,7 @@ impl<R> Flash<R> {
     /// to "/".
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::response::{Redirect, Flash};
     ///
     /// # #[allow(unused_variables)]
@@ -147,6 +149,7 @@ impl<R> Flash<R> {
     /// to "/".
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::response::{Redirect, Flash};
     ///
     /// # #[allow(unused_variables)]
@@ -165,6 +168,7 @@ impl<R> Flash<R> {
     /// to "/".
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::response::{Redirect, Flash};
     ///
     /// # #[allow(unused_variables)]
@@ -175,8 +179,13 @@ impl<R> Flash<R> {
     }
 
     fn cookie(&self) -> Cookie<'static> {
-        let content = format!("{}{}{}{}",
-            self.kind.len(), FLASH_COOKIE_DELIM, self.kind, self.message);
+        let content = format!(
+            "{}{}{}{}",
+            self.kind.len(),
+            FLASH_COOKIE_DELIM,
+            self.kind,
+            self.message
+        );
 
         Cookie::build((FLASH_COOKIE_NAME, content))
             .max_age(Duration::minutes(5))
@@ -244,19 +253,23 @@ impl<'r> FromRequest<'r> for FlashMessage<'r> {
     type Error = ();
 
     async fn from_request(req: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
-        req.cookies().get(FLASH_COOKIE_NAME).ok_or(()).and_then(|cookie| {
-            // Parse the flash message.
-            let content = cookie.value();
-            let (len_str, kv) = match content.find(FLASH_COOKIE_DELIM) {
-                Some(i) => (&content[..i], &content[(i + 1)..]),
-                None => return Err(()),
-            };
+        req.cookies()
+            .get(FLASH_COOKIE_NAME)
+            .ok_or(())
+            .and_then(|cookie| {
+                // Parse the flash message.
+                let content = cookie.value();
+                let (len_str, kv) = match content.find(FLASH_COOKIE_DELIM) {
+                    Some(i) => (&content[..i], &content[(i + 1)..]),
+                    None => return Err(()),
+                };
 
-            match len_str.parse::<usize>() {
-                Ok(i) if i <= kv.len() => Ok(Flash::named(&kv[..i], &kv[i..], req)),
-                _ => Err(())
-            }
-        }).or_error(Status::BadRequest)
+                match len_str.parse::<usize>() {
+                    Ok(i) if i <= kv.len() => Ok(Flash::named(&kv[..i], &kv[i..], req)),
+                    _ => Err(()),
+                }
+            })
+            .or_error(Status::BadRequest)
     }
 }
 

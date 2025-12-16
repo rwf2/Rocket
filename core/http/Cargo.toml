@@ -1,9 +1,9 @@
 [package]
-name = "rocket_http"
-version = "0.6.0-dev"
+name = "rocket_http-community"
+version = "0.6.0-rc1"
 authors = ["Sergio Benitez <sb@sergio.bz>"]
 description = """
-Types, traits, and parsers for HTTP requests, responses, and headers.
+Types, traits, and parsers for HTTP requests, responses, and headers. (Community Fork)
 """
 documentation = "https://api.rocket.rs/master/rocket_http/"
 homepage = "https://rocket.rs"
@@ -13,7 +13,7 @@ keywords = ["rocket", "web", "framework", "http"]
 license = "MIT OR Apache-2.0"
 categories = ["web-programming"]
 edition = "2021"
-rust-version = "1.75"
+rust-version = "1.82.0"
 
 [lints]
 workspace = true
@@ -49,4 +49,4 @@ optional = true
 default-features = false
 
 [dev-dependencies]
-rocket = { path = "../lib", features = ["mtls"] }
+rocket = { package="rocket-community", path = "../lib", features = ["mtls"] }

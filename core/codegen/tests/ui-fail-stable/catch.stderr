@@ -1,54 +1,54 @@
 error: expected `fn`
-       = help: `#[catch]` can only be used on functions
+       ␛[1;34m= ␛[0m␛[1;36mhelp␛[0m␛[39m: ␛[0m␛[1;39m`#[catch]` can only be used on functions␛[0m
  --> tests/ui-fail-stable/catch.rs:6:1
   |
 6 | struct Catcher(String);
   | ^^^^^^
 
 error: expected `fn`
-       = help: `#[catch]` can only be used on functions
+       ␛[1;34m= ␛[0m␛[1;36mhelp␛[0m␛[39m: ␛[0m␛[1;39m`#[catch]` can only be used on functions␛[0m
  --> tests/ui-fail-stable/catch.rs:9:7
   |
 9 | const CATCH: &str = "Catcher";
   |       ^^^^^
 
 error: expected integer or `default`, found string literal
-       = help: `#[catch]` expects a status code int or `default`: `#[catch(404)]` or `#[catch(default)]`
+       ␛[1;34m= ␛[0m␛[1;36mhelp␛[0m␛[39m: ␛[0m␛[1;39m`#[catch]` expects a status code int or `default`: `#[catch(404)]` or `#[catch(default)]`␛[0m
   --> tests/ui-fail-stable/catch.rs:11:9
    |
 11 | #[catch("404")]
    |         ^^^^^
 
 error: unexpected keyed parameter: expected literal or identifier
-       = help: `#[catch]` expects a status code int or `default`: `#[catch(404)]` or `#[catch(default)]`
+       ␛[1;34m= ␛[0m␛[1;36mhelp␛[0m␛[39m: ␛[0m␛[1;39m`#[catch]` expects a status code int or `default`: `#[catch(404)]` or `#[catch(default)]`␛[0m
   --> tests/ui-fail-stable/catch.rs:14:9
    |
 14 | #[catch(code = "404")]
    |         ^^^^^^^^^^^^
 
 error: unexpected keyed parameter: expected literal or identifier
-       = help: `#[catch]` expects a status code int or `default`: `#[catch(404)]` or `#[catch(default)]`
+       ␛[1;34m= ␛[0m␛[1;36mhelp␛[0m␛[39m: ␛[0m␛[1;39m`#[catch]` expects a status code int or `default`: `#[catch(404)]` or `#[catch(default)]`␛[0m
   --> tests/ui-fail-stable/catch.rs:17:9
    |
 17 | #[catch(code = 404)]
    |         ^^^^^^^^^^
 
 error: status must be in range [100, 599]
-       = help: `#[catch]` expects a status code int or `default`: `#[catch(404)]` or `#[catch(default)]`
+       ␛[1;34m= ␛[0m␛[1;36mhelp␛[0m␛[39m: ␛[0m␛[1;39m`#[catch]` expects a status code int or `default`: `#[catch(404)]` or `#[catch(default)]`␛[0m
   --> tests/ui-fail-stable/catch.rs:20:9
    |
 20 | #[catch(99)]
    |         ^^
 
 error: status must be in range [100, 599]
-       = help: `#[catch]` expects a status code int or `default`: `#[catch(404)]` or `#[catch(default)]`
+       ␛[1;34m= ␛[0m␛[1;36mhelp␛[0m␛[39m: ␛[0m␛[1;39m`#[catch]` expects a status code int or `default`: `#[catch(404)]` or `#[catch(default)]`␛[0m
   --> tests/ui-fail-stable/catch.rs:23:9
    |
 23 | #[catch(600)]
    |         ^^^
 
 error: unexpected attribute parameter: `message`
-       = help: `#[catch]` expects a status code int or `default`: `#[catch(404)]` or `#[catch(default)]`
+       ␛[1;34m= ␛[0m␛[1;36mhelp␛[0m␛[39m: ␛[0m␛[1;39m`#[catch]` expects a status code int or `default`: `#[catch(404)]` or `#[catch(default)]`␛[0m
   --> tests/ui-fail-stable/catch.rs:26:14
    |
 26 | #[catch(400, message = "foo")]
@@ -58,16 +58,16 @@ error[E0308]: arguments to this function are incorrect
   --> tests/ui-fail-stable/catch.rs:30:4
    |
 30 | fn f3(_request: &Request, _other: bool) { }
-   |    ^^           --------          ---- an argument of type `bool` is missing
+   |    ^^           --------          ---- argument #2 of type `bool` is missing
    |                 |
-   |                 unexpected argument of type `Status`
+   |                 unexpected argument #1 of type `Status`
    |
 note: function defined here
   --> tests/ui-fail-stable/catch.rs:30:4
    |
 30 | fn f3(_request: &Request, _other: bool) { }
-   |    ^^ ------------------  ------------
+   |    ^^                     ------------
 help: provide the argument
    |
-29 | f3(bool, /* bool */)
-   |
+30 | fn f3(bool, /* bool */)(_request: &Request, _other: bool) { }
+   |      ++++++++++++++++++

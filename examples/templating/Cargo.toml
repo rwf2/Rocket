@@ -6,9 +6,10 @@ edition = "2021"
 publish = false
 
 [dependencies]
-rocket = { path = "../../core/lib" }
+rocket = { package = "rocket-community", path = "../../core/lib" }
 
 # in your application, you should enable only the template engine(s) used
 [dependencies.rocket_dyn_templates]
+package = "rocket_dyn_templates-community"
 path = "../../contrib/dyn_templates"
 features = ["tera", "handlebars", "minijinja"]

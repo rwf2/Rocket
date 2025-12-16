@@ -1,3 +1,5 @@
+extern crate rocket_community as rocket;
+
 use rocket::config::Config;
 use rocket::data::Limits;
 use rocket::figment::{providers::Serialized, Figment};

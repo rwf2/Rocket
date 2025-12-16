@@ -1,8 +1,11 @@
+use devise::{
+    ext::{SpanDiagnosticExt, Split2},
+    FromMeta, MetaItem, Result,
+};
+use proc_macro2::{Span, TokenStream};
 use quote::ToTokens;
-use devise::{FromMeta, MetaItem, Result, ext::{Split2, SpanDiagnosticExt}};
-use proc_macro2::{TokenStream, Span};
 
-use crate::{http, attribute::suppress::Lint};
+use crate::{attribute::suppress::Lint, http};
 
 #[derive(Debug)]
 pub struct ContentType(pub http::ContentType);
@@ -38,7 +41,9 @@ impl FromMeta for Status {
     fn from_meta(meta: &MetaItem) -> Result<Self> {
         let num = usize::from_meta(meta)?;
         if num < 100 || num >= 600 {
-            return Err(meta.value_span().error("status must be in range [100, 599]"));
+            return Err(meta
+                .value_span()
+                .error("status must be in range [100, 599]"));
         }
 
         Ok(Status(http::Status::new(num as u16)))
@@ -102,21 +107,27 @@ impl FromMeta for Method {
         let span = meta.value_span();
         let help = format!("known methods: {}", http::Method::ALL.join(", "));
 
-        let string = meta.path().ok()
+        let string = meta
+            .path()
+            .ok()
             .and_then(|p| p.get_ident().cloned())
             .map(|ident| (ident.span(), ident.to_string()))
             .or_else(|| match meta.lit() {
                 Ok(syn::Lit::Str(s)) => Some((s.span(), s.value())),
-                _ => None
+                _ => None,
             });
 
         if let Some((span, string)) = string {
-            string.to_ascii_uppercase()
+            string
+                .to_ascii_uppercase()
                 .parse()
                 .map(Method)
                 .map_err(|_| span.error("invalid or unknown HTTP method").help(help))
         } else {
-            let err = format!("expected method ident or string, found {}", meta.description());
+            let err = format!(
+                "expected method ident or string, found {}",
+                meta.description()
+            );
             Err(span.error(err).help(help))
         }
     }
@@ -131,12 +142,12 @@ impl ToTokens for Method {
 
 impl<T: ToTokens> ToTokens for Optional<T> {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        use crate::exports::{_Some, _None};
+        use crate::exports::{_None, _Some};
         use devise::Spanned;
 
         let opt_tokens = match self.0 {
             Some(ref val) => quote_spanned!(val.span() => #_Some(#val)),
-            None => quote!(#_None)
+            None => quote!(#_None),
         };
 
         tokens.extend(opt_tokens);

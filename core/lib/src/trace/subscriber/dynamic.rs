@@ -1,12 +1,12 @@
 use std::sync::OnceLock;
 
-use tracing::{Dispatch, Event, Metadata};
-use tracing::subscriber::{Subscriber, Interest};
 use tracing::span::{Attributes, Id, Record};
+use tracing::subscriber::{Interest, Subscriber};
+use tracing::{Dispatch, Event, Metadata};
 
-use tracing_subscriber::reload;
-use tracing_subscriber::registry::{Registry, LookupSpan};
 use tracing_subscriber::layer::{Context, Layer, Layered, SubscriberExt};
+use tracing_subscriber::registry::{LookupSpan, Registry};
+use tracing_subscriber::reload;
 use tracing_subscriber::util::SubscriberInitExt;
 
 use crate::config::Config;
@@ -20,13 +20,17 @@ pub struct RocketDynFmt {
 
 impl From<RocketFmt<Compact>> for RocketDynFmt {
     fn from(value: RocketFmt<Compact>) -> Self {
-        RocketDynFmt { inner: either::Either::Left(value) }
+        RocketDynFmt {
+            inner: either::Either::Left(value),
+        }
     }
 }
 
 impl From<RocketFmt<Pretty>> for RocketDynFmt {
     fn from(value: RocketFmt<Pretty>) -> Self {
-        RocketDynFmt { inner: either::Either::Right(value) }
+        RocketDynFmt {
+            inner: either::Either::Right(value),
+        }
     }
 }
 

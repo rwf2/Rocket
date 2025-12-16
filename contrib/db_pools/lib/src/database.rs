@@ -1,11 +1,11 @@
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 
-use rocket::{error, Build, Ignite, Phase, Rocket, Sentinel, Orbit};
 use rocket::fairing::{self, Fairing, Info, Kind};
-use rocket::request::{FromRequest, Outcome, Request};
 use rocket::figment::providers::Serialized;
 use rocket::http::Status;
+use rocket::request::{FromRequest, Outcome, Request};
+use rocket::{error, Build, Ignite, Orbit, Phase, Rocket, Sentinel};
 
 use crate::Pool;
 
@@ -15,6 +15,7 @@ use crate::Pool;
 /// should be derived:
 ///
 /// ```rust
+/// # extern crate rocket_db_pools_community as rocket_db_pools;
 /// # #[cfg(feature = "deadpool_redis")] mod _inner {
 /// # use rocket::launch;
 /// use rocket_db_pools::{deadpool_redis, Database};
@@ -31,7 +32,9 @@ use crate::Pool;
 /// ```
 ///
 /// See the [`Database` derive](derive@crate::Database) for details.
-pub trait Database: From<Self::Pool> + DerefMut<Target = Self::Pool> + Send + Sync + 'static {
+pub trait Database:
+    From<Self::Pool> + DerefMut<Target = Self::Pool> + Send + Sync + 'static
+{
     /// The [`Pool`] type of connections to this database.
     ///
     /// When `Database` is derived, this takes the value of the `Inner` type in
@@ -49,6 +52,7 @@ pub trait Database: From<Self::Pool> + DerefMut<Target = Self::Pool> + Send + Sy
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_db_pools_community as rocket_db_pools;
     /// # #[cfg(feature = "deadpool_postgres")] mod _inner {
     /// # use rocket::launch;
     /// use rocket_db_pools::{deadpool_postgres, Database};
@@ -87,6 +91,7 @@ pub trait Database: From<Self::Pool> + DerefMut<Target = Self::Pool> + Send + Sy
     /// migration fairing be registered _after_ the `init()` fairing.
     ///
     /// ```rust
+    /// # extern crate rocket_db_pools_community as rocket_db_pools;
     /// # #[cfg(feature = "sqlx_sqlite")] mod _inner {
     /// # use rocket::launch;
     /// use rocket::{Rocket, Build};
@@ -121,8 +126,10 @@ pub trait Database: From<Self::Pool> + DerefMut<Target = Self::Pool> + Send + Sy
         }
 
         let conn = std::any::type_name::<Self>();
-        error!("`{conn}::init()` is not attached\n\
-            the fairing must be attached to use `{conn}` in routes.");
+        error!(
+            "`{conn}::init()` is not attached\n\
+            the fairing must be attached to use `{conn}` in routes."
+        );
 
         None
     }
@@ -161,11 +168,11 @@ pub struct Initializer<D: Database>(Option<&'static str>, PhantomData<fn() -> D>
 /// [`Initializer`] fairing and a connection is available within
 /// [`connect_timeout`](crate::Config::connect_timeout) seconds.
 ///   * If the `Initializer` fairing was _not_ attached, the guard _fails_ with
-///   status `InternalServerError`. A [`Sentinel`] guards this condition, and so
-///   this type of error is unlikely to occur. A `None` error is returned.
+///     status `InternalServerError`. A [`Sentinel`] guards this condition, and so
+///     this type of error is unlikely to occur. A `None` error is returned.
 ///   * If a connection is not available within `connect_timeout` seconds or
-///   another error occurs, the guard _fails_ with status `ServiceUnavailable`
-///   and the error is returned in `Some`.
+///     another error occurs, the guard _fails_ with status `ServiceUnavailable`
+///     and the error is returned in `Some`.
 ///
 /// ## Deref
 ///
@@ -176,6 +183,7 @@ pub struct Initializer<D: Database>(Option<&'static str>, PhantomData<fn() -> D>
 /// # Example
 ///
 /// ```rust
+/// # extern crate rocket_db_pools_community as rocket_db_pools;
 /// # #[cfg(feature = "sqlx_sqlite")] mod _inner {
 /// # use rocket::get;
 /// # type Pool = rocket_db_pools::sqlx::SqlitePool;
@@ -212,6 +220,12 @@ impl<D: Database> Initializer<D> {
     }
 }
 
+impl<D: Database> Default for Initializer<D> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<D: Database> Connection<D> {
     /// Returns the internal connection value. See the [`Connection` Deref
     /// column](crate#supported-drivers) for the expected type of this value.
@@ -223,6 +237,7 @@ impl<D: Database> Connection<D> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_db_pools_community as rocket_db_pools;
     /// # #[cfg(feature = "sqlx_sqlite")] mod _inner {
     /// # use rocket::get;
     /// # type Pool = rocket_db_pools::sqlx::SqlitePool;
@@ -253,11 +268,13 @@ impl<D: Database> Fairing for Initializer<D> {
     }
 
     async fn on_ignite(&self, rocket: Rocket<Build>) -> fairing::Result {
-        let workers: usize = rocket.figment()
+        let workers: usize = rocket
+            .figment()
             .extract_inner(rocket::Config::WORKERS)
             .unwrap_or_else(|_| rocket::Config::default().workers);
 
-        let figment = rocket.figment()
+        let figment = rocket
+            .figment()
             .focus(&format!("databases.{}", D::NAME))
             .join(Serialized::default("max_connections", workers * 4))
             .join(Serialized::default("connect_timeout", 5));

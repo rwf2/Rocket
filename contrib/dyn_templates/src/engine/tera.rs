@@ -1,8 +1,8 @@
-use std::path::Path;
 use std::error::Error;
+use std::path::Path;
 
-use tera::{Context, Tera};
 use rocket::serde::Serialize;
+use tera::{Context, Tera};
 
 use crate::engine::Engine;
 
@@ -12,7 +12,14 @@ impl Engine for Tera {
     fn init<'a>(templates: impl Iterator<Item = (&'a str, &'a Path)>) -> Option<Self> {
         // Create the Tera instance.
         let mut tera = Tera::default();
-        let ext = [".html.tera", ".htm.tera", ".xml.tera", ".html", ".htm", ".xml"];
+        let ext = [
+            ".html.tera",
+            ".htm.tera",
+            ".xml.tera",
+            ".html",
+            ".htm",
+            ".xml",
+        ];
         tera.autoescape_on(ext.to_vec());
 
         // Collect into a tuple of (name, path) for Tera. If we register one at

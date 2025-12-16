@@ -1,3 +1,5 @@
+extern crate rocket_community as rocket;
+
 use rocket::local::blocking::Client;
 
 struct SpawnBlockingOnDrop;

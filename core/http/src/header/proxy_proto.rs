@@ -1,6 +1,6 @@
 use std::fmt;
 
-use uncased::{UncasedStr, AsUncased};
+use uncased::{AsUncased, UncasedStr};
 
 /// Parsed [`Config::proxy_proto_header`] value: identifies a forwarded HTTP
 /// protocol (aka [X-Forwarded-Proto]).
@@ -50,7 +50,7 @@ impl<'a> From<&'a str> for ProxyProto<'a> {
         match value.as_uncased() {
             v if v == "http" => ProxyProto::Http,
             v if v == "https" => ProxyProto::Https,
-            v => ProxyProto::Unknown(v)
+            v => ProxyProto::Unknown(v),
         }
     }
 }

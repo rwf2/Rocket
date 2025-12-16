@@ -29,6 +29,7 @@ use rocket::serde::{Deserialize, Serialize};
 /// with a global `databases.name` configuration:
 ///
 /// ```rust
+/// # extern crate rocket_db_pools_community as rocket_db_pools;
 /// # use rocket::launch;
 /// #[launch]
 /// fn rocket() -> _ {

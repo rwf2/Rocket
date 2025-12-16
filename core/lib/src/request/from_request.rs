@@ -1,12 +1,12 @@
-use std::fmt::Debug;
 use std::convert::Infallible;
+use std::fmt::Debug;
 use std::net::{IpAddr, SocketAddr};
 
-use crate::{Request, Route};
 use crate::outcome::{self, IntoOutcome, Outcome::*};
+use crate::{Request, Route};
 
 use crate::http::uri::{Host, Origin};
-use crate::http::{Status, ContentType, Accept, Method, ProxyProto, CookieJar};
+use crate::http::{Accept, ContentType, CookieJar, Method, ProxyProto, Status};
 use crate::listener::Endpoint;
 
 /// Type alias for the `Outcome` of a `FromRequest` conversion.
@@ -33,6 +33,7 @@ pub type Outcome<S, E> = outcome::Outcome<S, (Status, E), Status>;
 /// be decorated with an attribute of `#[rocket::async_trait]`:
 ///
 /// ```rust
+/// # extern crate rocket_community as rocket;
 /// use rocket::request::{self, Request, FromRequest};
 /// # struct MyType;
 /// # type MyError = String;
@@ -56,7 +57,7 @@ pub type Outcome<S, E> = outcome::Outcome<S, (Status, E), Status>;
 /// guard.
 ///
 /// ```rust
-/// # #[macro_use] extern crate rocket;
+/// # #[macro_use] extern crate rocket_community as rocket;
 /// # use rocket::http::Method;
 /// # type A = Method; type B = Method; type C = Method; type T = ();
 /// #[get("/<param>")]
@@ -202,7 +203,7 @@ pub type Outcome<S, E> = outcome::Outcome<S, (Status, E), Status>;
 /// `sensitive` handler.
 ///
 /// ```rust
-/// # #[macro_use] extern crate rocket;
+/// # #[macro_use] extern crate rocket_community as rocket;
 /// #
 /// use rocket::http::Status;
 /// use rocket::request::{self, Outcome, Request, FromRequest};
@@ -250,7 +251,7 @@ pub type Outcome<S, E> = outcome::Outcome<S, (Status, E), Status>;
 /// routes (`admin_dashboard` and `user_dashboard`):
 ///
 /// ```rust
-/// # #[macro_use] extern crate rocket;
+/// # #[macro_use] extern crate rocket_community as rocket;
 /// # #[cfg(feature = "secrets")] mod wrapper {
 /// # use rocket::outcome::{IntoOutcome, try_outcome};
 /// # use rocket::request::{self, Outcome, FromRequest, Request};
@@ -315,7 +316,7 @@ pub type Outcome<S, E> = outcome::Outcome<S, (Status, E), Status>;
 /// used, as illustrated below:
 ///
 /// ```rust
-/// # #[macro_use] extern crate rocket;
+/// # #[macro_use] extern crate rocket_community as rocket;
 /// # #[cfg(feature = "secrets")] mod wrapper {
 /// # use rocket::outcome::{IntoOutcome, try_outcome};
 /// # use rocket::request::{self, Outcome, FromRequest, Request};
@@ -415,7 +416,7 @@ impl<'r> FromRequest<'r> for &'r Host<'r> {
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Infallible> {
         match request.host() {
             Some(host) => Success(host),
-            None => Forward(Status::InternalServerError)
+            None => Forward(Status::InternalServerError),
         }
     }
 }
@@ -427,7 +428,7 @@ impl<'r> FromRequest<'r> for &'r Route {
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Infallible> {
         match request.route() {
             Some(route) => Success(route),
-            None => Forward(Status::InternalServerError)
+            None => Forward(Status::InternalServerError),
         }
     }
 }
@@ -448,7 +449,7 @@ impl<'r> FromRequest<'r> for &'r Accept {
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Infallible> {
         match request.accept() {
             Some(accept) => Success(accept),
-            None => Forward(Status::InternalServerError)
+            None => Forward(Status::InternalServerError),
         }
     }
 }
@@ -460,7 +461,7 @@ impl<'r> FromRequest<'r> for &'r ContentType {
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Infallible> {
         match request.content_type() {
             Some(content_type) => Success(content_type),
-            None => Forward(Status::InternalServerError)
+            None => Forward(Status::InternalServerError),
         }
     }
 }
@@ -472,7 +473,7 @@ impl<'r> FromRequest<'r> for IpAddr {
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Infallible> {
         match request.client_ip() {
             Some(addr) => Success(addr),
-            None => Forward(Status::InternalServerError)
+            None => Forward(Status::InternalServerError),
         }
     }
 }
@@ -482,7 +483,9 @@ impl<'r> FromRequest<'r> for ProxyProto<'r> {
     type Error = std::convert::Infallible;
 
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-        request.proxy_proto().or_forward(Status::InternalServerError)
+        request
+            .proxy_proto()
+            .or_forward(Status::InternalServerError)
     }
 }
 
@@ -500,7 +503,8 @@ impl<'r> FromRequest<'r> for SocketAddr {
     type Error = Infallible;
 
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Infallible> {
-        request.remote()
+        request
+            .remote()
             .and_then(|r| r.socket_addr())
             .or_forward(Status::InternalServerError)
     }

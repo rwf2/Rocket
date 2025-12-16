@@ -4,7 +4,7 @@ error: fieldless structs are not supported
 4 | struct Foo1;
   | ^^^^^^^^^^^^
 
-error: [note] error occurred while deriving `UriDisplay`
+error: ␛[1;34m[␛[0m␛[1;32mnote␛[0m␛[1;34m] ␛[0m␛[1;39merror occurred while deriving `UriDisplay`␛[0m
  --> tests/ui-fail-stable/uri_display.rs:3:10
   |
 3 | #[derive(UriDisplayQuery)]
@@ -18,7 +18,7 @@ error: fieldless structs are not supported
 7 | struct Foo2();
   | ^^^^^^^^^^^^^^
 
-error: [note] error occurred while deriving `UriDisplay`
+error: ␛[1;34m[␛[0m␛[1;32mnote␛[0m␛[1;34m] ␛[0m␛[1;39merror occurred while deriving `UriDisplay`␛[0m
  --> tests/ui-fail-stable/uri_display.rs:6:10
   |
 6 | #[derive(UriDisplayQuery)]
@@ -32,7 +32,7 @@ error: empty enums are not supported
 10 | enum Foo3 { }
    |           ^^^
 
-error: [note] error occurred while deriving `UriDisplay`
+error: ␛[1;34m[␛[0m␛[1;32mnote␛[0m␛[1;34m] ␛[0m␛[1;39merror occurred while deriving `UriDisplay`␛[0m
  --> tests/ui-fail-stable/uri_display.rs:9:10
   |
 9 | #[derive(UriDisplayQuery)]
@@ -46,7 +46,7 @@ error: tuple structs or variants must have exactly one field
 18 | struct Foo5(String, String);
    |            ^^^^^^^^^^^^^^^^
 
-error: [note] error occurred while deriving `UriDisplay`
+error: ␛[1;34m[␛[0m␛[1;32mnote␛[0m␛[1;34m] ␛[0m␛[1;39merror occurred while deriving `UriDisplay`␛[0m
   --> tests/ui-fail-stable/uri_display.rs:17:10
    |
 17 | #[derive(UriDisplayQuery)]
@@ -60,7 +60,7 @@ error: expected list `#[attr(..)]`, found bare integer literal
 22 |     #[field(name = 123)]
    |                    ^^^
 
-error: [note] error occurred while deriving `UriDisplay`
+error: ␛[1;34m[␛[0m␛[1;32mnote␛[0m␛[1;34m] ␛[0m␛[1;39merror occurred while deriving `UriDisplay`␛[0m
   --> tests/ui-fail-stable/uri_display.rs:20:10
    |
 20 | #[derive(UriDisplayQuery)]
@@ -74,7 +74,7 @@ error: struct must have exactly one field
 27 | struct Foo7(String, usize);
    |            ^^^^^^^^^^^^^^^
 
-error: [note] error occurred while deriving `UriDisplay`
+error: ␛[1;34m[␛[0m␛[1;32mnote␛[0m␛[1;34m] ␛[0m␛[1;39merror occurred while deriving `UriDisplay`␛[0m
   --> tests/ui-fail-stable/uri_display.rs:26:10
    |
 26 | #[derive(UriDisplayPath)]
@@ -88,7 +88,7 @@ error: struct must have exactly one field
 30 | struct Foo8;
    | ^^^^^^^^^^^^
 
-error: [note] error occurred while deriving `UriDisplay`
+error: ␛[1;34m[␛[0m␛[1;32mnote␛[0m␛[1;34m] ␛[0m␛[1;39merror occurred while deriving `UriDisplay`␛[0m
   --> tests/ui-fail-stable/uri_display.rs:29:10
    |
 29 | #[derive(UriDisplayPath)]
@@ -102,7 +102,7 @@ error: enums are not supported
 33 | enum Foo9 {  }
    | ^^^^^^^^^^^^^^
 
-error: [note] error occurred while deriving `UriDisplay`
+error: ␛[1;34m[␛[0m␛[1;32mnote␛[0m␛[1;34m] ␛[0m␛[1;39merror occurred while deriving `UriDisplay`␛[0m
   --> tests/ui-fail-stable/uri_display.rs:32:10
    |
 32 | #[derive(UriDisplayPath)]
@@ -118,7 +118,7 @@ error: named structs are not supported
 38 | | }
    | |_^
 
-error: [note] error occurred while deriving `UriDisplay`
+error: ␛[1;34m[␛[0m␛[1;32mnote␛[0m␛[1;34m] ␛[0m␛[1;39merror occurred while deriving `UriDisplay`␛[0m
   --> tests/ui-fail-stable/uri_display.rs:35:10
    |
 35 | #[derive(UriDisplayPath)]

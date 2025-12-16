@@ -12,7 +12,8 @@ use std::ops::BitOr;
 /// A simple `Info` structure that can be used for a `Fairing` that implements
 /// all callbacks:
 ///
-/// ```
+/// ```rust
+/// # extern crate rocket_community as rocket;
 /// use rocket::fairing::{Info, Kind};
 ///
 /// # let _unused_info =
@@ -80,6 +81,7 @@ impl Kind {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::fairing::Kind;
     ///
     /// let ignite_and_req = Kind::Ignite | Kind::Request;
@@ -103,6 +105,7 @@ impl Kind {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::fairing::Kind;
     ///
     /// let ignite_and_req = Kind::Ignite | Kind::Request;
@@ -133,7 +136,9 @@ impl std::fmt::Display for Kind {
         let mut is_first = true;
         let mut write = |string, kind| {
             if self.is(kind) {
-                if !is_first { f.write_str(", ")?; }
+                if !is_first {
+                    f.write_str(", ")?;
+                }
                 f.write_str(string)?;
                 is_first = false;
             }

@@ -9,6 +9,7 @@
 //! overrides the `Content-Type` to the value in `.0`:
 //!
 //! ```rust
+//! # extern crate rocket_community as rocket;
 //! # use rocket::get;
 //! use rocket::http::ContentType;
 //!
@@ -26,14 +27,15 @@
 //! instead:
 //!
 //! ```rust
+//! # extern crate rocket_community as rocket;
 //! use rocket::response::content;
 //!
 //! let response = content::RawHtml("<h1>Hello, world!</h1>");
 //! ```
 
-use crate::request::Request;
-use crate::response::{self, Response, Responder};
 use crate::http::ContentType;
+use crate::request::Request;
+use crate::response::{self, Responder, Response};
 
 macro_rules! ctrs {
     ($($name:ident: $ct:ident, $name_str:expr, $ct_str:expr),+) => {

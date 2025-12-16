@@ -17,15 +17,16 @@ use either::{Either, Left, Right};
 #[doc(inline)]
 pub use tokio::net::{TcpListener, TcpStream};
 
-use crate::{Ignite, Rocket};
 use crate::listener::{Bind, Connection, Endpoint, Listener};
+use crate::{Ignite, Rocket};
 
 impl Bind for TcpListener {
     type Error = Either<figment::Error, io::Error>;
 
     async fn bind(rocket: &Rocket<Ignite>) -> Result<Self, Self::Error> {
         let endpoint = Self::bind_endpoint(rocket)?;
-        let addr = endpoint.tcp()
+        let addr = endpoint
+            .tcp()
             .ok_or_else(|| io::Error::other("internal error: invalid endpoint"))
             .map_err(Right)?;
 
@@ -37,7 +38,8 @@ impl Bind for TcpListener {
         let mut address = Endpoint::fetch(figment, "tcp", "address", |e| {
             let default = SocketAddr::new(Ipv4Addr::LOCALHOST.into(), 8000);
             e.map(|e| e.tcp()).unwrap_or(Some(default))
-        }).map_err(Left)?;
+        })
+        .map_err(Left)?;
 
         if figment.contains("port") {
             let port = figment.extract_inner("port").map_err(Left)?;

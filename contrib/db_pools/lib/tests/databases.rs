@@ -1,5 +1,7 @@
+extern crate rocket_db_pools_community as rocket_db_pools;
+
 macro_rules! check_types_match {
-    ($feature:expr, $name:ident, $Pool:ty, $Conn:ty $(,)?) => (
+    ($feature:expr, $name:ident, $Pool:ty, $Conn:ty $(,)?) => {
         #[cfg(feature = $feature)]
         mod $name {
             use rocket::*;
@@ -14,7 +16,7 @@ macro_rules! check_types_match {
                 let _: &$Conn = &*conn;
             }
         }
-    )
+    };
 }
 
 check_types_match!(
@@ -52,9 +54,4 @@ check_types_match!(
     sqlx::pool::PoolConnection<sqlx::Sqlite>,
 );
 
-check_types_match!(
-    "mongodb",
-    mongodb,
-    mongodb::Client,
-    mongodb::Client,
-);
+check_types_match!("mongodb", mongodb, mongodb::Client, mongodb::Client,);

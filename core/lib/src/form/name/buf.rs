@@ -9,6 +9,7 @@ use crate::form::name::*;
 /// version via [`IntoOwned`](crate::http::ext::IntoOwned).
 ///
 /// ```rust
+/// # extern crate rocket_community as rocket;
 /// use rocket::form::name::NameBuf;
 /// use rocket::http::ext::IntoOwned;
 ///
@@ -35,6 +36,7 @@ impl<'v> NameBuf<'v> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::form::name::NameBuf;
     ///
     /// let name = NameBuf::from("apple.b[foo:bar]zoo.[barb].bat");
@@ -52,6 +54,7 @@ impl<'v> NameBuf<'v> {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::form::name::NameBuf;
     ///
     /// let name = NameBuf::from("apple.b[foo:bar]zoo.[barb].bat");
@@ -78,13 +81,17 @@ impl crate::http::ext::IntoOwned for NameBuf<'_> {
             (l, r) => format!("{}.{}", l, r).into(),
         };
 
-        NameBuf { left: "".into(), right }
+        NameBuf {
+            left: "".into(),
+            right,
+        }
     }
 }
 
 impl serde::Serialize for NameBuf<'_> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where S: serde::Serializer
+    where
+        S: serde::Serializer,
     {
         serializer.serialize_str(&self.to_string())
     }
@@ -92,13 +99,19 @@ impl serde::Serialize for NameBuf<'_> {
 
 impl<'v> From<NameView<'v>> for NameBuf<'v> {
     fn from(nv: NameView<'v>) -> Self {
-        NameBuf { left: nv.as_name(), right: Cow::Borrowed("") }
+        NameBuf {
+            left: nv.as_name(),
+            right: Cow::Borrowed(""),
+        }
     }
 }
 
 impl<'v> From<&'v Name> for NameBuf<'v> {
     fn from(name: &'v Name) -> Self {
-        NameBuf { left: name, right: Cow::Borrowed("") }
+        NameBuf {
+            left: name,
+            right: Cow::Borrowed(""),
+        }
     }
 }
 
@@ -119,7 +132,10 @@ impl<'v> From<(Option<&'v Name>, Cow<'v, str>)> for NameBuf<'v> {
     fn from((prefix, right): (Option<&'v Name>, Cow<'v, str>)) -> Self {
         match prefix {
             Some(left) => NameBuf { left, right },
-            None => NameBuf { left: "".into(), right }
+            None => NameBuf {
+                left: "".into(),
+                right,
+            },
         }
     }
 }
@@ -128,8 +144,14 @@ impl<'v> From<(Option<&'v Name>, Cow<'v, str>)> for NameBuf<'v> {
 impl<'v> From<(Option<&'v Name>, String)> for NameBuf<'v> {
     fn from((prefix, right): (Option<&'v Name>, String)) -> Self {
         match prefix {
-            Some(left) => NameBuf { left, right: right.into() },
-            None => NameBuf { left: "".into(), right: right.into() }
+            Some(left) => NameBuf {
+                left,
+                right: right.into(),
+            },
+            None => NameBuf {
+                left: "".into(),
+                right: right.into(),
+            },
         }
     }
 }
@@ -153,9 +175,13 @@ impl std::fmt::Debug for NameBuf<'_> {
         write!(f, "\"")?;
 
         let (left, right) = self.split();
-        if !left.is_empty() { write!(f, "{}", left.escape_debug())? }
+        if !left.is_empty() {
+            write!(f, "{}", left.escape_debug())?
+        }
         if !right.is_empty() {
-            if !left.is_empty() { f.write_str(".")?; }
+            if !left.is_empty() {
+                f.write_str(".")?;
+            }
             write!(f, "{}", right.escape_debug())?;
         }
 
@@ -166,9 +192,13 @@ impl std::fmt::Debug for NameBuf<'_> {
 impl std::fmt::Display for NameBuf<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let (left, right) = self.split();
-        if !left.is_empty() { left.fmt(f)?; }
+        if !left.is_empty() {
+            left.fmt(f)?;
+        }
         if !right.is_empty() {
-            if !left.is_empty() { f.write_str(".")?; }
+            if !left.is_empty() {
+                f.write_str(".")?;
+            }
             right.fmt(f)?;
         }
 
@@ -206,7 +236,7 @@ impl PartialEq<NameBuf<'_>> for &str {
     }
 }
 
-impl Eq for NameBuf<'_> { }
+impl Eq for NameBuf<'_> {}
 
 impl std::hash::Hash for NameBuf<'_> {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {

@@ -1,7 +1,7 @@
 use std::borrow::Cow;
+use std::fmt;
 use std::ops::Deref;
 use std::str::FromStr;
-use std::fmt;
 
 use crate::header::{Header, MediaType};
 use crate::uncased::UncasedStr;
@@ -227,7 +227,9 @@ impl ContentType {
     /// ```
     #[inline(always)]
     pub fn new<T, S>(top: T, sub: S) -> ContentType
-        where T: Into<Cow<'static, str>>, S: Into<Cow<'static, str>>
+    where
+        T: Into<Cow<'static, str>>,
+        S: Into<Cow<'static, str>>,
     {
         ContentType(MediaType::new(top, sub))
     }
@@ -262,9 +264,10 @@ impl ContentType {
     /// assert_eq!(mt.to_string(), "text/person; name=bob; ref=2382".to_string());
     /// ```
     pub fn with_params<K, V, P>(self, parameters: P) -> ContentType
-        where K: Into<Cow<'static, str>>,
-              V: Into<Cow<'static, str>>,
-              P: IntoIterator<Item = (K, V)>
+    where
+        K: Into<Cow<'static, str>>,
+        V: Into<Cow<'static, str>>,
+        P: IntoIterator<Item = (K, V)>,
     {
         ContentType(self.0.with_params(parameters))
     }

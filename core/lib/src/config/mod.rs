@@ -10,6 +10,7 @@
 //! that implements [`Deserialize`] can be extracted from the figment:
 //!
 //! ```rust
+//! # extern crate rocket_community as rocket;
 //! use rocket::fairing::AdHoc;
 //!
 //! #[derive(serde::Deserialize)]
@@ -53,7 +54,7 @@
 //! providers with Rocket's default provider:
 //!
 //! ```rust
-//! # #[macro_use] extern crate rocket;
+//! # #[macro_use] extern crate rocket_community as rocket;
 //! use rocket::data::{Limits, ToByteUnit};
 //!
 //! #[launch]
@@ -74,7 +75,7 @@
 //! follows:
 //!
 //! ```rust
-//! # #[macro_use] extern crate rocket;
+//! # #[macro_use] extern crate rocket_community as rocket;
 //! use serde::{Serialize, Deserialize};
 //! use figment::{Figment, Profile, providers::{Format, Toml, Serialized, Env}};
 //! use rocket::fairing::AdHoc;
@@ -112,18 +113,18 @@
 
 #[macro_use]
 mod ident;
-mod config;
 mod cli_colors;
+mod config;
 mod http_header;
 #[cfg(test)]
 mod tests;
 
-pub use ident::Ident;
-pub use config::Config;
 pub use cli_colors::CliColors;
+pub use config::Config;
+pub use ident::Ident;
 
-pub use crate::trace::{TraceFormat, Level};
 pub use crate::shutdown::ShutdownConfig;
+pub use crate::trace::{Level, TraceFormat};
 
 #[cfg(feature = "tls")]
 pub use crate::tls::TlsConfig;

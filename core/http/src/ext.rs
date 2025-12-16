@@ -28,14 +28,13 @@ impl<T: IntoOwned> IntoOwned for Vec<T> {
 
     #[inline(always)]
     fn into_owned(self) -> Self::Owned {
-        self.into_iter()
-            .map(|inner| inner.into_owned())
-            .collect()
+        self.into_iter().map(|inner| inner.into_owned()).collect()
     }
 }
 
 impl<T: IntoOwned + Send + Sync> IntoOwned for InitCell<T>
-    where T::Owned: Send + Sync
+where
+    T::Owned: Send + Sync,
 {
     type Owned = InitCell<T::Owned>;
 

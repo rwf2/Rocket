@@ -78,7 +78,7 @@ impl std::error::Error for Error {
 
 impl From<std::io::Error> for Error {
     fn from(e: std::io::Error) -> Self {
-       Error::Io(e)
+        Error::Io(e)
     }
 }
 
@@ -101,6 +101,7 @@ impl From<KeyError> for Error {
 }
 
 impl From<std::convert::Infallible> for Error {
+    #[allow(clippy::unconditional_recursion)]
     fn from(v: std::convert::Infallible) -> Self {
         v.into()
     }

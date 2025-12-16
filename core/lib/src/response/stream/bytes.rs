@@ -1,9 +1,9 @@
 use futures::stream::{Stream, StreamExt};
 
-use crate::request::Request;
-use crate::response::{self, Response, Responder};
 use crate::http::ContentType;
+use crate::request::Request;
 use crate::response::stream::ReaderStream;
+use crate::response::{self, Responder, Response};
 
 /// A potentially infinite stream of bytes: any `T: AsRef<[u8]>`.
 ///
@@ -27,6 +27,7 @@ use crate::response::stream::ReaderStream;
 /// form `vec![i, i + 1, i + 2]` for `i` from `0` to `10` exclusive:
 ///
 /// ```rust
+/// # extern crate rocket_community as rocket;
 /// # use rocket::*;
 /// use rocket::response::stream::ByteStream;
 /// use rocket::futures::stream::{repeat, StreamExt};
@@ -62,7 +63,9 @@ impl<S> From<S> for ByteStream<S> {
 }
 
 impl<'r, S: Stream> Responder<'r, 'r> for ByteStream<S>
-    where S: Send + 'r, S::Item: AsRef<[u8]> + Send + Unpin + 'r
+where
+    S: Send + 'r,
+    S::Item: AsRef<[u8]> + Send + Unpin + 'r,
 {
     fn respond_to(self, _: &'r Request<'_>) -> response::Result<'r> {
         Response::build()

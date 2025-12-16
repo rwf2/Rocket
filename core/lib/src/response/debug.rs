@@ -1,6 +1,6 @@
+use crate::http::Status;
 use crate::request::Request;
 use crate::response::{self, Responder};
-use crate::http::Status;
 
 /// Debug prints the internal value before forwarding to the 500 error catcher.
 ///
@@ -13,6 +13,7 @@ use crate::http::Status;
 /// returned directly without the need for `Debug`:
 ///
 /// ```rust
+/// # extern crate rocket_community as rocket;
 /// use std::io;
 ///
 /// # use rocket::get;
@@ -31,6 +32,7 @@ use crate::http::Status;
 /// automatically:
 ///
 /// ```rust
+/// # extern crate rocket_community as rocket;
 /// use std::string::FromUtf8Error;
 ///
 /// # use rocket::get;
@@ -50,6 +52,7 @@ use crate::http::Status;
 /// [`Result::map_err()`]:
 ///
 /// ```rust
+/// # extern crate rocket_community as rocket;
 /// use std::string::FromUtf8Error;
 ///
 /// # use rocket::get;

@@ -1,15 +1,15 @@
+use std::borrow::Cow;
 use std::fmt;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::borrow::Cow;
 
-use crate::{response, Data, Request, Response};
-use crate::outcome::IntoOutcome;
-use crate::http::{uri::Segments, HeaderMap, Method, ContentType, Status};
-use crate::route::{Route, Handler, Outcome};
-use crate::response::Responder;
-use crate::util::Formatter;
 use crate::fs::rewrite::*;
+use crate::http::{uri::Segments, ContentType, HeaderMap, Method, Status};
+use crate::outcome::IntoOutcome;
+use crate::response::Responder;
+use crate::route::{Handler, Outcome, Route};
+use crate::util::Formatter;
+use crate::{response, Data, Request, Response};
 
 /// Custom handler for serving static files.
 ///
@@ -18,7 +18,7 @@ use crate::fs::rewrite::*;
 /// [`FileServer::new()`], then `mount` the handler.
 ///
 /// ```rust,no_run
-/// # #[macro_use] extern crate rocket;
+/// # #[macro_use] extern crate rocket_community as rocket;
 /// use rocket::fs::FileServer;
 ///
 /// #[launch]
@@ -49,7 +49,7 @@ use crate::fs::rewrite::*;
 /// `/public` path:
 ///
 /// ```rust,no_run
-/// # #[macro_use] extern crate rocket;
+/// # #[macro_use] extern crate rocket_community as rocket;
 /// use rocket::fs::FileServer;
 ///
 /// #[launch]
@@ -71,7 +71,7 @@ use crate::fs::rewrite::*;
 /// at `/`, you might write:
 ///
 /// ```rust,no_run
-/// # #[macro_use] extern crate rocket;
+/// # #[macro_use] extern crate rocket_community as rocket;
 /// use rocket::fs::{FileServer, relative};
 ///
 /// #[launch]
@@ -111,7 +111,7 @@ impl FileServer {
     /// # Example
     ///
     /// ```rust,no_run
-    /// # #[macro_use] extern crate rocket;
+    /// # #[macro_use] extern crate rocket_community as rocket;
     /// use rocket::fs::FileServer;
     ///
     /// #[launch]
@@ -141,7 +141,7 @@ impl FileServer {
     /// `index.txt` as the index file if `index.html` doesn't exist.
     ///
     /// ```rust,no_run
-    /// # #[macro_use] extern crate rocket;
+    /// # #[macro_use] extern crate rocket_community as rocket;
     /// use rocket::fs::{FileServer, rewrite::DirIndex};
     ///
     /// #[launch]
@@ -179,7 +179,7 @@ impl FileServer {
     /// # Example
     ///
     /// ```rust,no_run
-    /// # #[macro_use] extern crate rocket;
+    /// # #[macro_use] extern crate rocket_community as rocket;
     /// use rocket::fs::{FileServer, rewrite};
     ///
     /// #[launch]
@@ -196,7 +196,7 @@ impl FileServer {
     pub fn identity() -> Self {
         Self {
             rewrites: vec![],
-            rank: Self::DEFAULT_RANK
+            rank: Self::DEFAULT_RANK,
         }
     }
 
@@ -205,6 +205,7 @@ impl FileServer {
     /// # Example
     ///
     /// ```rust,no_run
+    /// # extern crate rocket_community as rocket;
     /// # use rocket::fs::FileServer;
     /// # fn make_server() -> FileServer {
     /// FileServer::identity()
@@ -222,7 +223,7 @@ impl FileServer {
     /// Redirect filtered requests (`None`) to `/`.
     ///
     /// ```rust,no_run
-    /// # #[macro_use] extern crate rocket;
+    /// # #[macro_use] extern crate rocket_community as rocket;
     /// use rocket::fs::{FileServer, rewrite::Rewrite};
     /// use rocket::{request::Request, response::Redirect};
     ///
@@ -253,7 +254,7 @@ impl FileServer {
     /// than "hidden".
     ///
     /// ```rust,no_run
-    /// # #[macro_use] extern crate rocket;
+    /// # #[macro_use] extern crate rocket_community as rocket;
     /// use rocket::fs::FileServer;
     ///
     /// #[launch]
@@ -266,12 +267,14 @@ impl FileServer {
     /// }
     /// ```
     pub fn filter<F: Send + Sync + 'static>(self, f: F) -> Self
-        where F: Fn(&File<'_>, &Request<'_>) -> bool
+    where
+        F: Fn(&File<'_>, &Request<'_>) -> bool,
     {
         struct Filter<F>(F);
 
         impl<F> Rewriter for Filter<F>
-            where F: Fn(&File<'_>, &Request<'_>) -> bool + Send + Sync + 'static
+        where
+            F: Fn(&File<'_>, &Request<'_>) -> bool + Send + Sync + 'static,
         {
             fn rewrite<'r>(&self, f: Option<Rewrite<'r>>, r: &Request<'_>) -> Option<Rewrite<'r>> {
                 f.and_then(|f| match f {
@@ -293,7 +296,7 @@ impl FileServer {
     /// Append `index.txt` to every path.
     ///
     /// ```rust,no_run
-    /// # #[macro_use] extern crate rocket;
+    /// # #[macro_use] extern crate rocket_community as rocket;
     /// use rocket::fs::FileServer;
     ///
     /// #[launch]
@@ -306,12 +309,14 @@ impl FileServer {
     /// }
     /// ```
     pub fn map<F: Send + Sync + 'static>(self, f: F) -> Self
-        where F: for<'r> Fn(File<'r>, &Request<'_>) -> Rewrite<'r>
+    where
+        F: for<'r> Fn(File<'r>, &Request<'_>) -> Rewrite<'r>,
     {
         struct Map<F>(F);
 
         impl<F> Rewriter for Map<F>
-            where F: for<'r> Fn(File<'r>, &Request<'_>) -> Rewrite<'r> + Send + Sync + 'static
+        where
+            F: for<'r> Fn(File<'r>, &Request<'_>) -> Rewrite<'r> + Send + Sync + 'static,
         {
             fn rewrite<'r>(&self, f: Option<Rewrite<'r>>, r: &Request<'_>) -> Option<Rewrite<'r>> {
                 f.map(|f| match f {
@@ -337,7 +342,9 @@ impl From<FileServer> for Vec<Route> {
 impl Handler for FileServer {
     async fn handle<'r>(&self, req: &'r Request<'_>, data: Data<'r>) -> Outcome<'r> {
         use crate::http::uri::fmt::Path as UriPath;
-        let path: Option<PathBuf> = req.segments::<Segments<'_, UriPath>>(0..).ok()
+        let path: Option<PathBuf> = req
+            .segments::<Segments<'_, UriPath>>(0..)
+            .ok()
             .and_then(|segments| segments.to_path_buf(true).ok());
 
         let mut response = path.map(|p| Rewrite::File(File::new(p)));
@@ -358,7 +365,10 @@ impl Handler for FileServer {
 impl fmt::Debug for FileServer {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("FileServer")
-            .field("rewrites", &Formatter(|f| write!(f, "<{} rewrites>", self.rewrites.len())))
+            .field(
+                "rewrites",
+                &Formatter(|f| write!(f, "<{} rewrites>", self.rewrites.len())),
+            )
             .field("rank", &self.rank)
             .finish()
     }
@@ -394,7 +404,8 @@ impl<'r> Responder<'r, 'r> for NamedFile<'r> {
         let mut response = Response::new();
         response.set_header_map(self.headers);
         if !response.headers().contains("Content-Type") {
-            self.path.extension()
+            self.path
+                .extension()
                 .and_then(|ext| ext.to_str())
                 .and_then(ContentType::from_extension)
                 .map(|content_type| response.set_header(content_type));

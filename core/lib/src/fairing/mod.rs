@@ -20,6 +20,7 @@
 //! write:
 //!
 //! ```rust
+//! # extern crate rocket_community as rocket;
 //! # use rocket::fairing::AdHoc;
 //! # let req_fairing = AdHoc::on_request("Request", |_, _| Box::pin(async move {}));
 //! # let res_fairing = AdHoc::on_response("Response", |_, _| Box::pin(async move {}));
@@ -51,14 +52,14 @@
 
 use std::any::Any;
 
-use crate::{Rocket, Request, Response, Data, Build, Orbit};
+use crate::{Build, Data, Orbit, Request, Response, Rocket};
 
-mod fairings;
 mod ad_hoc;
+mod fairings;
 mod info_kind;
 
-pub(crate) use self::fairings::Fairings;
 pub use self::ad_hoc::AdHoc;
+pub(crate) use self::fairings::Fairings;
 pub use self::info_kind::{Info, Kind};
 
 /// A type alias for the return `Result` type of [`Fairing::on_ignite()`].
@@ -249,6 +250,7 @@ pub type Result<T = Rocket<Build>, E = Rocket<Build>> = std::result::Result<T, E
 /// decorated with an attribute of `#[rocket::async_trait]`:
 ///
 /// ```rust
+/// # extern crate rocket_community as rocket;
 /// use rocket::{Rocket, Request, Data, Response, Build, Orbit};
 /// use rocket::fairing::{self, Fairing, Info, Kind};
 ///
@@ -300,6 +302,7 @@ pub type Result<T = Rocket<Build>, E = Rocket<Build>> = std::result::Result<T, E
 /// path.
 ///
 /// ```rust
+/// # extern crate rocket_community as rocket;
 /// use std::future::Future;
 /// use std::io::Cursor;
 /// use std::pin::Pin;
@@ -362,6 +365,7 @@ pub type Result<T = Rocket<Build>, E = Rocket<Build>> = std::result::Result<T, E
 /// request guard.
 ///
 /// ```rust
+/// # extern crate rocket_community as rocket;
 /// # use std::future::Future;
 /// # use std::pin::Pin;
 /// # use std::time::{Duration, SystemTime};
@@ -446,6 +450,7 @@ pub trait Fairing: Send + Sync + AsAny + 'static {
     /// Fairing" that is both an ignite and response fairing.
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::fairing::{Fairing, Info, Kind};
     ///
     /// struct MyFairing;
@@ -474,7 +479,9 @@ pub trait Fairing: Send + Sync + AsAny + 'static {
     /// ## Default Implementation
     ///
     /// The default implementation of this method simply returns `Ok(rocket)`.
-    async fn on_ignite(&self, rocket: Rocket<Build>) -> Result { Ok(rocket) }
+    async fn on_ignite(&self, rocket: Rocket<Build>) -> Result {
+        Ok(rocket)
+    }
 
     /// The liftoff callback.
     ///
@@ -487,7 +494,7 @@ pub trait Fairing: Send + Sync + AsAny + 'static {
     /// ## Default Implementation
     ///
     /// The default implementation of this method does nothing.
-    async fn on_liftoff(&self, _rocket: &Rocket<Orbit>) { }
+    async fn on_liftoff(&self, _rocket: &Rocket<Orbit>) {}
 
     /// The request callback.
     ///
@@ -530,7 +537,7 @@ pub trait Fairing: Send + Sync + AsAny + 'static {
     /// ## Default Implementation
     ///
     /// The default implementation of this method does nothing.
-    async fn on_shutdown(&self, _rocket: &Rocket<Orbit>) { }
+    async fn on_shutdown(&self, _rocket: &Rocket<Orbit>) {}
 }
 
 pub trait AsAny: Any {
@@ -572,8 +579,12 @@ impl<T: Fairing + ?Sized> Fairing for std::sync::Arc<T> {
 }
 
 impl<T: Any> AsAny for T {
-    fn as_any_ref(&self) -> &dyn Any { self }
-    fn as_any_mut(&mut self) -> &mut dyn Any { self }
+    fn as_any_ref(&self) -> &dyn Any {
+        self
+    }
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
 }
 
 impl dyn Fairing {

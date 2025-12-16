@@ -4,7 +4,7 @@ error: need at least one field
 4 | struct Thing1;
   | ^^^^^^^^^^^^^^
 
-error: [note] error occurred while deriving `Responder`
+error: ␛[1;34m[␛[0m␛[1;32mnote␛[0m␛[1;34m] ␛[0m␛[1;39merror occurred while deriving `Responder`␛[0m
  --> tests/ui-fail-stable/responder.rs:3:10
   |
 3 | #[derive(Responder)]
@@ -18,7 +18,7 @@ error: need at least one field
 7 | struct Thing2();
   |              ^^
 
-error: [note] error occurred while deriving `Responder`
+error: ␛[1;34m[␛[0m␛[1;32mnote␛[0m␛[1;34m] ␛[0m␛[1;39merror occurred while deriving `Responder`␛[0m
  --> tests/ui-fail-stable/responder.rs:6:10
   |
 6 | #[derive(Responder)]
@@ -32,7 +32,7 @@ error: need at least one field
 13 | enum Foo { Bark, }
    |            ^^^^
 
-error: [note] error occurred while deriving `Responder`
+error: ␛[1;34m[␛[0m␛[1;32mnote␛[0m␛[1;34m] ␛[0m␛[1;39merror occurred while deriving `Responder`␛[0m
   --> tests/ui-fail-stable/responder.rs:12:10
    |
 12 | #[derive(Responder)]
@@ -46,7 +46,7 @@ error: only one lifetime is supported
 16 | struct Thing4<'a, 'b>(&'a str, &'b str);
    |              ^^^^^^^^
 
-error: [note] error occurred while deriving `Responder`
+error: ␛[1;34m[␛[0m␛[1;32mnote␛[0m␛[1;34m] ␛[0m␛[1;39merror occurred while deriving `Responder`␛[0m
   --> tests/ui-fail-stable/responder.rs:15:10
    |
 15 | #[derive(Responder)]
@@ -60,7 +60,7 @@ error: invalid or unknown content type
 25 | #[response(content_type = "")]
    |                           ^^
 
-error: [note] error occurred while deriving `Responder`
+error: ␛[1;34m[␛[0m␛[1;32mnote␛[0m␛[1;34m] ␛[0m␛[1;39merror occurred while deriving `Responder`␛[0m
   --> tests/ui-fail-stable/responder.rs:24:10
    |
 24 | #[derive(Responder)]
@@ -74,7 +74,7 @@ error: invalid or unknown content type
 29 | #[response(content_type = "idk")]
    |                           ^^^^^
 
-error: [note] error occurred while deriving `Responder`
+error: ␛[1;34m[␛[0m␛[1;32mnote␛[0m␛[1;34m] ␛[0m␛[1;39merror occurred while deriving `Responder`␛[0m
   --> tests/ui-fail-stable/responder.rs:28:10
    |
 28 | #[derive(Responder)]
@@ -88,7 +88,7 @@ error: invalid value: expected string literal
 33 | #[response(content_type = 100)]
    |                           ^^^
 
-error: [note] error occurred while deriving `Responder`
+error: ␛[1;34m[␛[0m␛[1;32mnote␛[0m␛[1;34m] ␛[0m␛[1;39merror occurred while deriving `Responder`␛[0m
   --> tests/ui-fail-stable/responder.rs:32:10
    |
 32 | #[derive(Responder)]
@@ -102,7 +102,7 @@ error: status must be in range [100, 599]
 37 | #[response(status = 8)]
    |                     ^
 
-error: [note] error occurred while deriving `Responder`
+error: ␛[1;34m[␛[0m␛[1;32mnote␛[0m␛[1;34m] ␛[0m␛[1;39merror occurred while deriving `Responder`␛[0m
   --> tests/ui-fail-stable/responder.rs:36:10
    |
 36 | #[derive(Responder)]
@@ -116,7 +116,7 @@ error: invalid value: expected unsigned integer literal
 41 | #[response(status = "404")]
    |                     ^^^^^
 
-error: [note] error occurred while deriving `Responder`
+error: ␛[1;34m[␛[0m␛[1;32mnote␛[0m␛[1;34m] ␛[0m␛[1;39merror occurred while deriving `Responder`␛[0m
   --> tests/ui-fail-stable/responder.rs:40:10
    |
 40 | #[derive(Responder)]
@@ -130,7 +130,7 @@ error: invalid value: expected unsigned integer literal
 45 | #[response(status = "404", content_type = "html")]
    |                     ^^^^^
 
-error: [note] error occurred while deriving `Responder`
+error: ␛[1;34m[␛[0m␛[1;32mnote␛[0m␛[1;34m] ␛[0m␛[1;39merror occurred while deriving `Responder`␛[0m
   --> tests/ui-fail-stable/responder.rs:44:10
    |
 44 | #[derive(Responder)]
@@ -144,7 +144,7 @@ error: invalid value: expected string literal
 49 | #[response(status = 404, content_type = 120)]
    |                                         ^^^
 
-error: [note] error occurred while deriving `Responder`
+error: ␛[1;34m[␛[0m␛[1;32mnote␛[0m␛[1;34m] ␛[0m␛[1;39merror occurred while deriving `Responder`␛[0m
   --> tests/ui-fail-stable/responder.rs:48:10
    |
 48 | #[derive(Responder)]

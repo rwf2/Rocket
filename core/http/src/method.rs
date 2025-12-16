@@ -64,10 +64,10 @@ macro_rules! define_methods {
         /// `Method` is both `Serialize` and `Deserialize`.
         ///
         ///   - `Method` _serializes_ as the specification-defined string form
-        ///   of the method, equivalent to the value returned from
-        ///   [`Method::as_str()`].
+        ///     of the method, equivalent to the value returned from
+        ///     [`Method::as_str()`].
         ///   - `Method` _deserializes_ from method's string form _or_ from a
-        ///   lowercased string, equivalent to the `FromStr` implementation.
+        ///     lowercased string, equivalent to the `FromStr` implementation.
         ///
         /// For example, [`Method::Get`] serializes to `"GET"` and deserializes
         /// from either `"GET"` or `"get"` but not `"GeT"`.
@@ -133,13 +133,13 @@ macro_rules! define_methods {
             /// From [RFC9110 §9.2.1](https://www.rfc-editor.org/rfc/rfc9110#section-9.2.1):
             ///
             /// > Request methods are considered "safe" if their defined
-            /// semantics are essentially read-only; i.e., the client does not
-            /// request, and does not expect, any state change on the origin server
-            /// as a result of applying a safe method to a target resource.
-            /// Likewise, reasonable use of a safe method is not expected to cause
-            /// any harm, loss of property, or unusual burden on the origin server.
-            /// Of the request methods defined by this specification, the GET,
-            /// HEAD, OPTIONS, and TRACE methods are defined to be safe.
+            /// > semantics are essentially read-only; i.e., the client does not
+            /// > request, and does not expect, any state change on the origin server
+            /// > as a result of applying a safe method to a target resource.
+            /// > Likewise, reasonable use of a safe method is not expected to cause
+            /// > any harm, loss of property, or unusual burden on the origin server.
+            /// > Of the request methods defined by this specification, the GET,
+            /// > HEAD, OPTIONS, and TRACE methods are defined to be safe.
             ///
             /// # Example
             ///
@@ -166,10 +166,10 @@ macro_rules! define_methods {
             /// From [RFC9110 §9.2.2](https://www.rfc-editor.org/rfc/rfc9110#section-9.2.2):
             ///
             /// > A request method is considered "idempotent" if the intended
-            /// effect on the server of multiple identical requests with that method
-            /// is the same as the effect for a single such request. Of the request
-            /// methods defined by this specification, PUT, DELETE, and safe request
-            /// methods are idempotent.
+            /// > effect on the server of multiple identical requests with that method
+            /// > is the same as the effect for a single such request. Of the request
+            /// > methods defined by this specification, PUT, DELETE, and safe request
+            /// > methods are idempotent.
             ///
             /// # Example
             ///
@@ -313,12 +313,12 @@ impl Method {
     }
 }
 
-use define_methods as define_methods;
+use define_methods;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct ParseMethodError;
 
-impl std::error::Error for ParseMethodError { }
+impl std::error::Error for ParseMethodError {}
 
 impl From<std::convert::Infallible> for ParseMethodError {
     fn from(infallible: std::convert::Infallible) -> Self {
@@ -377,8 +377,8 @@ impl PartialEq<Method> for &Method {
 mod serde_impl {
     use super::*;
 
+    use serde::de::{Deserialize, Deserializer, Error, Unexpected, Visitor};
     use serde::ser::{Serialize, Serializer};
-    use serde::de::{Deserialize, Deserializer, Error, Visitor, Unexpected};
 
     impl Serialize for Method {
         fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {

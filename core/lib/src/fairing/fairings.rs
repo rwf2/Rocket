@@ -1,5 +1,5 @@
-use crate::{Rocket, Request, Response, Data, Build, Orbit};
 use crate::fairing::{Fairing, Info, Kind};
+use crate::{Build, Data, Orbit, Request, Response, Rocket};
 
 #[derive(Default)]
 pub struct Fairings {
@@ -18,10 +18,10 @@ pub struct Fairings {
 }
 
 macro_rules! iter {
-    ($_self:ident . $kind:ident) => ({
+    ($_self:ident . $kind:ident) => {{
         iter!($_self, $_self.$kind.iter().copied()).map(|v| v.1)
-    });
-    ($_self:ident, $indices:expr) => ({
+    }};
+    ($_self:ident, $indices:expr) => {{
         let all_fairings = &$_self.all_fairings;
         $indices.filter_map(move |i| {
             let i = i.clone();
@@ -29,7 +29,7 @@ macro_rules! iter {
             let f = all_fairings.get(i).map(|f| &**f)?;
             Some((i, f))
         })
-    })
+    }};
 }
 
 impl Fairings {
@@ -39,7 +39,8 @@ impl Fairings {
     }
 
     pub fn active(&self) -> impl Iterator<Item = &usize> {
-        self.ignite.iter()
+        self.ignite
+            .iter()
             .chain(self.liftoff.iter())
             .chain(self.request.iter())
             .chain(self.response.iter())
@@ -49,10 +50,13 @@ impl Fairings {
     pub fn unique_active(&self) -> impl Iterator<Item = usize> {
         let mut bitmap = vec![false; self.all_fairings.len()];
         for i in self.active() {
-            bitmap.get_mut(*i).map(|active| *active = true);
+            if let Some(active) = bitmap.get_mut(*i) {
+                *active = true;
+            }
         }
 
-        bitmap.into_iter()
+        bitmap
+            .into_iter()
             .enumerate()
             .filter_map(|(i, active)| active.then_some(i))
     }
@@ -97,7 +101,9 @@ impl Fairings {
                 .collect();
 
             // Reverse the dup indices so `remove` is stable given shifts.
-            dups.sort(); dups.dedup(); dups.reverse();
+            dups.sort();
+            dups.dedup();
+            dups.reverse();
             for i in dups {
                 remove(i, &mut self.ignite);
                 remove(i, &mut self.liftoff);
@@ -109,11 +115,21 @@ impl Fairings {
 
         let index = self.all_fairings.len();
         self.all_fairings.push(fairing);
-        if this_info.kind.is(Kind::Ignite) { self.ignite.push(index); }
-        if this_info.kind.is(Kind::Liftoff) { self.liftoff.push(index); }
-        if this_info.kind.is(Kind::Request) { self.request.push(index); }
-        if this_info.kind.is(Kind::Response) { self.response.push(index); }
-        if this_info.kind.is(Kind::Shutdown) { self.shutdown.push(index); }
+        if this_info.kind.is(Kind::Ignite) {
+            self.ignite.push(index);
+        }
+        if this_info.kind.is(Kind::Liftoff) {
+            self.liftoff.push(index);
+        }
+        if this_info.kind.is(Kind::Request) {
+            self.request.push(index);
+        }
+        if this_info.kind.is(Kind::Response) {
+            self.response.push(index);
+        }
+        if this_info.kind.is(Kind::Shutdown) {
+            self.shutdown.push(index);
+        }
     }
 
     pub fn append(&mut self, others: &mut Fairings) {
@@ -177,26 +193,30 @@ impl Fairings {
     pub fn audit(&self) -> Result<(), &[Info]> {
         match &self.failures[..] {
             [] => Ok(()),
-            failures => Err(failures)
+            failures => Err(failures),
         }
     }
 
     pub fn filter<F: Fairing>(&self) -> impl Iterator<Item = &F> {
-        iter!(self, self.unique_active())
-            .filter_map(|v| v.1.downcast_ref::<F>())
+        iter!(self, self.unique_active()).filter_map(|v| v.1.downcast_ref::<F>())
     }
 
     pub fn filter_mut<F: Fairing>(&mut self) -> impl Iterator<Item = &mut F> {
         let mut bitmap = vec![false; self.all_fairings.len()];
         for &i in self.active() {
-            let is_target = self.all_fairings.get(i)
+            let is_target = self
+                .all_fairings
+                .get(i)
                 .and_then(|f| f.downcast_ref::<F>())
                 .is_some();
 
-            bitmap.get_mut(i).map(|target| *target = is_target);
+            if let Some(target) = bitmap.get_mut(i) {
+                *target = is_target;
+            }
         }
 
-        self.all_fairings.iter_mut()
+        self.all_fairings
+            .iter_mut()
             .enumerate()
             .filter(move |(i, _)| *bitmap.get(*i).unwrap_or(&false))
             .filter_map(|(_, f)| f.downcast_mut::<F>())

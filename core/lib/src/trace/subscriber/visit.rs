@@ -29,7 +29,8 @@ impl Data {
     }
 
     pub fn get(&self, key: &str) -> Option<&str> {
-        self.map.iter()
+        self.map
+            .iter()
             .find(|(k, _)| k == &key)
             .map(|(_, v)| v.as_str())
     }
@@ -56,7 +57,11 @@ impl Visit for Data {
 impl<T: RecordFields> RecordDisplay for T {
     fn find_map_display<V, F: Fn(&dyn fmt::Display) -> V>(&self, name: &str, f: F) -> Option<V> {
         let mut value = None;
-        self.record_display(|field, item| if field.name() == name { value = Some(f(item)); });
+        self.record_display(|field, item| {
+            if field.name() == name {
+                value = Some(f(item));
+            }
+        });
         value
     }
 

@@ -1,7 +1,7 @@
-use rocket::{Rocket, Build};
-use rocket::figment::{self, Figment, providers::Serialized};
+use rocket::figment::{self, providers::Serialized, Figment};
+use rocket::{Build, Rocket};
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 /// A base `Config` for any `Poolable` type.
 ///
@@ -17,6 +17,7 @@ use serde::{Serialize, Deserialize};
 /// ...`Config::from("my_database", rocket)` would return the following struct:
 ///
 /// ```rust
+/// # extern crate rocket_sync_db_pools_community as rocket_sync_db_pools;
 /// # use rocket_sync_db_pools::Config;
 /// Config {
 ///     url: "postgres://root:root@localhost/my_database".into(),
@@ -50,6 +51,7 @@ impl Config {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_sync_db_pools_community as rocket_sync_db_pools;
     /// # #[cfg(feature = "diesel_sqlite_pool")] {
     /// # use rocket::figment::{Figment, providers::{Format, Toml}};
     /// // Assume that these are the contents of `Rocket.toml`:
@@ -82,6 +84,7 @@ impl Config {
     /// # pool(&rocket);
     /// # }
     /// ```
+    #[allow(clippy::result_large_err)]
     pub fn from(db_name: &str, rocket: &Rocket<Build>) -> Result<Config, figment::Error> {
         Config::figment(db_name, rocket).extract::<Self>()
     }
@@ -92,6 +95,7 @@ impl Config {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_sync_db_pools_community as rocket_sync_db_pools;
     /// use rocket::{Rocket, Build};
     /// use rocket_sync_db_pools::Config;
     ///
@@ -102,7 +106,8 @@ impl Config {
     /// ```
     pub fn figment(db_name: &str, rocket: &Rocket<Build>) -> Figment {
         let db_key = format!("databases.{}", db_name);
-        let default_pool_size = rocket.figment()
+        let default_pool_size = rocket
+            .figment()
             .extract_inner::<u32>(rocket::Config::WORKERS)
             .map(|workers| workers * 4)
             .ok();
@@ -113,7 +118,7 @@ impl Config {
 
         match default_pool_size {
             Some(pool_size) => figment.join(Serialized::default("pool_size", pool_size)),
-            None => figment
+            None => figment,
         }
     }
 }

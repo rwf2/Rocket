@@ -1,13 +1,13 @@
+use std::any::type_name;
 use std::fmt;
 use std::ops::Deref;
-use std::any::type_name;
 
 use ref_cast::RefCast;
 
-use crate::{Phase, Rocket, Ignite, Sentinel};
-use crate::request::{self, FromRequest, Request};
-use crate::outcome::Outcome;
 use crate::http::Status;
+use crate::outcome::Outcome;
+use crate::request::{self, FromRequest, Request};
+use crate::{Ignite, Phase, Rocket, Sentinel};
 
 /// Request guard to retrieve managed state.
 ///
@@ -26,7 +26,7 @@ use crate::http::Status;
 /// following example does just this:
 ///
 /// ```rust,no_run
-/// # #[macro_use] extern crate rocket;
+/// # #[macro_use] extern crate rocket_community as rocket;
 /// use rocket::State;
 ///
 /// // In a real application, this would likely be more complex.
@@ -60,6 +60,8 @@ use crate::http::Status;
 /// the `Item` request guard retrieves `MyConfig` from managed state:
 ///
 /// ```rust
+/// extern crate rocket_community as rocket;
+///
 /// use rocket::State;
 /// use rocket::request::{self, Request, FromRequest};
 /// use rocket::outcome::IntoOutcome;
@@ -94,7 +96,7 @@ use crate::http::Status;
 /// [`State::get()`] static method or the `From<&T>` implementation:
 ///
 /// ```rust
-/// # #[macro_use] extern crate rocket;
+/// # #[macro_use] extern crate rocket_community as rocket;
 /// use rocket::State;
 ///
 /// struct MyManagedState(usize);
@@ -122,6 +124,8 @@ impl<T: Send + Sync + 'static> State<T> {
     /// # Example
     ///
     /// ```rust
+    /// extern crate rocket_community as rocket;
+    ///
     /// use rocket::State;
     ///
     /// #[derive(Debug, PartialEq)]
@@ -161,6 +165,8 @@ impl<T: Send + Sync + 'static> State<T> {
     /// # Example
     ///
     /// ```rust
+    /// extern crate rocket_community as rocket;
+    ///
     /// use rocket::State;
     ///
     /// #[derive(Clone)]
@@ -200,9 +206,11 @@ impl<'r, T: Send + Sync + 'static> FromRequest<'r> for &'r State<T> {
         match State::get(req.rocket()) {
             Some(state) => Outcome::Success(state),
             None => {
-            error!(type_name = type_name::<T>(),
-                "retrieving unmanaged state\n\
-                state must be managed via `rocket.manage()`");
+                error!(
+                    type_name = type_name::<T>(),
+                    "retrieving unmanaged state\n\
+                state must be managed via `rocket.manage()`"
+                );
 
                 Outcome::Error((Status::InternalServerError, ()))
             }
@@ -213,9 +221,11 @@ impl<'r, T: Send + Sync + 'static> FromRequest<'r> for &'r State<T> {
 impl<T: Send + Sync + 'static> Sentinel for &State<T> {
     fn abort(rocket: &Rocket<Ignite>) -> bool {
         if rocket.state::<T>().is_none() {
-            error!(type_name = type_name::<T>(),
+            error!(
+                type_name = type_name::<T>(),
                 "unmanaged state detected\n\
-                ensure type is being managed via `rocket.manage()`");
+                ensure type is being managed via `rocket.manage()`"
+            );
 
             return true;
         }

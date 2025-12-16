@@ -1,9 +1,12 @@
+extern crate rocket_community as rocket;
+
 use rocket::http::uri::Origin;
 use rocket::local::blocking::Client;
 
 #[test]
 fn can_correct_bad_local_uri() {
-    #[rocket::get("/")] fn f() {}
+    #[rocket::get("/")]
+    fn f() {}
 
     let client = Client::debug_with(rocket::routes![f]).unwrap();
     let mut req = client.get("this is a bad URI");

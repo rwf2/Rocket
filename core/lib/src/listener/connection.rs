@@ -1,5 +1,5 @@
-use std::io;
 use std::borrow::Cow;
+use std::io;
 
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_util::either::Either;
@@ -21,7 +21,9 @@ pub trait Connection: AsyncRead + AsyncWrite + Send + Unpin {
     ///
     /// Defaults to an empty vector to indicate that no certificates were
     /// presented.
-    fn certificates(&self) -> Option<Certificates<'_>> { None }
+    fn certificates(&self) -> Option<Certificates<'_>> {
+        None
+    }
 }
 
 impl<A: Connection, B: Connection> Connection for Either<A, B> {
@@ -42,7 +44,9 @@ impl<A: Connection, B: Connection> Connection for Either<A, B> {
 
 impl Certificates<'_> {
     pub fn into_owned(self) -> Certificates<'static> {
-        let cow = self.0.iter()
+        let cow = self
+            .0
+            .iter()
             .map(|der| der.clone().into_owned())
             .collect::<Vec<_>>()
             .into();

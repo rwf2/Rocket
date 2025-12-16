@@ -25,6 +25,7 @@
 //!
 //! ```rust
 //! # #[macro_use] extern crate rocket;
+//! # extern crate rocket_db_pools_community as rocket_db_pools;
 //! # #[cfg(feature = "diesel_mysql")] {
 //! use rocket_db_pools::{Database, Connection};
 //! use rocket_db_pools::diesel::{QueryResult, MysqlPool, prelude::*};
@@ -111,6 +112,7 @@ pub type QueryResult<T, E = rocket::response::Debug<diesel::result::Error>> = Re
 ///
 /// ```rust
 /// # extern crate rocket;
+/// # extern crate rocket_db_pools_community as rocket_db_pools;
 /// # #[cfg(feature = "diesel_mysql")] {
 /// # use rocket::get;
 /// use rocket_db_pools::{Database, Connection};
@@ -133,6 +135,7 @@ pub type MysqlPool = Pool<AsyncMysqlConnection>;
 ///
 /// ```rust
 /// # extern crate rocket;
+/// # extern crate rocket_db_pools_community as rocket_db_pools;
 /// # #[cfg(feature = "diesel_postgres")] {
 /// # use rocket::get;
 /// use rocket_db_pools::{Database, Connection};

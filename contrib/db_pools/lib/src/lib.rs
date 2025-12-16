@@ -26,6 +26,7 @@
 //!    database pool:
 //!
 //!    ```rust
+//!    # extern crate rocket_db_pools_community as rocket_db_pools;
 //!    # #[cfg(feature = "sqlx_sqlite")] mod _inner {
 //!    # use rocket::launch;
 //!    use rocket_db_pools::{sqlx, Database};
@@ -46,6 +47,7 @@
 //!    [`Connection` deref](#supported-drivers) column.
 //!
 //!    ```rust
+//!    # extern crate rocket_db_pools_community as rocket_db_pools;
 //!    # #[cfg(feature = "sqlx_sqlite")] mod _inner {
 //!    # use rocket::{get, response::Responder};
 //!    # use rocket_db_pools::{sqlx, Database};
@@ -74,6 +76,7 @@
 //!    doing so does _not_ guarantee that a connection is available:
 //!
 //!    ```rust
+//!    # extern crate rocket_db_pools_community as rocket_db_pools;
 //!    # #[cfg(feature = "sqlx_sqlite")] mod _inner {
 //!    # use rocket::{get, response::Responder};
 //!    # use rocket_db_pools::{sqlx, Database};
@@ -234,7 +237,6 @@
 #![doc(html_root_url = "https://api.rocket.rs/master/rocket_db_pools")]
 #![doc(html_favicon_url = "https://rocket.rs/images/favicon.ico")]
 #![doc(html_logo_url = "https://rocket.rs/images/logo-boxed.png")]
-
 #![deny(missing_docs)]
 
 pub use rocket;
@@ -243,20 +245,25 @@ pub use rocket;
 #[doc(inline)]
 pub use rocket::figment;
 
-#[cfg(any(feature = "diesel_postgres", feature = "diesel_mysql"))] pub mod diesel;
-#[cfg(feature = "deadpool_postgres")] pub use deadpool_postgres;
-#[cfg(feature = "deadpool_redis")] pub use deadpool_redis;
-#[cfg(feature = "mongodb")] pub use mongodb;
-#[cfg(feature = "sqlx")] pub use sqlx;
+#[cfg(any(feature = "diesel_postgres", feature = "diesel_mysql"))]
+pub mod diesel;
+#[cfg(feature = "deadpool_postgres")]
+pub use deadpool_postgres;
+#[cfg(feature = "deadpool_redis")]
+pub use deadpool_redis;
+#[cfg(feature = "mongodb")]
+pub use mongodb;
+#[cfg(feature = "sqlx")]
+pub use sqlx;
 
+mod config;
 mod database;
 mod error;
 mod pool;
-mod config;
 
+pub use self::config::Config;
 pub use self::database::{Connection, Database, Initializer};
 pub use self::error::Error;
 pub use self::pool::Pool;
-pub use self::config::Config;
 
 pub use rocket_db_pools_codegen::*;

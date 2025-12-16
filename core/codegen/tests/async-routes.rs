@@ -1,10 +1,11 @@
 #![allow(dead_code)]
 
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket;
 use rocket::http::uri::Origin;
 use rocket::request::Request;
 
-async fn noop() { }
+async fn noop() {}
 
 #[get("/")]
 async fn hello(_origin: &Origin<'_>) -> &'static str {

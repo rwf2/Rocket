@@ -1,5 +1,5 @@
-use std::fmt;
 use std::any::Any;
+use std::fmt;
 use std::net::{self, AddrParseError, IpAddr, Ipv4Addr};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
@@ -10,10 +10,12 @@ use serde::de;
 
 use crate::http::uncased::AsUncased;
 
-#[cfg(feature = "tls")]      type TlsInfo = Option<Box<crate::tls::TlsConfig>>;
-#[cfg(not(feature = "tls"))] type TlsInfo = Option<()>;
+#[cfg(feature = "tls")]
+type TlsInfo = Option<Box<crate::tls::TlsConfig>>;
+#[cfg(not(feature = "tls"))]
+type TlsInfo = Option<()>;
 
-pub trait CustomEndpoint: fmt::Display + fmt::Debug + Sync + Send + Any { }
+pub trait CustomEndpoint: fmt::Display + fmt::Debug + Sync + Send + Any {}
 
 impl<T: fmt::Display + fmt::Debug + Sync + Send + Any> CustomEndpoint for T {}
 
@@ -178,7 +180,8 @@ impl Endpoint {
     /// and `Some` value was passed in, returns an error indicating the endpoint
     /// was an invalid `kind` and otherwise returns a "missing field" error.
     pub(crate) fn fetch<T, F>(figment: &Figment, kind: &str, path: &str, f: F) -> figment::Result<T>
-        where F: FnOnce(Option<&Endpoint>) -> Option<T>
+    where
+        F: FnOnce(Option<&Endpoint>) -> Option<T>,
     {
         match figment.extract_inner::<Endpoint>(path) {
             Ok(endpoint) => f(Some(&endpoint)).ok_or_else(|| {
@@ -189,7 +192,7 @@ impl Endpoint {
                 error
             }),
             Err(e) if e.missing() => f(None).ok_or(e),
-            Err(e) => Err(e)
+            Err(e) => Err(e),
         }
     }
 }
@@ -243,7 +246,8 @@ impl FromStr for Endpoint {
 
     fn from_str(string: &str) -> Result<Self, Self::Err> {
         fn parse_tcp(str: &str, def_port: u16) -> Result<net::SocketAddr, AddrParseError> {
-            str.parse().or_else(|_| str.parse().map(|ip| net::SocketAddr::new(ip, def_port)))
+            str.parse()
+                .or_else(|_| str.parse().map(|ip| net::SocketAddr::new(ip, def_port)))
         }
 
         if let Some((proto, string)) = string.split_once(':') {
@@ -278,7 +282,7 @@ impl<'de> de::Deserialize<'de> for Endpoint {
     }
 }
 
-impl Eq for Endpoint { }
+impl Eq for Endpoint {}
 
 impl PartialEq for Endpoint {
     fn eq(&self, other: &Self) -> bool {
@@ -331,7 +335,7 @@ macro_rules! impl_from {
                 Self::$V(value.into())
             }
         }
-    }
+    };
 }
 
 impl_from!(std::net::SocketAddr => Tcp);

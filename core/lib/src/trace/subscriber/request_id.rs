@@ -1,12 +1,12 @@
+use std::cell::Cell;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::thread::ThreadId;
-use std::cell::Cell;
 
-use tracing::Subscriber;
 use tracing::span::{Attributes, Id};
-use tracing_subscriber::{layer::Context, Layer};
+use tracing::Subscriber;
 use tracing_subscriber::registry::{LookupSpan, SpanRef};
+use tracing_subscriber::{layer::Context, Layer};
 
 pub struct RequestIdLayer;
 
@@ -19,8 +19,8 @@ pub struct IdentHasher(u128);
 impl RequestId {
     fn new() -> Self {
         thread_local! {
-            pub static COUNTER: Cell<u64> = Cell::new(0);
-            pub static THREAD_ID: Cell<Option<ThreadId>> = Cell::new(None);
+            pub static COUNTER: Cell<u64> = const { Cell::new(0) };
+            pub static THREAD_ID: Cell<Option<ThreadId>> = const { Cell::new(None) };
         }
 
         let thread_id = THREAD_ID.get().unwrap_or_else(|| {
@@ -61,7 +61,7 @@ impl RequestId {
 
 impl RequestIdLayer {
     thread_local! {
-        static CURRENT_REQUEST_ID: Cell<Option<RequestId>> = Cell::new(None);
+        static CURRENT_REQUEST_ID: Cell<Option<RequestId>> = const { Cell::new(None) };
     }
 
     pub fn current() -> Option<RequestId> {

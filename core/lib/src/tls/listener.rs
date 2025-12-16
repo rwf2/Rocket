@@ -2,14 +2,14 @@ use std::io;
 use std::sync::Arc;
 
 use futures::TryFutureExt;
+use rustls::server::{Acceptor, ServerConfig};
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_rustls::LazyConfigAcceptor;
-use rustls::server::{Acceptor, ServerConfig};
 
-use crate::{Ignite, Rocket};
-use crate::listener::{Bind, Certificates, Connection, Endpoint, Listener};
-use crate::tls::{TlsConfig, Result, Error};
 use super::resolver::DynResolver;
+use crate::listener::{Bind, Certificates, Connection, Endpoint, Listener};
+use crate::tls::{Error, Result, TlsConfig};
+use crate::{Ignite, Rocket};
 
 #[doc(inline)]
 pub use tokio_rustls::server::TlsStream;
@@ -22,7 +22,8 @@ pub struct TlsListener<L> {
 }
 
 impl<L> TlsListener<L>
-    where L: Listener<Accept = <L as Listener>::Connection>,
+where
+    L: Listener<Accept = <L as Listener>::Connection>,
 {
     pub async fn from(listener: L, config: TlsConfig) -> Result<TlsListener<L>> {
         Ok(TlsListener {
@@ -34,12 +35,15 @@ impl<L> TlsListener<L>
 }
 
 impl<L: Bind> Bind for TlsListener<L>
-    where L: Listener<Accept = <L as Listener>::Connection>
+where
+    L: Listener<Accept = <L as Listener>::Connection>,
 {
     type Error = Error;
 
     async fn bind(rocket: &Rocket<Ignite>) -> Result<Self, Self::Error> {
-        let listener = L::bind(rocket).map_err(|e| Error::Bind(Box::new(e))).await?;
+        let listener = L::bind(rocket)
+            .map_err(|e| Error::Bind(Box::new(e)))
+            .await?;
         let mut config: TlsConfig = rocket.figment().extract_inner("tls")?;
         config.resolver = DynResolver::extract(rocket);
         Self::from(listener, config).await
@@ -54,8 +58,9 @@ impl<L: Bind> Bind for TlsListener<L>
 }
 
 impl<L> Listener for TlsListener<L>
-    where L: Listener<Accept = <L as Listener>::Connection>,
-          L::Connection: AsyncRead + AsyncWrite
+where
+    L: Listener<Accept = <L as Listener>::Connection>,
+    L::Connection: AsyncRead + AsyncWrite,
 {
     type Accept = L::Connection;
 
@@ -70,7 +75,10 @@ impl<L> Listener for TlsListener<L>
         let handshake = acceptor.await?;
         let hello = handshake.client_hello();
         let config = match &self.config.resolver {
-            Some(r) => r.resolve(hello).await.unwrap_or_else(|| self.default.clone()),
+            Some(r) => r
+                .resolve(hello)
+                .await
+                .unwrap_or_else(|| self.default.clone()),
             None => self.default.clone(),
         };
 
@@ -88,7 +96,8 @@ impl<C: Connection> Connection for TlsStream<C> {
     }
 
     fn certificates(&self) -> Option<Certificates<'_>> {
-        #[cfg(feature = "mtls")] {
+        #[cfg(feature = "mtls")]
+        {
             let cert_chain = self.get_ref().1.peer_certificates()?;
             Some(Certificates::from(cert_chain))
         }

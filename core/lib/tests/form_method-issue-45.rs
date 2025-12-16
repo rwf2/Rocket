@@ -1,4 +1,5 @@
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket_community as rocket;
 
 use rocket::form::Form;
 
@@ -27,34 +28,38 @@ fn vc(form_data: Form<FormData>) -> &'static str {
 
 mod tests {
     use super::*;
+    use rocket::http::{ContentType, Method, Status};
     use rocket::local::blocking::Client;
-    use rocket::http::{Status, ContentType, Method};
 
     #[test]
     fn method_eval() {
         let client = Client::debug_with(routes![patch, urr, vc]).unwrap();
-        let response = client.post("/")
+        let response = client
+            .post("/")
             .header(ContentType::Form)
             .body("_method=patch&form_data=Form+data")
             .dispatch();
 
         assert_eq!(response.into_string(), Some("PATCH OK".into()));
 
-        let response = client.post("/")
+        let response = client
+            .post("/")
             .header(ContentType::Form)
             .body("_method=updateredirectref&form_data=Form+data")
             .dispatch();
 
         assert_eq!(response.into_string(), Some("UPDATEREDIRECTREF OK".into()));
 
-        let response = client.req(Method::UpdateRedirectRef, "/")
+        let response = client
+            .req(Method::UpdateRedirectRef, "/")
             .header(ContentType::Form)
             .body("form_data=Form+data")
             .dispatch();
 
         assert_eq!(response.into_string(), Some("UPDATEREDIRECTREF OK".into()));
 
-        let response = client.post("/")
+        let response = client
+            .post("/")
             .header(ContentType::Form)
             .body("_method=version-control&form_data=Form+data")
             .dispatch();
@@ -65,7 +70,8 @@ mod tests {
     #[test]
     fn get_passes_through() {
         let client = Client::debug_with(routes![patch, urr, vc]).unwrap();
-        let response = client.get("/")
+        let response = client
+            .get("/")
             .header(ContentType::Form)
             .body("_method=patch&form_data=Form+data")
             .dispatch();

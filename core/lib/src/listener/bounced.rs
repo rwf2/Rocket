@@ -1,6 +1,6 @@
 use std::{io, time::Duration};
 
-use crate::listener::{Listener, Endpoint};
+use crate::listener::{Endpoint, Listener};
 
 static DURATION: Duration = Duration::from_millis(250);
 
@@ -14,13 +14,14 @@ pub trait BouncedExt: Sized {
     }
 }
 
-impl<L> BouncedExt for L { }
+impl<L> BouncedExt for L {}
 
 fn is_recoverable(e: &io::Error) -> bool {
-    matches!(e.kind(),
-        | io::ErrorKind::ConnectionRefused
-        | io::ErrorKind::ConnectionAborted
-        | io::ErrorKind::ConnectionReset)
+    matches!(
+        e.kind(),
+        |io::ErrorKind::ConnectionRefused| io::ErrorKind::ConnectionAborted
+            | io::ErrorKind::ConnectionReset
+    )
 }
 
 impl<L: Listener + Sync> Bounced<L> {

@@ -225,6 +225,7 @@ route below matches _every_ GET request.
 
 ```rust
 # #[macro_use] extern crate rocket;
+# extern crate rocket_docs_tests_community as rocket_docs_tests;
 
 #[get("/foo/<_>/bar")]
 fn foo_bar() -> &'static str {
@@ -360,6 +361,7 @@ application from before:
 
 ```rust
 # #[macro_use] extern crate rocket;
+# extern crate rocket_docs_tests_community as rocket_docs_tests;
 
 #[get("/foo/<_>/bar")]
 fn foo_bar() { }
@@ -1031,6 +1033,7 @@ defaults to `Err(Missing)` or otherwise collects errors in an `Err` of
 [`Errors<'_>`]. Defaulting guards can be used just like any other form guard:
 
 ```rust
+# extern crate rocket_docs_tests_community as rocket_docs_tests;
 # use rocket::form::FromForm;
 use rocket::form::{self, Errors};
 
@@ -1315,6 +1318,7 @@ To parse into a `MyForm`, a form with the following fields must be submitted:
 Such a form, URL-encoded, may look like:
 
 ```rust
+# extern crate rocket_docs_tests_community as rocket_docs_tests;
 # use rocket::form::FromForm;
 # use rocket_docs_tests::{assert_form_parses, assert_not_form_parses};
 # #[derive(FromForm, Debug, PartialEq)] struct MyForm { owner: Person, pet: Pet, }
@@ -1346,6 +1350,7 @@ Note that `.` is used to separate each field. Identically, `[]` can be used in
 place of or in addition to `.`:
 
 ```rust
+# extern crate rocket_docs_tests_community as rocket_docs_tests;
 # use rocket::form::FromForm;
 # use rocket_docs_tests::{assert_form_parses, assert_not_form_parses};
 # #[derive(FromForm, Debug, PartialEq)] struct MyForm { owner: Person, pet: Pet, }
@@ -1402,6 +1407,7 @@ not remembered by `Vec`. The special blank key is never equal to any other key.
 Consider the following examples.
 
 ```rust
+# extern crate rocket_docs_tests_community as rocket_docs_tests;
 # use rocket::form::FromForm;
 # use rocket_docs_tests::{assert_form_parses, assert_not_form_parses};
 # #[derive(FromForm, PartialEq, Debug)] struct MyForm { numbers: Vec<usize>, }
@@ -1471,6 +1477,7 @@ To parse into a `MyForm`, a form with the following fields must be submitted:
 Examples include:
 
 ```rust
+# extern crate rocket_docs_tests_community as rocket_docs_tests;
 # use rocket::form::FromForm;
 # use rocket_docs_tests::{assert_form_parses, assert_not_form_parses};
 # #[derive(FromForm, Debug, PartialEq)] struct MyForm { name: String, pets: Vec<Pet>, }
@@ -1511,6 +1518,7 @@ struct MyForm {
 The rules are exactly the same.
 
 ```rust
+# extern crate rocket_docs_tests_community as rocket_docs_tests;
 # use rocket::form::FromForm;
 # use rocket_docs_tests::assert_form_parses;
 # #[derive(FromForm, Debug, PartialEq)] struct MyForm { v: Vec<Vec<usize>>, }
@@ -1552,6 +1560,7 @@ As an example, the following are equivalent and all parse to `{ "a" => 1, "b" =>
 2 }`:
 
 ```rust
+# extern crate rocket_docs_tests_community as rocket_docs_tests;
 # use std::collections::HashMap;
 #
 # use rocket::form::FromForm;
@@ -1607,6 +1616,7 @@ To parse into a `MyForm`, a form with the following fields must be submitted:
 Examples include:
 
 ```rust
+# extern crate rocket_docs_tests_community as rocket_docs_tests;
 # use std::collections::HashMap;
 #
 # use rocket::form::FromForm;
@@ -1682,6 +1692,7 @@ parsed into the map.
 Examples include:
 
 ```rust
+# extern crate rocket_docs_tests_community as rocket_docs_tests;
 # use std::collections::HashMap;
 #
 # use rocket::form::FromForm;
@@ -1773,6 +1784,7 @@ Where we have the following symbolic keys:
   * `$j`: symbolic name and/or value top-level value's key
 
 ```rust
+# extern crate rocket_docs_tests_community as rocket_docs_tests;
 # use std::collections::BTreeMap;
 # use std::collections::HashMap;
 #
@@ -1893,6 +1905,7 @@ the query segments `hello` and `cat=♥`:
 
 ```rust
 # #[macro_use] extern crate rocket;
+# extern crate rocket_docs_tests_community as rocket_docs_tests;
 
 #[get("/?hello&cat=♥")]
 fn cats() -> &'static str {
@@ -1925,6 +1938,7 @@ and an `other` value that will default to `None`:
 
 ```rust
 # #[macro_use] extern crate rocket;
+# extern crate rocket_docs_tests_community as rocket_docs_tests;
 
 #[derive(Debug, PartialEq, FromFormField)]
 enum Color {
@@ -1980,6 +1994,7 @@ words, the otherwise unmatched segments are pushed, unshifted, to the
 
 ```rust
 # #[macro_use] extern crate rocket;
+# extern crate rocket_docs_tests_community as rocket_docs_tests;
 
 use rocket::form::Form;
 

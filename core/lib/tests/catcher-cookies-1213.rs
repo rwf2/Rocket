@@ -1,7 +1,8 @@
-#[macro_use] extern crate rocket;
+#[macro_use]
+extern crate rocket_community as rocket;
 
-use rocket::request::Request;
 use rocket::http::CookieJar;
+use rocket::request::Request;
 
 #[catch(404)]
 fn not_found(request: &Request<'_>) -> &'static str {
@@ -17,17 +18,19 @@ fn index(cookies: &CookieJar<'_>) -> &'static str {
 
 mod tests {
     use super::*;
-    use rocket::local::blocking::Client;
     use rocket::fairing::AdHoc;
+    use rocket::local::blocking::Client;
 
     #[test]
     fn error_catcher_sets_cookies() {
         let rocket = rocket::build()
             .mount("/", routes![index])
             .register("/", catchers![not_found])
-            .attach(AdHoc::on_request("Add Cookie", |req, _| Box::pin(async move {
-                req.cookies().add(("fairing", "woo"));
-            })));
+            .attach(AdHoc::on_request("Add Cookie", |req, _| {
+                Box::pin(async move {
+                    req.cookies().add(("fairing", "woo"));
+                })
+            }));
 
         let client = Client::debug(rocket).unwrap();
 

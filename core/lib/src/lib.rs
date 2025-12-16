@@ -1,5 +1,4 @@
-#![recursion_limit="256"]
-
+#![recursion_limit = "256"]
 #![doc(html_root_url = "https://api.rocket.rs/master")]
 #![doc(html_favicon_url = "https://rocket.rs/images/favicon.ico")]
 #![doc(html_logo_url = "https://rocket.rs/images/logo-boxed.png")]
@@ -38,7 +37,7 @@
 //! [git dependencies]: https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#specifying-dependencies-from-git-repositories
 //!
 //! ```rust,no_run
-//! #[macro_use] extern crate rocket;
+//! #[macro_use] extern crate rocket_community as rocket;
 //!
 //! #[get("/")]
 //! fn hello() -> &'static str {
@@ -112,18 +111,18 @@
 // Allows using Rocket's codegen in Rocket itself.
 extern crate self as rocket;
 
+#[doc(hidden)]
+pub use async_stream;
+pub use either;
+pub use figment;
+pub use futures;
+pub use time;
+pub use tokio;
+pub use tracing;
 /// These are public dependencies! Update docs if these are changed, especially
 /// figment's version number in docs.
 #[doc(hidden)]
 pub use yansi;
-#[doc(hidden)]
-pub use async_stream;
-pub use futures;
-pub use tokio;
-pub use figment;
-pub use time;
-pub use tracing;
-pub use either;
 
 #[macro_use]
 pub mod trace;
@@ -131,54 +130,67 @@ pub mod trace;
 pub mod outcome;
 #[macro_use]
 pub mod data;
-#[doc(hidden)]
-pub mod sentinel;
-pub mod local;
-pub mod request;
-pub mod response;
-pub mod config;
-pub mod form;
-pub mod fairing;
-pub mod error;
 pub mod catcher;
-pub mod route;
-pub mod serde;
-pub mod shield;
+pub mod config;
+pub mod error;
+pub mod fairing;
+pub mod form;
 pub mod fs;
 pub mod http;
 pub mod listener;
+pub mod local;
+#[cfg(feature = "mtls")]
+#[cfg_attr(nightly, doc(cfg(feature = "mtls")))]
+pub mod mtls;
+pub mod request;
+pub mod response;
+pub mod route;
+#[doc(hidden)]
+pub mod sentinel;
+pub mod serde;
+pub mod shield;
 pub mod shutdown;
 #[cfg(feature = "tls")]
 #[cfg_attr(nightly, doc(cfg(feature = "tls")))]
 pub mod tls;
-#[cfg(feature = "mtls")]
-#[cfg_attr(nightly, doc(cfg(feature = "mtls")))]
-pub mod mtls;
 
+mod erased;
+mod lifecycle;
+mod phase;
 #[path = "rocket.rs"]
 mod rkt;
-mod util;
-mod server;
-mod lifecycle;
-mod state;
 mod router;
-mod phase;
-mod erased;
+mod server;
+mod state;
+mod util;
 
-#[doc(inline)] pub use rocket_codegen::*;
+#[doc(inline)]
+pub use rocket_codegen::*;
 
-#[doc(inline)] pub use crate::response::Response;
-#[doc(inline)] pub use crate::data::Data;
-#[doc(inline)] pub use crate::config::Config;
-#[doc(inline)] pub use crate::catcher::Catcher;
-#[doc(inline)] pub use crate::route::Route;
-#[doc(inline)] pub use crate::phase::{Phase, Build, Ignite, Orbit};
-#[doc(inline)] pub use crate::error::Error;
-#[doc(inline)] pub use crate::sentinel::{Sentinel, Sentry};
-#[doc(inline)] pub use crate::request::Request;
-#[doc(inline)] pub use crate::rkt::Rocket;
-#[doc(inline)] pub use crate::shutdown::Shutdown;
-#[doc(inline)] pub use crate::state::State;
+#[doc(inline)]
+pub use crate::catcher::Catcher;
+#[doc(inline)]
+pub use crate::config::Config;
+#[doc(inline)]
+pub use crate::data::Data;
+#[doc(inline)]
+pub use crate::error::Error;
+#[doc(inline)]
+pub use crate::phase::{Build, Ignite, Orbit, Phase};
+#[doc(inline)]
+pub use crate::request::Request;
+#[doc(inline)]
+pub use crate::response::Response;
+#[doc(inline)]
+pub use crate::rkt::Rocket;
+#[doc(inline)]
+pub use crate::route::Route;
+#[doc(inline)]
+pub use crate::sentinel::{Sentinel, Sentry};
+#[doc(inline)]
+pub use crate::shutdown::Shutdown;
+#[doc(inline)]
+pub use crate::state::State;
 
 /// Retrofits support for `async fn` in trait impls and declarations.
 ///
@@ -186,6 +198,7 @@ mod erased;
 /// retrofitted with support for `async fn`s:
 ///
 /// ```rust
+/// # extern crate rocket_community as rocket;
 /// # use rocket::*;
 /// #[async_trait]
 /// trait MyAsyncTrait {
@@ -226,7 +239,8 @@ pub fn custom<T: figment::Provider>(provider: T) -> Rocket<Build> {
 /// WARNING: This is unstable! Do not use this method outside of Rocket!
 #[doc(hidden)]
 pub fn async_run<F, R>(fut: F, workers: usize, sync: usize, force_end: bool, name: &str) -> R
-    where F: std::future::Future<Output = R>
+where
+    F: std::future::Future<Output = R>,
 {
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .thread_name(name)
@@ -270,8 +284,17 @@ pub fn async_main<R>(fut: impl std::future::Future<Output = R> + Send) -> R {
     let fig = Config::figment();
     let workers = fig.extract_inner(Config::WORKERS).unwrap_or_else(bail);
     let max_blocking = fig.extract_inner(Config::MAX_BLOCKING).unwrap_or_else(bail);
-    let force = fig.focus(Config::SHUTDOWN).extract_inner("force").unwrap_or_else(bail);
-    async_run(fut, workers, max_blocking, force, &format!("{WORKER_PREFIX}-thread"))
+    let force = fig
+        .focus(Config::SHUTDOWN)
+        .extract_inner("force")
+        .unwrap_or_else(bail);
+    async_run(
+        fut,
+        workers,
+        max_blocking,
+        force,
+        &format!("{WORKER_PREFIX}-thread"),
+    )
 }
 
 /// Executes a `future` to completion on a new tokio-based Rocket async runtime.
@@ -291,6 +314,7 @@ pub fn async_main<R>(fut: impl std::future::Future<Output = R> + Send) -> R {
 /// Rocket is just a small part of a bigger application:
 ///
 /// ```rust,no_run
+/// # extern crate rocket_community as rocket;
 /// #[rocket::main]
 /// async fn main() {
 ///     # let should_start_server_in_foreground = false;
@@ -313,6 +337,7 @@ pub fn async_main<R>(fut: impl std::future::Future<Output = R> + Send) -> R {
 /// Build an instance of Rocket, launch it, and wait for shutdown:
 ///
 /// ```rust,no_run
+/// # extern crate rocket_community as rocket;
 /// use rocket::fairing::AdHoc;
 ///
 /// let rocket = rocket::build()
@@ -328,6 +353,7 @@ pub fn async_main<R>(fut: impl std::future::Future<Output = R> + Send) -> R {
 /// Launch a pre-built instance of Rocket and wait for it to shutdown:
 ///
 /// ```rust,no_run
+/// # extern crate rocket_community as rocket;
 /// use rocket::{Rocket, Ignite, Phase, Error};
 ///
 /// fn launch<P: Phase>(rocket: Rocket<P>) -> Result<Rocket<Ignite>, Error> {
@@ -338,6 +364,7 @@ pub fn async_main<R>(fut: impl std::future::Future<Output = R> + Send) -> R {
 /// Do async work to build an instance of Rocket, launch, and wait for shutdown:
 ///
 /// ```rust,no_run
+/// # extern crate rocket_community as rocket;
 /// use rocket::fairing::AdHoc;
 ///
 /// // This line can also be inside of the `async` block.
@@ -350,7 +377,8 @@ pub fn async_main<R>(fut: impl std::future::Future<Output = R> + Send) -> R {
 /// });
 /// ```
 pub fn execute<R, F>(future: F) -> R
-    where F: std::future::Future<Output = R> + Send
+where
+    F: std::future::Future<Output = R> + Send,
 {
     async_main(future)
 }
@@ -362,6 +390,7 @@ fn running_within_rocket_async_rt() -> impl std::future::Future<Output = bool> {
 
     tokio::task::spawn_blocking(|| {
         let this = std::thread::current();
-        this.name().map_or(false, |s| s.starts_with(WORKER_PREFIX))
-    }).map(|r| r.unwrap_or(false))
+        this.name().is_some_and(|s| s.starts_with(WORKER_PREFIX))
+    })
+    .map(|r| r.unwrap_or(false))
 }

@@ -5,8 +5,8 @@ use std::sync::Arc;
 
 pub use rustls::server::{ClientHello, ServerConfig};
 
-use crate::{Build, Ignite, Rocket};
 use crate::fairing::{self, Info, Kind};
+use crate::{Build, Ignite, Rocket};
 
 /// Proxy type to get PartialEq + Debug impls.
 #[derive(Clone)]
@@ -21,7 +21,7 @@ pub struct Fairing<T: ?Sized>(PhantomData<T>);
 /// This is an async trait. Implement it as follows:
 ///
 /// ```rust
-/// # #[macro_use] extern crate rocket;
+/// # #[macro_use] extern crate rocket_community as rocket;
 /// use std::sync::Arc;
 /// use rocket::tls::{self, Resolver, TlsConfig, ClientHello, ServerConfig};
 /// use rocket::{Rocket, Build};
@@ -50,7 +50,10 @@ pub struct Fairing<T: ?Sized>(PhantomData<T>);
 /// ```
 #[crate::async_trait]
 pub trait Resolver: Send + Sync + 'static {
-    async fn init(rocket: &Rocket<Build>) -> crate::tls::Result<Self> where Self: Sized {
+    async fn init(rocket: &Rocket<Build>) -> crate::tls::Result<Self>
+    where
+        Self: Sized,
+    {
         let _rocket = rocket;
         let type_name = std::any::type_name::<Self>();
         Err(figment::Error::from(format!("{type_name}: Resolver::init() unimplemented")).into())
@@ -58,7 +61,10 @@ pub trait Resolver: Send + Sync + 'static {
 
     async fn resolve(&self, hello: ClientHello<'_>) -> Option<Arc<ServerConfig>>;
 
-    fn fairing() -> Fairing<Self> where Self: Sized {
+    fn fairing() -> Fairing<Self>
+    where
+        Self: Sized,
+    {
         Fairing(PhantomData)
     }
 }
@@ -68,7 +74,7 @@ impl<T: Resolver> fairing::Fairing for Fairing<T> {
     fn info(&self) -> Info {
         Info {
             name: "Resolver Fairing",
-            kind: Kind::Ignite | Kind::Singleton
+            kind: Kind::Ignite | Kind::Singleton,
         }
     }
 

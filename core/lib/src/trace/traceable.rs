@@ -1,10 +1,10 @@
 use std::error::Error as StdError;
 
+use crate::error::ErrorKind;
 use crate::request::ConnectionMeta;
 use crate::sentinel::Sentry;
 use crate::util::Formatter;
 use crate::{route, Catcher, Config, Error, Request, Response, Route};
-use crate::error::ErrorKind;
 
 use figment::Figment;
 use rocket::http::Header;
@@ -13,21 +13,51 @@ use tracing::Level;
 pub trait Trace {
     fn trace(&self, level: Level);
 
-    #[inline(always)] fn trace_info(&self) { self.trace(Level::INFO) }
-    #[inline(always)] fn trace_warn(&self) { self.trace(Level::WARN) }
-    #[inline(always)] fn trace_error(&self) { self.trace(Level::ERROR) }
-    #[inline(always)] fn trace_debug(&self) { self.trace(Level::DEBUG) }
-    #[inline(always)] fn trace_trace(&self) { self.trace(Level::TRACE) }
+    #[inline(always)]
+    fn trace_info(&self) {
+        self.trace(Level::INFO)
+    }
+    #[inline(always)]
+    fn trace_warn(&self) {
+        self.trace(Level::WARN)
+    }
+    #[inline(always)]
+    fn trace_error(&self) {
+        self.trace(Level::ERROR)
+    }
+    #[inline(always)]
+    fn trace_debug(&self) {
+        self.trace(Level::DEBUG)
+    }
+    #[inline(always)]
+    fn trace_trace(&self) {
+        self.trace(Level::TRACE)
+    }
 }
 
 pub trait TraceAll: Sized {
     fn trace_all(self, level: Level);
 
-    #[inline(always)] fn trace_all_info(self) { self.trace_all(Level::INFO) }
-    #[inline(always)] fn trace_all_warn(self) { self.trace_all(Level::WARN) }
-    #[inline(always)] fn trace_all_error(self) { self.trace_all(Level::ERROR) }
-    #[inline(always)] fn trace_all_debug(self) { self.trace_all(Level::DEBUG) }
-    #[inline(always)] fn trace_all_trace(self) { self.trace_all(Level::TRACE) }
+    #[inline(always)]
+    fn trace_all_info(self) {
+        self.trace_all(Level::INFO)
+    }
+    #[inline(always)]
+    fn trace_all_warn(self) {
+        self.trace_all(Level::WARN)
+    }
+    #[inline(always)]
+    fn trace_all_error(self) {
+        self.trace_all(Level::ERROR)
+    }
+    #[inline(always)]
+    fn trace_all_debug(self) {
+        self.trace_all(Level::DEBUG)
+    }
+    #[inline(always)]
+    fn trace_all_trace(self) {
+        self.trace_all(Level::TRACE)
+    }
 }
 
 impl<T: Trace, I: IntoIterator<Item = T>> TraceAll for I {
@@ -109,7 +139,8 @@ impl Trace for Config {
                 shutdown.force = self.shutdown.force,
         }
 
-        #[cfg(feature = "secrets")] {
+        #[cfg(feature = "secrets")]
+        {
             if !self.secret_key.is_provided() {
                 warn! {
                     name: "volatile_secret_key",
@@ -140,7 +171,7 @@ impl Trace for Config {
 impl Trace for Route {
     fn trace(&self, level: Level) {
         event! { level, "route",
-            name = self.name.as_ref().map(|n| &**n),
+            name = self.name.as_deref(),
             rank = self.rank,
             method = %Formatter(|f| match self.method {
                 Some(method) => write!(f, "{}", method),
@@ -156,7 +187,7 @@ impl Trace for Route {
         }
 
         event! { Level::DEBUG, "sentinels",
-            route = self.name.as_ref().map(|n| &**n),
+            route = self.name.as_deref(),
             sentinels = %Formatter(|f| {
                 f.debug_set()
                     .entries(self.sentinels.iter().filter(|s| s.specialized).map(|s| s.type_name))
@@ -169,7 +200,7 @@ impl Trace for Route {
 impl Trace for Catcher {
     fn trace(&self, level: Level) {
         event! { level, "catcher",
-            name = self.name.as_ref().map(|n| &**n),
+            name = self.name.as_deref(),
             code = %Formatter(|f| match self.code {
                 Some(code) => write!(f, "{}", code),
                 None => write!(f, "default"),
@@ -197,7 +228,7 @@ impl Trace for crate::fairing::Info {
 
 impl Trace for figment::error::Kind {
     fn trace(&self, _: Level) {
-        use figment::error::{OneOf as V, Kind::*};
+        use figment::error::{Kind::*, OneOf as V};
 
         match self {
             Message(message) => error!(message),
@@ -233,13 +264,20 @@ impl Trace for figment::Error {
 
 impl Trace for Header<'_> {
     fn trace(&self, level: Level) {
-        event!(level, "header", name = self.name().as_str(), value = self.value());
+        event!(
+            level,
+            "header",
+            name = self.name().as_str(),
+            value = self.value()
+        );
     }
 }
 
 impl Trace for route::Outcome<'_> {
     fn trace(&self, level: Level) {
-        event!(level, "outcome",
+        event!(
+            level,
+            "outcome",
             outcome = match self {
                 Self::Success(..) => "success",
                 Self::Error(..) => "error",
@@ -284,7 +322,9 @@ impl Trace for Request<'_> {
 
 impl Trace for ConnectionMeta {
     fn trace(&self, level: Level) {
-        event!(level, "connection",
+        event!(
+            level,
+            "connection",
             endpoint = self.peer_endpoint.as_ref().map(display),
             certs = self.peer_certs.is_some(),
         )
@@ -296,9 +336,12 @@ impl Trace for ErrorKind {
         use ErrorKind::*;
 
         fn try_downcast<'a, T>(error: &'a (dyn StdError + 'static)) -> Option<&'a T>
-            where T: StdError + 'static
+        where
+            T: StdError + 'static,
         {
-            error.downcast_ref().or_else(|| error.source()?.downcast_ref())
+            error
+                .downcast_ref()
+                .or_else(|| error.source()?.downcast_ref())
         }
 
         match self {
@@ -317,12 +360,15 @@ impl Trace for ErrorKind {
             }
             Io(reason) => event!(level, "error::io", %reason, "i/o error"),
             Config(error) => error.trace(level),
-            Collisions { routes, catchers }=> {
-                span!(level, "collision",
+            Collisions { routes, catchers } => {
+                span!(
+                    level,
+                    "collision",
                     route.pairs = routes.len(),
                     catcher.pairs = catchers.len(),
                     "colliding items detected"
-                ).in_scope(|| {
+                )
+                .in_scope(|| {
                     for (a, b) in routes {
                         span!(level, "colliding route pair").in_scope(|| {
                             a.trace(level);
@@ -337,13 +383,16 @@ impl Trace for ErrorKind {
                         })
                     }
 
-                    span!(Level::INFO, "collisions can usually be resolved by ranking items");
+                    span!(
+                        Level::INFO,
+                        "collisions can usually be resolved by ranking items"
+                    );
                 });
             }
             FailedFairings(fairings) => {
                 let span = span!(level, "failed ignite fairings", count = fairings.len());
                 span.in_scope(|| fairings.iter().trace_all(level));
-            },
+            }
             SentinelAborts(sentries) => {
                 let span = span!(level, "sentries", "sentry launch abort");
                 span.in_scope(|| sentries.iter().trace_all(level));

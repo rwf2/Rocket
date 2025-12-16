@@ -25,6 +25,7 @@
 //! the user. For example, consider the following handler:
 //!
 //! ```rust
+//! # extern crate rocket_community as rocket;
 //! # use rocket::post;
 //! # type S = String;
 //! #[post("/", data = "<my_val>")]
@@ -48,6 +49,7 @@
 //! like:
 //!
 //! ```rust
+//! # extern crate rocket_community as rocket;
 //! # use rocket::post;
 //! # type S = Option<String>;
 //! # type E = std::convert::Infallible;
@@ -71,6 +73,7 @@
 //! handler:
 //!
 //! ```rust
+//! # extern crate rocket_community as rocket;
 //! # use rocket::post;
 //! # type S = String;
 //! #[post("/", data = "<my_val>")]
@@ -86,9 +89,9 @@
 //! a type of `Option<S>`. If an `Outcome` is a `Forward`, the `Option` will be
 //! `None`.
 
-use crate::{route, request, response};
 use crate::data::{self, Data, FromData};
 use crate::http::Status;
+use crate::{request, response, route};
 
 use self::Outcome::*;
 
@@ -117,6 +120,7 @@ impl<S, E, F> Outcome<S, E, F> {
     /// # Examples
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// # use rocket::outcome::Outcome;
     /// # use rocket::outcome::Outcome::*;
     /// #
@@ -128,7 +132,7 @@ impl<S, E, F> Outcome<S, E, F> {
     pub fn unwrap(self) -> S {
         match self {
             Success(val) => val,
-            _ => panic!("unwrapped a non-successful outcome")
+            _ => panic!("unwrapped a non-successful outcome"),
         }
     }
 
@@ -141,6 +145,7 @@ impl<S, E, F> Outcome<S, E, F> {
     /// # Examples
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// # use rocket::outcome::Outcome;
     /// # use rocket::outcome::Outcome::*;
     /// #
@@ -152,7 +157,7 @@ impl<S, E, F> Outcome<S, E, F> {
     pub fn expect(self, message: &str) -> S {
         match self {
             Success(val) => val,
-            _ => panic!("unwrapped a non-successful outcome: {}", message)
+            _ => panic!("unwrapped a non-successful outcome: {}", message),
         }
     }
 
@@ -161,6 +166,7 @@ impl<S, E, F> Outcome<S, E, F> {
     /// # Examples
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// # use rocket::outcome::Outcome;
     /// # use rocket::outcome::Outcome::*;
     /// #
@@ -183,6 +189,7 @@ impl<S, E, F> Outcome<S, E, F> {
     /// # Examples
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// # use rocket::outcome::Outcome;
     /// # use rocket::outcome::Outcome::*;
     /// #
@@ -205,6 +212,7 @@ impl<S, E, F> Outcome<S, E, F> {
     /// # Examples
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// # use rocket::outcome::Outcome;
     /// # use rocket::outcome::Outcome::*;
     /// #
@@ -228,6 +236,7 @@ impl<S, E, F> Outcome<S, E, F> {
     /// returns `None`. `self` is consumed, and all other values are discarded.
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// # use rocket::outcome::Outcome;
     /// # use rocket::outcome::Outcome::*;
     /// #
@@ -244,7 +253,7 @@ impl<S, E, F> Outcome<S, E, F> {
     pub fn succeeded(self) -> Option<S> {
         match self {
             Success(val) => Some(val),
-            _ => None
+            _ => None,
         }
     }
 
@@ -254,6 +263,7 @@ impl<S, E, F> Outcome<S, E, F> {
     /// returns `None`. `self` is consumed, and all other values are discarded.
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// # use rocket::outcome::Outcome;
     /// # use rocket::outcome::Outcome::*;
     /// #
@@ -270,7 +280,7 @@ impl<S, E, F> Outcome<S, E, F> {
     pub fn failed(self) -> Option<E> {
         match self {
             Error(val) => Some(val),
-            _ => None
+            _ => None,
         }
     }
 
@@ -280,6 +290,7 @@ impl<S, E, F> Outcome<S, E, F> {
     /// returns `None`. `self` is consumed, and all other values are discarded.
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// # use rocket::outcome::Outcome;
     /// # use rocket::outcome::Outcome::*;
     /// #
@@ -296,7 +307,7 @@ impl<S, E, F> Outcome<S, E, F> {
     pub fn forwarded(self) -> Option<F> {
         match self {
             Forward(val) => Some(val),
-            _ => None
+            _ => None,
         }
     }
 
@@ -308,6 +319,7 @@ impl<S, E, F> Outcome<S, E, F> {
     /// other values are discarded.
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// # use rocket::outcome::Outcome;
     /// # use rocket::outcome::Outcome::*;
     /// #
@@ -324,7 +336,7 @@ impl<S, E, F> Outcome<S, E, F> {
     pub fn success_or<T>(self, value: T) -> Result<S, T> {
         match self {
             Success(val) => Ok(val),
-            _ => Err(value)
+            _ => Err(value),
         }
     }
 
@@ -337,6 +349,7 @@ impl<S, E, F> Outcome<S, E, F> {
     /// all other values are discarded.
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// # use rocket::outcome::Outcome;
     /// # use rocket::outcome::Outcome::*;
     /// #
@@ -353,13 +366,14 @@ impl<S, E, F> Outcome<S, E, F> {
     pub fn success_or_else<T, V: FnOnce() -> T>(self, f: V) -> Result<S, T> {
         match self {
             Success(val) => Ok(val),
-            _ => Err(f())
+            _ => Err(f()),
         }
     }
 
     /// Converts from `Outcome<S, E, F>` to `Outcome<&S, &E, &F>`.
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// # use rocket::outcome::Outcome;
     /// # use rocket::outcome::Outcome::*;
     /// #
@@ -381,6 +395,7 @@ impl<S, E, F> Outcome<S, E, F> {
     /// Converts from `Outcome<S, E, F>` to `Outcome<&mut S, &mut E, &mut F>`.
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// # use rocket::outcome::Outcome;
     /// # use rocket::outcome::Outcome::*;
     /// #
@@ -405,6 +420,7 @@ impl<S, E, F> Outcome<S, E, F> {
     /// in `self` if `self` is an `Outcome::Success`.
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// # use rocket::outcome::Outcome;
     /// # use rocket::outcome::Outcome::*;
     /// #
@@ -427,6 +443,7 @@ impl<S, E, F> Outcome<S, E, F> {
     /// in `self` if `self` is an `Outcome::Error`.
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// # use rocket::outcome::Outcome;
     /// # use rocket::outcome::Outcome::*;
     /// #
@@ -449,6 +466,7 @@ impl<S, E, F> Outcome<S, E, F> {
     /// in `self` if `self` is an `Outcome::Forward`.
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// # use rocket::outcome::Outcome;
     /// # use rocket::outcome::Outcome::*;
     /// #
@@ -474,6 +492,7 @@ impl<S, E, F> Outcome<S, E, F> {
     /// # Examples
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// # use rocket::outcome::Outcome;
     /// # use rocket::outcome::Outcome::*;
     /// #
@@ -504,6 +523,7 @@ impl<S, E, F> Outcome<S, E, F> {
     /// # Examples
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// # use rocket::outcome::Outcome;
     /// # use rocket::outcome::Outcome::*;
     /// #
@@ -534,6 +554,7 @@ impl<S, E, F> Outcome<S, E, F> {
     /// # Examples
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// # use rocket::outcome::Outcome;
     /// # use rocket::outcome::Outcome::*;
     /// #
@@ -561,6 +582,7 @@ impl<S, E, F> Outcome<S, E, F> {
     /// to `Result<T, E>` using `f`.
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// # use rocket::outcome::Outcome;
     /// # use rocket::outcome::Outcome::*;
     /// #
@@ -575,7 +597,8 @@ impl<S, E, F> Outcome<S, E, F> {
     /// ```
     #[inline]
     pub fn ok_map_forward<M>(self, f: M) -> Result<S, E>
-        where M: FnOnce(F) -> Result<S, E>
+    where
+        M: FnOnce(F) -> Result<S, E>,
     {
         match self {
             Outcome::Success(s) => Ok(s),
@@ -589,6 +612,7 @@ impl<S, E, F> Outcome<S, E, F> {
     /// to `Result<T, F>` using `f`.
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// # use rocket::outcome::Outcome;
     /// # use rocket::outcome::Outcome::*;
     /// #
@@ -603,7 +627,8 @@ impl<S, E, F> Outcome<S, E, F> {
     /// ```
     #[inline]
     pub fn ok_map_error<M>(self, f: M) -> Result<S, F>
-        where M: FnOnce(E) -> Result<S, F>
+    where
+        M: FnOnce(E) -> Result<S, F>,
     {
         match self {
             Outcome::Success(s) => Ok(s),
@@ -632,6 +657,7 @@ crate::export! {
     /// The macro has the following "signature":
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// use rocket::outcome::Outcome;
     ///
     /// // Returns the inner `S` if `outcome` is `Outcome::Success`. Otherwise
@@ -652,7 +678,7 @@ crate::export! {
     /// ## Example
     ///
     /// ```rust,no_run
-    /// # #[macro_use] extern crate rocket;
+    /// # #[macro_use] extern crate rocket_community as rocket;
     /// use std::sync::atomic::{AtomicUsize, Ordering};
     ///
     /// use rocket::State;
@@ -733,7 +759,7 @@ impl<S, E, F> IntoOutcome<Outcome<S, E, F>> for Option<S> {
     fn or_error(self, error: E) -> Outcome<S, E, F> {
         match self {
             Some(val) => Success(val),
-            None => Error(error)
+            None => Error(error),
         }
     }
 
@@ -741,7 +767,7 @@ impl<S, E, F> IntoOutcome<Outcome<S, E, F>> for Option<S> {
     fn or_forward(self, forward: F) -> Outcome<S, E, F> {
         match self {
             Some(val) => Success(val),
-            None => Forward(forward)
+            None => Forward(forward),
         }
     }
 }
@@ -754,7 +780,7 @@ impl<'r, T: FromData<'r>> IntoOutcome<data::Outcome<'r, T>> for Result<T, T::Err
     fn or_error(self, error: Status) -> data::Outcome<'r, T> {
         match self {
             Ok(val) => Success(val),
-            Err(err) => Error((error, err))
+            Err(err) => Error((error, err)),
         }
     }
 
@@ -762,7 +788,7 @@ impl<'r, T: FromData<'r>> IntoOutcome<data::Outcome<'r, T>> for Result<T, T::Err
     fn or_forward(self, (data, forward): (Data<'r>, Status)) -> data::Outcome<'r, T> {
         match self {
             Ok(val) => Success(val),
-            Err(_) => Forward((data, forward))
+            Err(_) => Forward((data, forward)),
         }
     }
 }
@@ -775,7 +801,7 @@ impl<S, E> IntoOutcome<request::Outcome<S, E>> for Result<S, E> {
     fn or_error(self, error: Status) -> request::Outcome<S, E> {
         match self {
             Ok(val) => Success(val),
-            Err(err) => Error((error, err))
+            Err(err) => Error((error, err)),
         }
     }
 
@@ -783,7 +809,7 @@ impl<S, E> IntoOutcome<request::Outcome<S, E>> for Result<S, E> {
     fn or_forward(self, status: Status) -> request::Outcome<S, E> {
         match self {
             Ok(val) => Success(val),
-            Err(_) => Forward(status)
+            Err(_) => Forward(status),
         }
     }
 }
@@ -804,7 +830,7 @@ impl<'r, 'o: 'r> IntoOutcome<route::Outcome<'r>> for response::Result<'o> {
     fn or_forward(self, (data, forward): (Data<'r>, Status)) -> route::Outcome<'r> {
         match self {
             Ok(val) => Success(val),
-            Err(_) => Forward((data, forward))
+            Err(_) => Forward((data, forward)),
         }
     }
 }

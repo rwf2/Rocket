@@ -18,6 +18,7 @@
 //! [`WebSocket::stream()`] in the handler. The examples below are equivalent:
 //!
 //! ```rust
+//! # extern crate rocket_ws_community as rocket_ws;
 //! # use rocket::get;
 //! # use rocket_ws as ws;
 //! #
@@ -52,6 +53,7 @@
 //! WebSocket connections are configurable via [`WebSocket::config()`]:
 //!
 //! ```rust
+//! # extern crate rocket_ws_community as rocket_ws;
 //! # use rocket::get;
 //! # use rocket_ws as ws;
 //! #
@@ -75,13 +77,14 @@
 #![doc(html_logo_url = "https://rocket.rs/images/logo-boxed.png")]
 
 mod tungstenite {
-    #[doc(inline)] pub use tokio_tungstenite::tungstenite::*;
+    #[doc(inline)]
+    pub use tokio_tungstenite::tungstenite::*;
 }
 
 mod duplex;
 mod websocket;
 
-pub use self::websocket::{WebSocket, Channel};
+pub use self::websocket::{Channel, WebSocket};
 
 /// A WebSocket message.
 ///
@@ -90,6 +93,7 @@ pub use self::websocket::{WebSocket, Channel};
 /// bytes via `&[u8]` and `Vec<u8>`:
 ///
 /// ```rust
+/// # extern crate rocket_ws_community as rocket_ws;
 /// # use rocket::get;
 /// # use rocket_ws as ws;
 /// #
@@ -107,6 +111,7 @@ pub use self::websocket::{WebSocket, Channel};
 /// Other kinds of messages can be constructed directly:
 ///
 /// ```rust
+/// # extern crate rocket_ws_community as rocket_ws;
 /// # use rocket::get;
 /// # use rocket_ws as ws;
 /// #
@@ -130,6 +135,7 @@ pub use self::tungstenite::Message;
 /// # Example
 ///
 /// ```rust
+/// # extern crate rocket_ws_community as rocket_ws;
 /// # use rocket::get;
 /// # use rocket_ws as ws;
 /// use rocket::data::ToByteUnit;
@@ -161,9 +167,10 @@ pub use self::tungstenite::protocol::WebSocketConfig as Config;
 
 /// Structures for constructing raw WebSocket frames.
 pub mod frame {
-    #[doc(hidden)] pub use crate::Message;
-    pub use crate::tungstenite::protocol::frame::{CloseFrame, Frame};
     pub use crate::tungstenite::protocol::frame::coding::CloseCode;
+    pub use crate::tungstenite::protocol::frame::{CloseFrame, Frame};
+    #[doc(hidden)]
+    pub use crate::Message;
 }
 
 /// Types representing incoming and/or outgoing `async` [`Message`] streams.
@@ -175,7 +182,7 @@ pub mod stream {
 /// Library [`Error`](crate::result::Error) and
 /// [`Result`](crate::result::Result) types.
 pub mod result {
-    pub use crate::tungstenite::error::{Result, Error};
+    pub use crate::tungstenite::error::{Error, Result};
 }
 
 /// Type and expression macro for `async` WebSocket [`Message`] streams.
@@ -210,6 +217,7 @@ pub mod result {
 /// supports `yield` and `for await` syntax. It is invoked as follows:
 ///
 /// ```rust
+/// # extern crate rocket_ws_community as rocket_ws;
 /// # use rocket::get;
 /// use rocket_ws as ws;
 ///
@@ -264,6 +272,7 @@ pub mod result {
 /// Borrow from the request. Send a single message and close:
 ///
 /// ```rust
+/// # extern crate rocket_ws_community as rocket_ws;
 /// # use rocket::get;
 /// use rocket_ws as ws;
 ///
@@ -278,6 +287,7 @@ pub mod result {
 /// Borrow from the request with explicit lifetime:
 ///
 /// ```rust
+/// # extern crate rocket_ws_community as rocket_ws;
 /// # use rocket::get;
 /// use rocket_ws as ws;
 ///
@@ -292,6 +302,7 @@ pub mod result {
 /// Emit several messages and short-circuit if the client sends a bad message:
 ///
 /// ```rust
+/// # extern crate rocket_ws_community as rocket_ws;
 /// # use rocket::get;
 /// use rocket_ws as ws;
 ///

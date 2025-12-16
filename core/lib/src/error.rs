@@ -1,14 +1,14 @@
 //! Types representing various errors that can occur in a Rocket application.
 
-use std::{io, fmt, process};
 use std::error::Error as StdError;
 use std::sync::Arc;
+use std::{fmt, io, process};
 
 use figment::Profile;
 
 use crate::listener::Endpoint;
-use crate::{Catcher, Ignite, Orbit, Phase, Rocket, Route};
 use crate::trace::Trace;
+use crate::{Catcher, Ignite, Orbit, Phase, Rocket, Route};
 
 /// An error that occurred during launch or ignition.
 ///
@@ -24,6 +24,7 @@ use crate::trace::Trace;
 /// # Example
 ///
 /// ```rust
+/// # extern crate rocket_community as rocket;
 /// # use rocket::*;
 /// use rocket::trace::Trace;
 /// use rocket::error::ErrorKind;
@@ -42,7 +43,7 @@ use crate::trace::Trace;
 /// # }
 /// ```
 pub struct Error {
-    pub(crate) kind: ErrorKind
+    pub(crate) kind: ErrorKind,
 }
 
 /// The error kind that occurred. Returned by [`Error::kind()`].
@@ -102,7 +103,7 @@ pub struct Empty;
 /// # Example
 ///
 /// ```rust
-/// # #[macro_use] extern crate rocket;
+/// # #[macro_use] extern crate rocket_community as rocket;
 /// use rocket::error::InvalidOption;
 ///
 /// #[derive(FromParam)]
@@ -137,7 +138,11 @@ impl<'a> InvalidOption<'a> {
 
 impl fmt::Display for InvalidOption<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "unexpected value {:?}, expected one of {:?}", self.value, self.options)
+        write!(
+            f,
+            "unexpected value {:?}, expected one of {:?}",
+            self.value, self.options
+        )
     }
 }
 
@@ -154,6 +159,7 @@ impl Error {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// # use rocket::*;
     /// use rocket::trace::Trace;
     /// use rocket::error::ErrorKind;
@@ -183,6 +189,7 @@ impl Error {
     /// # Example
     ///
     /// ```rust
+    /// # extern crate rocket_community as rocket;
     /// # use rocket::*;
     /// use std::process::ExitCode;
     /// use rocket::error::Error;
@@ -279,7 +286,7 @@ impl fmt::Display for Empty {
     }
 }
 
-impl StdError for Empty { }
+impl StdError for Empty {}
 
 struct ServerError<'a>(&'a (dyn StdError + 'static));
 
@@ -294,8 +301,9 @@ impl fmt::Display for ServerError<'_> {
             match e.kind() {
                 io::ErrorKind::NotConnected => write!(f, "remote disconnected")?,
                 io::ErrorKind::UnexpectedEof => write!(f, "remote sent early eof")?,
-                io::ErrorKind::ConnectionReset
-                | io::ErrorKind::ConnectionAborted => write!(f, "terminated by remote")?,
+                io::ErrorKind::ConnectionReset | io::ErrorKind::ConnectionAborted => {
+                    write!(f, "terminated by remote")?
+                }
                 _ => write!(f, "{e}")?,
             }
         } else {
@@ -371,14 +379,14 @@ pub mod display_hack_impl {
 #[doc(hidden)]
 #[macro_export]
 macro_rules! display_hack {
-    ($v:expr) => ({
+    ($v:expr) => {{
         #[allow(unused_imports)]
-        use $crate::error::display_hack_impl::{DisplayHack, DefaultDisplay as _};
+        use $crate::error::display_hack_impl::{DefaultDisplay as _, DisplayHack};
 
         #[allow(unreachable_code)]
         DisplayHack($v).display()
-    })
+    }};
 }
 
 #[doc(hidden)]
-pub use display_hack as display_hack;
+pub use display_hack;
