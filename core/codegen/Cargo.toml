@@ -1,10 +1,10 @@
 [package]
 name = "rocket_codegen-community"
-version = "0.6.0-rc1"
+version = "0.6.0-rc2"
 authors = ["Sergio Benitez <sb@sergio.bz>"]
 description = "Procedural macros for the Rocket web framework (Community Fork)."
-documentation = "https://api.rocket.rs/master/rocket_codegen/"
-homepage = "https://rocket.rs"
+documentation = "https://docs.rs/rocket-community/latest/rocket_codegen_community/"
+homepage = "https://github.com/rocket-rs-community/Rocket"
 repository = "https://github.com/rocket-rs-community/Rocket"
 readme = "../../README.md"
 keywords = ["rocket", "web", "framework", "code", "generation"]

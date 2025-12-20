@@ -1,12 +1,12 @@
 [package]
 name = "rocket-community"
-version = "0.6.0-rc1"
+version = "0.6.0-rc2"
 authors = ["Sergio Benitez <sb@sergio.bz>"]
 description = """
 Web framework with a focus on usability, security, extensibility, and speed. (Community Fork)
 """
-documentation = "https://api.rocket.rs/master/rocket/"
-homepage = "https://rocket.rs"
+documentation = "https://docs.rs/rocket-community/latest/rocket_community/"
+homepage = "https://github.com/rocket-rs-community/Rocket"
 repository = "https://github.com/rocket-rs-community/Rocket"
 readme = "../../README.md"
 keywords = ["rocket", "web", "framework", "server"]

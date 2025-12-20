@@ -1,13 +1,13 @@
 [package]
 name = "rocket_http-community"
-version = "0.6.0-rc1"
+version = "0.6.0-rc2"
 authors = ["Sergio Benitez <sb@sergio.bz>"]
 description = """
 Types, traits, and parsers for HTTP requests, responses, and headers. (Community Fork)
 """
-documentation = "https://api.rocket.rs/master/rocket_http/"
-homepage = "https://rocket.rs"
-repository = "https://github.com/rwf2/Rocket"
+documentation = "https://docs.rs/rocket-community/latest/rocket_http/"
+homepage = "https://github.com/rocket-rs-community/Rocket"
+repository = "https://github.com/rocket-rs-community/Rocket"
 readme = "../../README.md"
 keywords = ["rocket", "web", "framework", "http"]
 license = "MIT OR Apache-2.0"
