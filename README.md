@@ -1,9 +1,25 @@
 # Rocket
 
-[![Build Status](https://github.com/rwf2/Rocket/workflows/CI/badge.svg)](https://github.com/rwf2/Rocket/actions)
-[![Rocket Homepage](https://img.shields.io/badge/web-rocket.rs-red.svg?style=flat&label=https&colorB=d33847)](https://rocket.rs)
-[![Current Crates.io Version](https://img.shields.io/crates/v/rocket.svg)](https://crates.io/crates/rocket)
+[![Build Status](https://github.com/rocket-rs-community/Rocket/workflows/CI/badge.svg)](https://github.com/rocket-rs-community/Rocket/actions)
+[![Rocket Homepage](https://img.shields.io/badge/web-rocket.rs-red.svg?style=flat&label=https&colorB=d33847)](https://github.com/rocket-rs-community/Rocket)
+[![Current Crates.io Version](https://img.shields.io/crates/v/rocket.svg)](https://crates.io/crates/rocket_community)
 [![Matrix: #rocket:mozilla.org](https://img.shields.io/badge/style-%23rocket:mozilla.org-blue.svg?style=flat&label=[m])](https://chat.mozilla.org/#/room/#rocket:mozilla.org)
+
+
+> [!IMPORTANT]
+> This is a community fork of the Rocket.rs project.
+>
+> To switch to the community edition change your dependency import from:
+>
+> ```toml
+> rocket = "0.6.0-rc2"
+> ```
+>
+> to:
+>
+> ```toml
+> rocket = { package = "rocket-community", version = "0.6.0-rc2" }
+> ```
 
 Rocket is an async web framework for Rust with a focus on usability, security,
 extensibility, and speed.
