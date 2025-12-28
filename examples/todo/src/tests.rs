@@ -1,6 +1,6 @@
 use super::task::Task;
 
-use rand::{Rng, thread_rng, distributions::Alphanumeric};
+use rand::{self, Rng, distr::Alphanumeric};
 
 use rocket::local::asynchronous::Client;
 use rocket::http::{Status, ContentType};
@@ -103,7 +103,7 @@ fn test_many_insertions() {
 
         for i in 0..ITER {
             // Issue a request to insert a new task with a random description.
-            let desc: String = thread_rng()
+            let desc: String = rand::rng()
                 .sample_iter(&Alphanumeric)
                 .take(12)
                 .map(char::from)

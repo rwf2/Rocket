@@ -182,7 +182,7 @@ Before we continue, we'll need to make a few design decisions.
             const BASE62: &[u8] = b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
             let mut id = String::with_capacity(size);
-            let mut rng = rand::thread_rng();
+            let mut rng = rand::rng();
             for _ in 0..size {
                 id.push(BASE62[rng.random_range(0..62)] as char);
             }
