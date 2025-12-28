@@ -15,7 +15,7 @@ rocket = { path = "../../core/lib", features = ["secrets"] }
 rocket = { path = "../../core/lib", features = ["secrets", "json", "mtls"] }
 figment = { version = "0.10.17", features = ["toml", "env"] }
 tokio = { version = "1", features = ["macros", "io-std"] }
-rand = "0.8"
+rand = "0.9"
 
 [dev-dependencies.rocket_dyn_templates]
 path = "../../contrib/dyn_templates"

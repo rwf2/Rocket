@@ -184,7 +184,7 @@ Before we continue, we'll need to make a few design decisions.
             let mut id = String::with_capacity(size);
             let mut rng = rand::thread_rng();
             for _ in 0..size {
-                id.push(BASE62[rng.gen_range(0..62)] as char);
+                id.push(BASE62[rng.random_range(0..62)] as char);
             }
 
             PasteId(Cow::Owned(id))
@@ -227,7 +227,7 @@ Before we continue, we'll need to make a few design decisions.
     ```toml
     [dependencies]
     ## existing Rocket dependencies...
-    rand = "0.8"
+    rand = "0.9"
     ```
 
     Ensure that your application builds with the new code:
