@@ -144,7 +144,7 @@ fn methods_match(route: &Route, req: &Request<'_>) -> bool {
     route.method.map_or(true, |method| method == req.method())
 }
 
-fn paths_match(route: &Route, req: &Request<'_>) -> bool {
+pub(crate) fn paths_match(route: &Route, req: &Request<'_>) -> bool {
     trace!(route.uri = %route.uri, request.uri = %req.uri());
     let route_segments = &route.uri.metadata.uri_segments;
     let req_segments = req.uri().path().segments();
@@ -174,7 +174,7 @@ fn paths_match(route: &Route, req: &Request<'_>) -> bool {
     true
 }
 
-fn queries_match(route: &Route, req: &Request<'_>) -> bool {
+pub(crate) fn queries_match(route: &Route, req: &Request<'_>) -> bool {
     trace!(
         route.query = route.uri.query().map(display),
         route.query.color = route.uri.metadata.query_color.map(debug),
@@ -201,7 +201,7 @@ fn queries_match(route: &Route, req: &Request<'_>) -> bool {
     true
 }
 
-fn formats_match(route: &Route, req: &Request<'_>) -> bool {
+pub(crate) fn formats_match(route: &Route, req: &Request<'_>) -> bool {
     trace!(
         route.format = route.format.as_ref().map(display),
         request.format = req.format().map(display),

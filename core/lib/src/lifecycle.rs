@@ -112,6 +112,25 @@ impl Rocket<Orbit> {
                     Outcome::Forward((_, status)) => self.dispatch_error(status, request).await,
                 }
             }
+            Outcome::Forward((_, status)) if status == Status::NotFound => {
+                // We failed to find a route which matches on path, query AND formats.
+                // Before we return the error to the user, we'll check for "near misses".
+
+                // This code path primarily exists to assist clients in debugging their requests.
+                let mut status = status;
+                if self.router.matches_except_formats(request) {
+                    // Tailor the error code to the interpretation of the request in question.
+                    if request.method().allows_request_body() == Some(true) {
+                        status = Status::UnsupportedMediaType;
+                    } else if request.headers().contains("Accept") {
+                        status = Status::NotAcceptable;
+                    }
+                } else if self.router.matches_except_method(request) {
+                    // Found a more suitable error code for paths implemented on different methods.
+                    status = Status::MethodNotAllowed;
+                }
+                self.dispatch_error(status, request).await
+            }
             Outcome::Forward((_, status)) => self.dispatch_error(status, request).await,
             Outcome::Error(status) => self.dispatch_error(status, request).await,
         };
