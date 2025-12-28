@@ -1,3 +1,8 @@
+// use quote::ToTokens;
+// use crate::{exports::{*, Status as _Status}, syn_ext::IdentExt};
+// use devise::{*, ext::{TypeExt, SpanDiagnosticExt}};
+// use crate::http_codegen::{ContentType, Status};
+
 use quote::ToTokens;
 use devise::{*, ext::{TypeExt, SpanDiagnosticExt}};
 use proc_macro2::TokenStream;
@@ -6,12 +11,12 @@ use crate::exports::*;
 use crate::syn_ext::{TypeExt as _, GenericsExt as _};
 use crate::http_codegen::{ContentType, Status};
 
+
 #[derive(Debug, Default, FromMeta)]
 struct ItemAttr {
     content_type: Option<SpanWrapped<ContentType>>,
     status: Option<SpanWrapped<Status>>,
 }
-
 #[derive(Default, FromMeta)]
 struct FieldAttr {
     ignore: bool,
@@ -65,7 +70,7 @@ pub fn derive_responder(input: proc_macro::TokenStream) -> TokenStream {
         )
         .inner_mapper(MapperBuild::new()
             .with_output(|_, output| quote! {
-                fn respond_to(self, __req: &'r #Request<'_>) -> #_response::Result<'o> {
+                fn respond_to(self, __req: &'r #Request<'_>) -> #_response::Result<'r, 'o> {
                     #output
                 }
             })

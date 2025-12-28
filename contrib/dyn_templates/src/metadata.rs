@@ -1,8 +1,10 @@
+use std::convert::Infallible;
 use std::fmt;
 use std::borrow::Cow;
 
-use rocket::{Request, Rocket, Ignite, Sentinel};
-use rocket::http::{Status, ContentType};
+use rocket::outcome::Outcome;
+use rocket::{Ignite, Request, Rocket, Sentinel, StateError};
+use rocket::http::ContentType;
 use rocket::request::{self, FromRequest};
 use rocket::serde::Serialize;
 
@@ -152,18 +154,22 @@ impl Sentinel for Metadata<'_> {
 /// (`500`) is returned.
 #[rocket::async_trait]
 impl<'r> FromRequest<'r> for Metadata<'r> {
-    type Error = ();
+    type Forward = Infallible;
+    type Error = StateError;
 
-    async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, ()> {
-        request.rocket().state::<ContextManager>()
-            .map(|cm| request::Outcome::Success(Metadata(cm)))
-            .unwrap_or_else(|| {
+    async fn from_request(request: &'r Request<'_>) ->
+        request::Outcome<Self, Self::Error, Infallible>
+    {
+        match request.rocket().state::<ContextManager>() {
+            Some(cm) => Outcome::Success(Metadata(cm)),
+            None => {
                 error!(
                     "uninitialized template context: missing `Template::fairing()`.\n\
                     To use templates, you must attach `Template::fairing()`."
                 );
 
-                request::Outcome::Error((Status::InternalServerError, ()))
-            })
+                request::Outcome::Error(StateError("Template::fairing()"))
+            }
+        }
     }
 }

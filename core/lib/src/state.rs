@@ -1,9 +1,12 @@
+use std::convert::Infallible;
 use std::fmt;
 use std::ops::Deref;
 use std::any::type_name;
 
 use ref_cast::RefCast;
+use transient::Static;
 
+use crate::catcher::TypedError;
 use crate::{Phase, Rocket, Ignite, Sentinel};
 use crate::request::{self, FromRequest, Request};
 use crate::outcome::Outcome;
@@ -70,9 +73,10 @@ use crate::http::Status;
 ///
 /// #[rocket::async_trait]
 /// impl<'r> FromRequest<'r> for Item<'r> {
-///     type Error = ();
+///     type Forward = Status;
+///     type Error = Status;
 ///
-///     async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, ()> {
+///     async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, Self::Error, Self::Forward> {
 ///         // Using `State` as a request guard. Use `inner()` to get an `'r`.
 ///         let outcome = request.guard::<&State<MyConfig>>().await
 ///             .map(|my_config| Item(&my_config.user_val));
@@ -191,12 +195,23 @@ impl<'r, T: Send + Sync + 'static> From<&'r T> for &'r State<T> {
     }
 }
 
+/// Error for a managed state element not being present.
+#[derive(Debug, PartialEq, Eq)]
+pub struct StateError(pub &'static str);
+
+impl Static for StateError {}
+
+impl<'r> TypedError<'r> for StateError {
+    fn status(&self) -> Status { Status::InternalServerError }
+}
+
 #[crate::async_trait]
 impl<'r, T: Send + Sync + 'static> FromRequest<'r> for &'r State<T> {
-    type Error = ();
+    type Forward = Infallible;
+    type Error = StateError;
 
     #[inline(always)]
-    async fn from_request(req: &'r Request<'_>) -> request::Outcome<Self, ()> {
+    async fn from_request(req: &'r Request<'_>) -> request::Outcome<Self, Self::Error, Infallible> {
         match State::get(req.rocket()) {
             Some(state) => Outcome::Success(state),
             None => {
@@ -204,7 +219,7 @@ impl<'r, T: Send + Sync + 'static> FromRequest<'r> for &'r State<T> {
                 "retrieving unmanaged state\n\
                 state must be managed via `rocket.manage()`");
 
-                Outcome::Error((Status::InternalServerError, ()))
+                Outcome::Error(StateError(type_name::<T>()))
             }
         }
     }

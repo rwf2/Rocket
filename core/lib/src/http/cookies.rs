@@ -98,7 +98,7 @@ pub use cookie::{Cookie, SameSite, Iter};
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
-/// # #[cfg(feature = "secrets")] {
+/// # #[cfg(feature = "secrets")] mod secrets {
 /// use rocket::http::Status;
 /// use rocket::request::{self, Request, FromRequest};
 /// use rocket::outcome::IntoOutcome;
@@ -108,9 +108,10 @@ pub use cookie::{Cookie, SameSite, Iter};
 ///
 /// #[rocket::async_trait]
 /// impl<'r> FromRequest<'r> for User {
+///     type Forward = Status;
 ///     type Error = std::convert::Infallible;
 ///
-///     async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
+///     async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, Self::Error, Self::Forward> {
 ///         request.cookies()
 ///             .get_private("user_id")
 ///             .and_then(|c| c.value().parse().ok())

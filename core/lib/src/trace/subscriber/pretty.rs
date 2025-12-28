@@ -118,6 +118,11 @@ impl<S: Subscriber + for<'a> LookupSpan<'a>> Layer<S> for RocketFmt<Pretty> {
                 }
 
                 write!(f, "{}", &data["uri.base"].paint(style.primary()))?;
+
+                if let Some(type_name) = data.get("type") {
+                    write!(f, " <{}>", &type_name.paint(style.dim()))?;
+                }
+
                 if let Some(name) = data.get("name") {
                     write!(f, " ({}", name.paint(style.bold().bright()))?;
 

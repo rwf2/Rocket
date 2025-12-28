@@ -51,6 +51,7 @@
 
 use std::any::Any;
 
+use crate::catcher::TypedError;
 use crate::{Rocket, Request, Response, Data, Build, Orbit};
 
 mod fairings;
@@ -63,6 +64,9 @@ pub use self::info_kind::{Info, Kind};
 
 /// A type alias for the return `Result` type of [`Fairing::on_ignite()`].
 pub type Result<T = Rocket<Build>, E = Rocket<Build>> = std::result::Result<T, E>;
+
+/// A type alias for the return `Result` type of [`Fairing::on_request_filter()`]
+pub type FilterResult<'r> = std::result::Result<(), Box<dyn TypedError<'r> + 'r>>;
 
 // We might imagine that a request fairing returns an `Outcome`. If it returns
 // `Success`, we don't do any routing and use that response directly. Same if it
@@ -152,6 +156,22 @@ pub type Result<T = Rocket<Build>, E = Rocket<Build>> = std::result::Result<T, E
 ///     to the request; these issues are better handled via [request guards] or
 ///     via response callbacks. Any modifications to a request are persisted and
 ///     can potentially alter how a request is routed.
+///
+///   * **<a name="request">RequestFilter</a> (`on_request_filter`)**
+///
+///     A request callback, represented by the [`Fairing::on_request_filter()`] method,
+///     is called just after a request is received, immediately after
+///     pre-processing the request and running all `Request` fairings. This method
+///     returns a `Result`, which can be used to terminate processing of a request,
+///     bypassing the routing process. The error value must be a [`TypedError`], which
+///     can then be caught by a typed catcher.
+///
+///     This method should only be used for global filters, i.e., filters that need
+///     to be run on every (or very nearly every) route. One common example might be
+///     CORS, since the CORS headers of every request need to be inspected, and potentially
+///     rejected.
+///
+/// [`TypedError`]: crate::catcher::TypedError
 ///
 ///   * **<a name="response">Response</a> (`on_response`)**
 ///
@@ -251,6 +271,7 @@ pub type Result<T = Rocket<Build>, E = Rocket<Build>> = std::result::Result<T, E
 /// ```rust
 /// use rocket::{Rocket, Request, Data, Response, Build, Orbit};
 /// use rocket::fairing::{self, Fairing, Info, Kind};
+/// use rocket::catcher::TypedError;
 ///
 /// # struct MyType;
 /// #[rocket::async_trait]
@@ -271,6 +292,13 @@ pub type Result<T = Rocket<Build>, E = Rocket<Build>> = std::result::Result<T, E
 ///     }
 ///
 ///     async fn on_request(&self, req: &mut Request<'_>, data: &mut Data<'_>) {
+///         /* ... */
+///         # unimplemented!()
+///     }
+///
+///     async fn on_request_filter<'r>(&self, req: &'r Request<'_>)
+///         -> Result<(), Box<dyn TypedError<'r> + 'r>>
+///     {
 ///         /* ... */
 ///         # unimplemented!()
 ///     }
@@ -412,12 +440,13 @@ pub type Result<T = Rocket<Build>, E = Rocket<Build>> = std::result::Result<T, E
 /// // Allows a route to access the time a request was initiated.
 /// #[rocket::async_trait]
 /// impl<'r> FromRequest<'r> for StartTime {
-///     type Error = ();
+///     type Forward = std::convert::Infallible;
+///     type Error = Status;
 ///
-///     async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, ()> {
+///     async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, Self::Error, Self::Forward> {
 ///         match *request.local_cache(|| TimerStart(None)) {
 ///             TimerStart(Some(time)) => request::Outcome::Success(StartTime(time)),
-///             TimerStart(None) => request::Outcome::Error((Status::InternalServerError, ())),
+///             TimerStart(None) => request::Outcome::Error(Status::InternalServerError),
 ///         }
 ///     }
 /// }
@@ -503,6 +532,21 @@ pub trait Fairing: Send + Sync + AsAny + 'static {
     /// The default implementation of this method does nothing.
     async fn on_request(&self, _req: &mut Request<'_>, _data: &mut Data<'_>) {}
 
+    /// The request filter callback.
+    ///
+    /// See [Fairing Callbacks](#request) for complete semantics.
+    ///
+    /// This method is called when a new request is received if `Kind::RequestFilter`
+    /// is in the `kind` field of the `Info` structure for this fairing. The
+    /// `&Request` parameter is the incoming request, and the `&Data`
+    /// parameter is the incoming data in the request.
+    ///
+    /// ## Default Implementation
+    ///
+    /// The default implementation of this method does nothing.
+    async fn on_request_filter<'r>(&self, _req: &'r Request<'_>) -> FilterResult<'r>
+    { Ok (()) }
+
     /// The response callback.
     ///
     /// See [Fairing Callbacks](#response) for complete semantics.
@@ -558,6 +602,13 @@ impl<T: Fairing + ?Sized> Fairing for std::sync::Arc<T> {
     #[inline]
     async fn on_request(&self, req: &mut Request<'_>, data: &mut Data<'_>) {
         (self as &T).on_request(req, data).await
+    }
+
+    #[inline]
+    async fn on_request_filter<'r>(&self, req: &'r Request<'_>)
+        -> Result<(), Box<dyn TypedError<'r> + 'r>>
+    {
+        (self as &T).on_request_filter(req).await
     }
 
     #[inline]

@@ -1,6 +1,8 @@
 use time::Duration;
 use serde::ser::{Serialize, Serializer, SerializeStruct};
+use transient::Static;
 
+use crate::catcher::TypedError;
 use crate::outcome::IntoOutcome;
 use crate::response::{self, Responder};
 use crate::request::{self, Request, FromRequest};
@@ -50,13 +52,14 @@ const FLASH_COOKIE_DELIM: char = ':';
 /// # #[macro_use] extern crate rocket;
 /// use rocket::response::{Flash, Redirect};
 /// use rocket::request::FlashMessage;
+/// use rocket::either::Either;
 ///
 /// #[post("/login/<name>")]
-/// fn login(name: &str) -> Result<&'static str, Flash<Redirect>> {
+/// fn login(name: &str) -> Either<&'static str, Flash<Redirect>> {
 ///     if name == "special_user" {
-///         Ok("Hello, special user!")
+///         Either::Left("Hello, special user!")
 ///     } else {
-///         Err(Flash::error(Redirect::to(uri!(index)), "Invalid username."))
+///         Either::Right(Flash::error(Redirect::to(uri!(index)), "Invalid username."))
 ///     }
 /// }
 ///
@@ -189,7 +192,7 @@ impl<R> Flash<R> {
 /// response handling to the wrapped responder. As a result, the `Outcome` of
 /// the response is the `Outcome` of the wrapped `Responder`.
 impl<'r, 'o: 'r, R: Responder<'r, 'o>> Responder<'r, 'o> for Flash<R> {
-    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'o> {
+    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'r, 'o> {
         req.cookies().add(self.cookie());
         self.inner.respond_to(req)
     }
@@ -234,6 +237,16 @@ impl<'r> FlashMessage<'r> {
     }
 }
 
+/// Error for a FlashMessage not being present in a request.
+#[derive(Debug, PartialEq, Eq)]
+pub struct FlashCookieMissing;
+
+impl Static for FlashCookieMissing {}
+
+impl<'r> TypedError<'r> for FlashCookieMissing {
+    fn status(&self) -> Status { Status::BadRequest }
+}
+
 /// Retrieves a flash message from a flash cookie. If there is no flash cookie,
 /// or if the flash cookie is malformed, an empty `Err` is returned.
 ///
@@ -241,22 +254,25 @@ impl<'r> FlashMessage<'r> {
 /// in `request`: `Option<FlashMessage>`.
 #[crate::async_trait]
 impl<'r> FromRequest<'r> for FlashMessage<'r> {
-    type Error = ();
+    type Error = FlashCookieMissing;
+    type Forward = std::convert::Infallible;
 
-    async fn from_request(req: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
-        req.cookies().get(FLASH_COOKIE_NAME).ok_or(()).and_then(|cookie| {
+    async fn from_request(req: &'r Request<'_>) ->
+        request::Outcome<Self, Self::Error, Self::Forward>
+    {
+        req.cookies().get(FLASH_COOKIE_NAME).ok_or(FlashCookieMissing).and_then(|cookie| {
             // Parse the flash message.
             let content = cookie.value();
             let (len_str, kv) = match content.find(FLASH_COOKIE_DELIM) {
                 Some(i) => (&content[..i], &content[(i + 1)..]),
-                None => return Err(()),
+                None => return Err(FlashCookieMissing),
             };
 
             match len_str.parse::<usize>() {
                 Ok(i) if i <= kv.len() => Ok(Flash::named(&kv[..i], &kv[i..], req)),
-                _ => Err(())
+                _ => Err(FlashCookieMissing)
             }
-        }).or_error(Status::BadRequest)
+        }).or_error(())
     }
 }
 

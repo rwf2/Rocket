@@ -20,10 +20,11 @@ or doing nothing at all.
 Rocket’s fairings are a lot like middleware from other frameworks, but they bear
 a few key distinctions:
 
-  * Fairings **cannot** terminate or respond to an incoming request directly.
+  * Fairings **cannot** respond to an incoming request directly.
   * Fairings **cannot** inject arbitrary, non-request data into a request.
   * Fairings _can_ prevent an application from launching.
   * Fairings _can_ inspect and modify the application's configuration.
+  * Fairings _can_ directly throw an error to be caught by a catcher.
 
 If you are familiar with middleware from other frameworks, you may find yourself
 reaching for fairings instinctively. Before doing so, remember that Rocket
@@ -76,7 +77,7 @@ order in which fairings are attached may be significant.
 
 ### Callbacks
 
-There are five events for which Rocket issues fairing callbacks. Each of these
+There are six events for which Rocket issues fairing callbacks. Each of these
 events is briefly described below and in details in the [`Fairing`] trait docs:
 
   * **Ignite (`on_ignite`)**
@@ -100,6 +101,13 @@ events is briefly described below and in details in the [`Fairing`] trait docs:
     callback can modify the request at will and peek into the incoming data. It
     may not, however, abort or respond directly to the request; these issues are
     better handled via request guards or via response callbacks.
+
+  * **Request Filter (`on_request_filter`)**
+
+    A request filter callback is called after every request fairing has been invoked,
+    but before any handlers have been attempted. This callback has the option to
+    reject any request, by returning a typed error. If a fairing returns an error
+    for a particular request, no additional request filters will be called.
 
   * **Response (`on_response`)**
 
@@ -136,6 +144,7 @@ callback has a default implementation that does absolutely nothing.
 [`on_ignite`]: @api/master/rocket/fairing/trait.Fairing.html#method.on_ignite
 [`on_liftoff`]: @api/master/rocket/fairing/trait.Fairing.html#method.on_liftoff
 [`on_request`]: @api/master/rocket/fairing/trait.Fairing.html#method.on_request
+[`on_request_filter`]: @api/master/rocket/fairing/trait.Fairing.html#method.on_request_filter
 [`on_response`]: @api/master/rocket/fairing/trait.Fairing.html#method.on_response
 [`on_shutdown`]: @api/master/rocket/fairing/trait.Fairing.html#method.on_shutdown
 
@@ -218,11 +227,12 @@ documentation](@api/master/rocket/fairing/trait.Fairing.html#example).
 
 ## Ad-Hoc Fairings
 
-For simpler cases, implementing the `Fairing` trait can be cumbersome. This is
-why Rocket provides the [`AdHoc`] type, which creates a fairing from a simple
-function or closure. Using the `AdHoc` type is easy: simply call the
-`on_ignite`, `on_liftoff`, `on_request`, `on_response`, or `on_shutdown`
-constructors on `AdHoc` to create a fairing from a function or closure.
+For simpler cases, implementing the `Fairing` trait can be cumbersome. This
+is why Rocket provides the [`AdHoc`] type, which creates a fairing from a
+simple function or closure. Using the `AdHoc` type is easy: simply call the
+`on_ignite`, `on_liftoff`, `on_request`, `on_request_filter`, `on_response`,
+or `on_shutdown` constructors on `AdHoc` to create a fairing from a function
+or closure.
 
 As an example, the code below creates a `Rocket` instance with two attached
 ad-hoc fairings. The first, a liftoff fairing named "Liftoff Printer", prints a

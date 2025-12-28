@@ -136,9 +136,10 @@ struct Item<'r>(&'r str);
 
 #[rocket::async_trait]
 impl<'r> FromRequest<'r> for Item<'r> {
-    type Error = ();
+    type Forward = Status;
+    type Error = Status;
 
-    async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, ()> {
+    async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, Status, Status> {
         // Using `State` as a request guard. Use `inner()` to get an `'r`.
         let outcome = request.guard::<&State<MyConfig>>().await
             .map(|my_config| Item(&my_config.user_val));
@@ -188,9 +189,10 @@ struct RequestId(pub usize);
 /// Returns the current request's ID, assigning one only as necessary.
 #[rocket::async_trait]
 impl<'r> FromRequest<'r> for &'r RequestId {
+    type Forward = ();
     type Error = ();
 
-    async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
+    async fn from_request(request: &'r Request<'_>) -> request::Outcome<Self, Self::Error, Self::Forward> {
         // The closure passed to `local_cache` will be executed at most once per
         // request: the first time the `RequestId` guard is used. If it is
         // requested again, `local_cache` will return the same value.

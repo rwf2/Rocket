@@ -1,3 +1,4 @@
+use crate::catcher::TypedError;
 use crate::{Rocket, Request, Response, Data, Build, Orbit};
 use crate::fairing::{Fairing, Info, Kind};
 
@@ -13,6 +14,7 @@ pub struct Fairings {
     ignite: Vec<usize>,
     liftoff: Vec<usize>,
     request: Vec<usize>,
+    request_filter: Vec<usize>,
     response: Vec<usize>,
     shutdown: Vec<usize>,
 }
@@ -42,6 +44,7 @@ impl Fairings {
         self.ignite.iter()
             .chain(self.liftoff.iter())
             .chain(self.request.iter())
+            .chain(self.request_filter.iter())
             .chain(self.response.iter())
             .chain(self.shutdown.iter())
     }
@@ -112,6 +115,7 @@ impl Fairings {
         if this_info.kind.is(Kind::Ignite) { self.ignite.push(index); }
         if this_info.kind.is(Kind::Liftoff) { self.liftoff.push(index); }
         if this_info.kind.is(Kind::Request) { self.request.push(index); }
+        if this_info.kind.is(Kind::RequestFilter) { self.request_filter.push(index); }
         if this_info.kind.is(Kind::Response) { self.response.push(index); }
         if this_info.kind.is(Kind::Shutdown) { self.shutdown.push(index); }
     }
@@ -159,6 +163,16 @@ impl Fairings {
         for fairing in iter!(self.request) {
             fairing.on_request(req, data).await
         }
+    }
+
+    #[inline(always)]
+    pub async fn handle_request_filter<'r>(&self, req: &'r Request<'_>)
+        -> Result<(), Box<dyn TypedError<'r> + 'r>>
+    {
+        for fairing in iter!(self.request_filter) {
+            fairing.on_request_filter(req).await?;
+        }
+        Ok(())
     }
 
     #[inline(always)]
@@ -213,6 +227,7 @@ impl std::fmt::Debug for Fairings {
             .field("launch", &debug_info(iter!(self.ignite)))
             .field("liftoff", &debug_info(iter!(self.liftoff)))
             .field("request", &debug_info(iter!(self.request)))
+            .field("request_filter", &debug_info(iter!(self.request_filter)))
             .field("response", &debug_info(iter!(self.response)))
             .field("shutdown", &debug_info(iter!(self.shutdown)))
             .finish()

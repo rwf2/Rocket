@@ -2,7 +2,6 @@ use ref_cast::RefCast;
 
 use crate::mtls::{x509, oid, bigint, Name, Result, Error};
 use crate::request::{Request, FromRequest, Outcome};
-use crate::http::Status;
 
 /// A request guard for validated, verified client certificates.
 ///
@@ -49,14 +48,15 @@ use crate::http::Status;
 ///
 /// #[rocket::async_trait]
 /// impl<'r> FromRequest<'r> for CertifiedAdmin<'r> {
+///     type Forward = mtls::Error;
 ///     type Error = mtls::Error;
 ///
-///     async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+///     async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error, Self::Forward> {
 ///         let cert = try_outcome!(req.guard::<Certificate<'r>>().await);
 ///         if let Some(true) = cert.has_serial(ADMIN_SERIAL) {
 ///             Outcome::Success(CertifiedAdmin(cert))
 ///         } else {
-///             Outcome::Forward(Status::Unauthorized)
+///             Outcome::Forward(mtls::Error::SubjectUnauthorized)
 ///         }
 ///     }
 /// }
@@ -109,18 +109,19 @@ pub use rustls::pki_types::CertificateDer;
 
 #[crate::async_trait]
 impl<'r> FromRequest<'r> for Certificate<'r> {
+    type Forward = Error;
     type Error = Error;
 
-    async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+    async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Error, Error> {
         use crate::outcome::{try_outcome, IntoOutcome};
 
-        let certs = req.connection
+        let certs: Outcome<_, Error, Error> = req.connection
             .peer_certs
             .as_ref()
-            .or_forward(Status::Unauthorized);
+            .or_forward(Error::Empty);
 
         let chain = try_outcome!(certs);
-        Certificate::parse(chain.inner()).or_error(Status::Unauthorized)
+        Certificate::parse(chain.inner()).or_error(())
     }
 }
 

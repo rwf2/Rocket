@@ -1,6 +1,8 @@
+use std::convert::Infallible;
 use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 
+use rocket::catcher::{Static, TypedError};
 use rocket::{error, Build, Ignite, Phase, Rocket, Sentinel, Orbit};
 use rocket::fairing::{self, Fairing, Info, Kind};
 use rocket::request::{FromRequest, Outcome, Request};
@@ -278,17 +280,38 @@ impl<D: Database> Fairing for Initializer<D> {
     }
 }
 
-#[rocket::async_trait]
-impl<'r, D: Database> FromRequest<'r> for Connection<D> {
-    type Error = Option<<D::Pool as Pool>::Error>;
+/// Possible errors when aquiring a database connection
+#[derive(Debug, PartialEq, Eq)]
+pub enum DbError<E> {
+    ServiceUnavailable(E),
+    InternalError,
+}
 
-    async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+impl<E: 'static> Static for DbError<E> {}
+
+impl<'r, E: Send + Sync + 'static> TypedError<'r> for DbError<E> {
+    fn status(&self) -> Status {
+        match self {
+            Self::ServiceUnavailable(_) => Status::ServiceUnavailable,
+            Self::InternalError => Status::InternalServerError,
+        }
+    }
+}
+
+#[rocket::async_trait]
+impl<'r, D: Database> FromRequest<'r> for Connection<D>
+    where <D::Pool as Pool>::Error: Send + Sync + 'static
+{
+    type Forward = Infallible;
+    type Error = DbError<<D::Pool as Pool>::Error>;
+
+    async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error, Infallible> {
         match D::fetch(req.rocket()) {
             Some(db) => match db.get().await {
                 Ok(conn) => Outcome::Success(Connection(conn)),
-                Err(e) => Outcome::Error((Status::ServiceUnavailable, Some(e))),
+                Err(e) => Outcome::Error(DbError::ServiceUnavailable(e)),
             },
-            None => Outcome::Error((Status::InternalServerError, None)),
+            None => Outcome::Error(DbError::InternalError),
         }
     }
 }

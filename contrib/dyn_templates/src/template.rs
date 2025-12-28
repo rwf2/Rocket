@@ -265,7 +265,7 @@ impl Template {
 /// extension and a fixed-size body containing the rendered template. If
 /// rendering fails, an `Err` of `Status::InternalServerError` is returned.
 impl<'r> Responder<'r, 'static> for Template {
-    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'static> {
+    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'r, 'static> {
         let ctxt = req.rocket()
             .state::<ContextManager>()
             .ok_or_else(|| {

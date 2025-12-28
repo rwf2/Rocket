@@ -179,6 +179,7 @@ mod erased;
 #[doc(inline)] pub use crate::rkt::Rocket;
 #[doc(inline)] pub use crate::shutdown::Shutdown;
 #[doc(inline)] pub use crate::state::State;
+#[doc(inline)] pub use crate::state::StateError;
 
 /// Retrofits support for `async fn` in trait impls and declarations.
 ///

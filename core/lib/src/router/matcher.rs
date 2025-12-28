@@ -1,3 +1,5 @@
+use transient::TypeId;
+
 use crate::{Route, Request, Catcher};
 use crate::router::Collide;
 use crate::http::Status;
@@ -118,14 +120,14 @@ impl Catcher {
     /// // Let's say `request` is `GET /` that 404s. The error matches only `a`:
     /// let request = client.get("/");
     /// # let request = request.inner();
-    /// assert!(a.matches(Status::NotFound, &request));
-    /// assert!(!b.matches(Status::NotFound, &request));
+    /// assert!(a.matches(Status::NotFound, None, &request));
+    /// assert!(!b.matches(Status::NotFound, None, &request));
     ///
     /// // Now `request` is a 404 `GET /bar`. The error matches `a` and `b`:
     /// let request = client.get("/bar");
     /// # let request = request.inner();
-    /// assert!(a.matches(Status::NotFound, &request));
-    /// assert!(b.matches(Status::NotFound, &request));
+    /// assert!(a.matches(Status::NotFound, None, &request));
+    /// assert!(b.matches(Status::NotFound, None, &request));
     ///
     /// // Note that because `b`'s base' has more complete segments that `a's,
     /// // Rocket would route the error to `b`, not `a`, even though both match.
@@ -133,8 +135,9 @@ impl Catcher {
     /// let b_count = b.base().segments().filter(|s| !s.is_empty()).count();
     /// assert!(b_count > a_count);
     /// ```
-    pub fn matches(&self, status: Status, request: &Request<'_>) -> bool {
+    pub fn matches(&self, status: Status, ty: Option<TypeId>, request: &Request<'_>) -> bool {
         self.code.map_or(true, |code| code == status.code)
+            && self.type_id() == ty
             && self.base().segments().prefix_of(request.uri().path().segments())
     }
 }

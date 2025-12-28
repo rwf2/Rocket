@@ -4,3 +4,4 @@ pub mod from_form_field;
 pub mod responder;
 pub mod uri_display;
 pub mod from_param;
+pub mod typed_error;

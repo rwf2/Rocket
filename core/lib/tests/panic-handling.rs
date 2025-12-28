@@ -4,6 +4,7 @@ use rocket::{Request, Rocket, Route, Catcher, Build, route, catcher};
 use rocket::data::Data;
 use rocket::http::{Method, Status};
 use rocket::local::blocking::Client;
+use rocket::catcher::TypedError;
 
 #[get("/panic")]
 fn panic_route() -> &'static str {
@@ -73,7 +74,11 @@ fn catches_early_route_panic() {
 
 #[test]
 fn catches_early_catcher_panic() {
-    fn pre_future_catcher<'r>(_: Status, _: &'r Request<'_>) -> catcher::BoxFuture<'r> {
+    fn pre_future_catcher<'r>(
+        _: Status,
+        _: &'r dyn TypedError<'r>,
+        _: &'r Request<'_>
+    ) -> catcher::BoxFuture<'r> {
         panic!("a panicking pre-future catcher")
     }
 

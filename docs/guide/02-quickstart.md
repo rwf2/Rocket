@@ -12,8 +12,9 @@ Started].
 ## Running Examples
 
 The absolute fastest way to start experimenting with Rocket is to clone the
-[Rocket repository](@github) and run the included examples in the `examples/`
-directory. For instance, the following set of commands runs the `hello` example:
+[Rocket repository](https://github.com/rwf2/Rocket) and run the included
+examples in the `examples/` directory. For instance, the following set of
+commands runs the `hello` example:
 
 ```sh
 git clone https://github.com/rwf2/Rocket

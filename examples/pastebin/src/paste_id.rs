@@ -32,14 +32,18 @@ impl PasteId<'_> {
     }
 }
 
+#[derive(Debug, TypedError)]
+#[error(debug)]
+pub struct InvalidId;
+
 /// Returns an instance of `PasteId` if the path segment is a valid ID.
 /// Otherwise returns the invalid ID as the `Err` value.
 impl<'a> FromParam<'a> for PasteId<'a> {
-    type Error = &'a str;
+    type Error = InvalidId;
 
     fn from_param(param: &'a str) -> Result<Self, Self::Error> {
         param.chars().all(|c| c.is_ascii_alphanumeric())
             .then(|| PasteId(param.into()))
-            .ok_or(param)
+            .ok_or(InvalidId)
     }
 }

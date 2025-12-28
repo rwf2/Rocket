@@ -136,10 +136,11 @@ impl Future for Shutdown {
 
 #[crate::async_trait]
 impl<'r> FromRequest<'r> for Shutdown {
+    type Forward = std::convert::Infallible;
     type Error = std::convert::Infallible;
 
     #[inline]
-    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error, Self::Forward> {
         Outcome::Success(request.rocket().shutdown())
     }
 }

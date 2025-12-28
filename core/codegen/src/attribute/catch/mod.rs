@@ -1,11 +1,12 @@
 mod parse;
 
-use devise::ext::SpanDiagnosticExt;
+use devise::ext::{SpanDiagnosticExt, TypeExt};
 use devise::{Spanned, Result};
 use proc_macro2::{TokenStream, Span};
+use syn::{Lifetime, TypeReference};
 
 use crate::http_codegen::Optional;
-use crate::syn_ext::ReturnTypeExt;
+use crate::syn_ext::{FnArgExt, IdentExt, ReturnTypeExt};
 use crate::exports::*;
 
 pub fn _catch(
@@ -22,35 +23,77 @@ pub fn _catch(
     let status_code = Optional(catch.status.map(|s| s.code));
     let deprecated = catch.function.attrs.iter().find(|a| a.path().is_ident("deprecated"));
 
-    // Determine the number of parameters that will be passed in.
-    if catch.function.sig.inputs.len() > 2 {
-        return Err(catch.function.sig.paren_token.span.join()
-            .error("invalid number of arguments: must be zero, one, or two")
-            .help("catchers optionally take `&Request` or `Status, &Request`"));
-    }
-
     // This ensures that "Responder not implemented" points to the return type.
     let return_type_span = catch.function.sig.output.ty()
         .map(|ty| ty.span())
         .unwrap_or_else(Span::call_site);
 
-    // Set the `req` and `status` spans to that of their respective function
-    // arguments for a more correct `wrong type` error span. `rev` to be cute.
-    let codegen_args = &[__req, __status];
-    let inputs = catch.function.sig.inputs.iter().rev()
-        .zip(codegen_args.iter())
-        .map(|(fn_arg, codegen_arg)| match fn_arg {
-            syn::FnArg::Receiver(_) => codegen_arg.respanned(fn_arg.span()),
-            syn::FnArg::Typed(a) => codegen_arg.respanned(a.ty.span())
-        }).rev();
+    let from_error = catch.guards.iter().map(|g| {
+        let name = g.fn_ident.rocketized();
+        let ty = g.ty.with_replaced_lifetimes(Lifetime::new("'__r", g.ty.span()));
+        quote_spanned!(g.span() =>
+            let #name: #ty = match <
+                #ty as #FromError<'__r>
+            >::from_error(#__status, #__req, #__error).await {
+                #_Ok(v) => v,
+                #_Err(__e) => {
+                    ::rocket::trace::info!(
+                        name: "error",
+                        target: concat!("rocket::codegen::route::", module_path!()),
+                        parameter = stringify!(#name),
+                        type_name = stringify!(#ty),
+                        status = __e.code,
+                        "error guard error"
+                    );
+                    return #_Err(__e);
+                },
+            };
+        )
+    });
+
+    let error = catch.error.iter().map(|g| {
+        let name = g.fn_ident.rocketized();
+        let ty = g.ty.with_replaced_lifetimes(Lifetime::new("'__r", g.ty.span()));
+        quote!(
+            let #name: #ty = match #_catcher::downcast(#__error) {
+                Some(v) => v,
+                None => {
+                    ::rocket::trace::error!(
+                        downcast_to = stringify!(#ty),
+                        error_name = #__error.name(),
+                        "Failed to downcast error. This should never happen, please \
+                        open an issue with details."
+                    );
+                    return #_Err(#Status::InternalServerError);
+                },
+            };
+        )
+    });
+
+    let error_type = Optional(catch.error.as_ref().map(|g| {
+        let ty = match &g.ty {
+            syn::Type::Reference(TypeReference { mutability: None, elem, .. }) => {
+                elem.as_ref().with_stripped_lifetimes()
+            },
+            _ => return Err(g.ty.span().error("invalid type, must be a reference")),
+        };
+        Ok(quote_spanned!(g.span() =>
+            (::std::any::type_name::<#ty>(), #_catcher::TypeId::of::<#ty>())
+        ))
+    }).transpose()?);
 
     // We append `.await` to the function call if this is `async`.
     let dot_await = catch.function.sig.asyncness
         .map(|a| quote_spanned!(a.span() => .await));
 
+    let args = catch.function.sig.inputs.iter().map(|a| {
+        let name = a.typed().unwrap().0.rocketized();
+        quote!(#name)
+    });
+
     let catcher_response = quote_spanned!(return_type_span => {
-        let ___responder = #user_catcher_fn_name(#(#inputs),*) #dot_await;
-        #_response::Responder::respond_to(___responder, #__req)?
+        let ___responder = #user_catcher_fn_name(#(#args),*) #dot_await;
+        #_response::Responder::respond_to(___responder, #__req).map_err(|e| e.status())?
     });
 
     // Generate the catcher, keeping the user's input around.
@@ -68,9 +111,12 @@ pub fn _catch(
             fn into_info(self) -> #_catcher::StaticInfo {
                 fn monomorphized_function<'__r>(
                     #__status: #Status,
+                    #__error: &'__r dyn #TypedError<'__r>,
                     #__req: &'__r #Request<'_>
                 ) -> #_catcher::BoxFuture<'__r> {
                     #_Box::pin(async move {
+                        #(#from_error)*
+                        #(#error)*
                         let __response = #catcher_response;
                         #Response::build()
                             .status(#__status)
@@ -83,6 +129,7 @@ pub fn _catch(
                     name: ::core::stringify!(#user_catcher_fn_name),
                     code: #status_code,
                     handler: monomorphized_function,
+                    type_info: #error_type,
                     location: (::core::file!(), ::core::line!(), ::core::column!()),
                 }
             }

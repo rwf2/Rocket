@@ -176,6 +176,7 @@ impl Trace for Catcher {
             }),
             rank = self.rank,
             uri.base = %self.base(),
+            "type" = self.type_name(),
             location = self.location.as_ref()
                 .map(|(file, line, _)| Formatter(move |f| write!(f, "{file}:{line}")))
                 .map(display),
@@ -247,8 +248,8 @@ impl Trace for route::Outcome<'_> {
             },
             status = match self {
                 Self::Success(r) => r.status().code,
-                Self::Error(s) => s.code,
-                Self::Forward((_, s)) => s.code,
+                Self::Error(s) => s.status().code,
+                Self::Forward((_, s)) => s.status().code,
             },
         )
     }

@@ -1,6 +1,7 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::convert::Infallible;
 
-use rocket::State;
+use rocket::{State, StateError};
 use rocket::outcome::{Outcome, try_outcome};
 use rocket::request::{self, FromRequest, Request};
 use rocket::fairing::AdHoc;
@@ -18,9 +19,12 @@ struct Guard4;
 
 #[rocket::async_trait]
 impl<'r> FromRequest<'r> for Guard1 {
-    type Error = ();
+    type Forward = Infallible;
+    type Error = StateError;
 
-    async fn from_request(req: &'r Request<'_>) -> request::Outcome<Self, ()> {
+    async fn from_request(req: &'r Request<'_>) ->
+        request::Outcome<Self, Self::Error, Self::Forward>
+    {
         let atomics = try_outcome!(req.guard::<&State<Atomics>>().await);
         atomics.uncached.fetch_add(1, Ordering::Relaxed);
         req.local_cache(|| {
@@ -33,9 +37,12 @@ impl<'r> FromRequest<'r> for Guard1 {
 
 #[rocket::async_trait]
 impl<'r> FromRequest<'r> for Guard2 {
-    type Error = ();
+    type Forward = Infallible;
+    type Error = StateError;
 
-    async fn from_request(req: &'r Request<'_>) -> request::Outcome<Self, ()> {
+    async fn from_request(req: &'r Request<'_>) ->
+        request::Outcome<Self, Self::Error, Self::Forward>
+    {
         try_outcome!(req.guard::<Guard1>().await);
         Outcome::Success(Guard2)
     }
@@ -43,9 +50,12 @@ impl<'r> FromRequest<'r> for Guard2 {
 
 #[rocket::async_trait]
 impl<'r> FromRequest<'r> for Guard3 {
-    type Error = ();
+    type Forward = Infallible;
+    type Error = StateError;
 
-    async fn from_request(req: &'r Request<'_>) -> request::Outcome<Self, ()> {
+    async fn from_request(req: &'r Request<'_>) ->
+        request::Outcome<Self, Self::Error, Self::Forward>
+    {
         let atomics = try_outcome!(req.guard::<&State<Atomics>>().await);
         atomics.uncached.fetch_add(1, Ordering::Relaxed);
         req.local_cache_async(async {
@@ -58,9 +68,12 @@ impl<'r> FromRequest<'r> for Guard3 {
 
 #[rocket::async_trait]
 impl<'r> FromRequest<'r> for Guard4 {
-    type Error = ();
+    type Forward = Infallible;
+    type Error = StateError;
 
-    async fn from_request(req: &'r Request<'_>) -> request::Outcome<Self, ()> {
+    async fn from_request(req: &'r Request<'_>) ->
+        request::Outcome<Self, Self::Error, Self::Forward>
+    {
         try_outcome!(Guard3::from_request(req).await);
         Outcome::Success(Guard4)
     }

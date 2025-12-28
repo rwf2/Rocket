@@ -198,16 +198,7 @@ impl<'r, T: Deserialize<'r>> FromData<'r> for MsgPack<T> {
     async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> Outcome<'r, Self> {
         match Self::from_data(req, data).await {
             Ok(value) => Outcome::Success(value),
-            Err(Error::InvalidDataRead(e)) if e.kind() == io::ErrorKind::UnexpectedEof => {
-                Outcome::Error((Status::PayloadTooLarge, Error::InvalidDataRead(e)))
-            },
-            | Err(e@Error::TypeMismatch(_))
-            | Err(e@Error::OutOfRange)
-            | Err(e@Error::LengthMismatch(_))
-            => {
-                Outcome::Error((Status::UnprocessableEntity, e))
-            },
-            Err(e) => Outcome::Error((Status::BadRequest, e)),
+            Err(e) => Outcome::Error(e),
         }
     }
 }
@@ -216,7 +207,7 @@ impl<'r, T: Deserialize<'r>> FromData<'r> for MsgPack<T> {
 /// Content-Type `MsgPack` and a fixed-size body with the serialization. If
 /// serialization fails, an `Err` of `Status::InternalServerError` is returned.
 impl<'r, T: Serialize, const COMPACT: bool> Responder<'r, 'static> for MsgPack<T, COMPACT> {
-    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'static> {
+    fn respond_to(self, req: &'r Request<'_>) -> response::Result<'r, 'static> {
         let maybe_buf = if COMPACT {
             rmp_serde::to_vec(&self.0)
         } else {

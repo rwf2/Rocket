@@ -1,6 +1,7 @@
 use std::ops::{Deref, DerefMut};
 use std::collections::HashMap;
 
+use crate::catcher::TypedError;
 use crate::request::Request;
 use crate::http::{Method, Status};
 use crate::{Route, Catcher};
@@ -106,22 +107,31 @@ impl Router<Finalized> {
 
     // For many catchers, using aho-corasick or similar should be much faster.
     #[track_caller]
-    pub fn catch<'r>(&self, status: Status, req: &'r Request<'r>) -> Option<&Catcher> {
+    pub fn catch<'r>(
+        &self,
+        status: Status,
+        error: Option<&'r dyn TypedError<'r>>,
+        req: &'r Request<'r>
+    ) -> Option<&Catcher> {
+        let ty = error.map(|e| e.trait_obj_typeid());
         // Note that catchers are presorted by descending base length.
-        let explicit = self.catcher_map.get(&Some(status.code))
+        self.catcher_map.get(&Some(status.code))
             .map(|catchers| catchers.iter().map(|&i| &self.catchers[i]))
-            .and_then(|mut catchers| catchers.find(|c| c.matches(status, req)));
+            .and_then(|mut catchers| catchers.find(|c| c.matches(status, ty, req)))
+    }
 
-        let default = self.catcher_map.get(&None)
+    #[track_caller]
+    pub fn catch_any<'r>(
+        &self,
+        status: Status,
+        error: Option<&'r dyn TypedError<'r>>,
+        req: &'r Request<'r>
+    ) -> Option<&Catcher> {
+        let ty = error.map(|e| e.trait_obj_typeid());
+        // Note that catchers are presorted by descending base length.
+        self.catcher_map.get(&None)
             .map(|catchers| catchers.iter().map(|&i| &self.catchers[i]))
-            .and_then(|mut catchers| catchers.find(|c| c.matches(status, req)));
-
-        match (explicit, default) {
-            (None, None) => None,
-            (None, c@Some(_)) | (c@Some(_), None) => c,
-            (Some(a), Some(b)) if a.rank <= b.rank => Some(a),
-            (Some(_), Some(b)) => Some(b),
-        }
+            .and_then(|mut catchers| catchers.find(|c| c.matches(status, ty, req)))
     }
 }
 
@@ -141,8 +151,11 @@ impl DerefMut for Router<Pending> {
 
 #[cfg(test)]
 mod test {
+    use transient::TypeId;
+
     use super::*;
 
+    use crate::catcher;
     use crate::route::dummy_handler;
     use crate::local::blocking::Client;
     use crate::http::{Method::*, uri::Origin};
@@ -575,120 +588,89 @@ mod test {
         );
     }
 
-    fn router_with_catchers(catchers: &[(Option<u16>, &str)]) -> Result<Router<Finalized>> {
+    fn make_router_catches<I>(catchers: I) -> Result<Router<Finalized>, Collisions>
+        where I: IntoIterator<Item = (Option<Status>, &'static str, Option<TypeId>)>
+    {
         let mut router = Router::new();
-        for (code, base) in catchers {
-            let catcher = Catcher::new(*code, crate::catcher::dummy_handler);
-            router.catchers.push(catcher.map_base(|_| base.to_string()).unwrap());
+        for (status, base, ty) in catchers {
+            let mut catcher = Catcher::new(status.map(|s| s.code), catcher::dummy_handler)
+                .rebase(Origin::parse(base).unwrap());
+            catcher.type_info = ty.map(|t| ("", t));
+            router.catchers.push(catcher);
         }
 
         router.finalize()
     }
 
-    #[track_caller]
-    fn catcher<'a>(r: &'a Router<Finalized>, status: Status, uri: &str) -> Option<&'a Catcher> {
-        let client = Client::debug_with(vec![]).expect("client");
-        let request = client.get(Origin::parse(uri).unwrap());
-        r.catch(status, &request)
+    #[test]
+    fn test_catcher_collisions() {
+        #[derive(transient::Transient)]
+        struct A;
+        assert!(make_router_catches([
+            (Some(Status::new(400)), "/", None),
+            (Some(Status::new(400)), "/", None)
+        ]).is_err());
+        assert!(make_router_catches([
+            (Some(Status::new(400)), "/", Some(TypeId::of::<()>())),
+            (Some(Status::new(400)), "/", None)
+        ]).is_ok());
+        assert!(make_router_catches([
+            (Some(Status::new(400)), "/", Some(TypeId::of::<()>())),
+            (Some(Status::new(400)), "/", Some(TypeId::of::<()>())),
+        ]).is_err());
+        assert!(make_router_catches([
+            (Some(Status::new(400)), "/", Some(TypeId::of::<()>())),
+            (Some(Status::new(400)), "/", Some(TypeId::of::<A>())),
+        ]).is_ok());
     }
 
-    macro_rules! assert_catcher_routing {
-        (
-            catch: [$(($code:expr, $uri:expr)),+],
-            reqs: [$($r:expr),+],
-            with: [$(($ecode:expr, $euri:expr)),+]
-        ) => ({
-            let catchers = vec![$(($code.into(), $uri)),+];
-            let requests = vec![$($r),+];
-            let expected = vec![$(($ecode.into(), $euri)),+];
+    #[track_caller]
+    fn catches<'a>(
+        router: &'a Router<Finalized>,
+        status: Status,
+        uri: &'a str,
+        ty: for<'r> fn(&'r ()) -> Option<&'r dyn TypedError<'r>>
+    ) -> Option<&'a Catcher> {
+        let client = Client::debug_with(vec![]).expect("client");
+        let request = client.req(Method::Get, Origin::parse(uri).unwrap());
+        router.catch(status, ty(&()), &request)
+    }
 
-            let router = router_with_catchers(&catchers).expect("valid router");
-            for (req, expected) in requests.iter().zip(expected.iter()) {
-                let req_status = Status::from_code(req.0).expect("valid status");
-                let catcher = catcher(&router, req_status, req.1).expect("some catcher");
-                assert_eq!(catcher.code, expected.0,
-                    "\nmatched {:?}, expected {:?} for req {:?}", catcher, expected, req);
-
-                assert_eq!(catcher.base.path(), expected.1,
-                    "\nmatched {:?}, expected {:?} for req {:?}", catcher, expected, req);
-            }
-        })
+    #[track_caller]
+    fn catches_any<'a>(
+        router: &'a Router<Finalized>,
+        status: Status,
+        uri: &'a str,
+        ty: for<'r> fn(&'r ()) -> Option<&'r dyn TypedError<'r>>
+    ) -> Option<&'a Catcher> {
+        let client = Client::debug_with(vec![]).expect("client");
+        let request = client.req(Method::Get, Origin::parse(uri).unwrap());
+        router.catch_any(status, ty(&()), &request)
     }
 
     #[test]
-    fn test_catcher_routing() {
-        // Check that the default `/` catcher catches everything.
-        assert_catcher_routing! {
-            catch: [(None, "/")],
-            reqs: [(404, "/a/b/c"), (500, "/a/b"), (415, "/a/b/d"), (422, "/a/b/c/d?foo")],
-            with: [(None, "/"), (None, "/"), (None, "/"), (None, "/")]
-        }
+    fn test_catch_vs_catch_any() {
+        let router = make_router_catches([(None, "/", None)]).unwrap();
 
-        // Check prefixes when they're exact.
-        assert_catcher_routing! {
-            catch: [(None, "/"), (None, "/a"), (None, "/a/b")],
-            reqs: [
-                (404, "/"), (500, "/"),
-                (404, "/a"), (500, "/a"),
-                (404, "/a/b"), (500, "/a/b")
-            ],
-            with: [
-                (None, "/"), (None, "/"),
-                (None, "/a"), (None, "/a"),
-                (None, "/a/b"), (None, "/a/b")
-            ]
-        }
+        assert!(catches(&router, Status::BadRequest, "/", |_| None).is_none());
+        assert!(catches_any(&router, Status::BadRequest, "/", |_| None).is_some());
+    }
 
-        // Check prefixes when they're not exact.
-        assert_catcher_routing! {
-            catch: [(None, "/"), (None, "/a"), (None, "/a/b")],
-            reqs: [
-                (404, "/foo"), (500, "/bar"), (422, "/baz/bar"), (418, "/poodle?yes"),
-                (404, "/a/foo"), (500, "/a/bar/baz"), (510, "/a/c"), (423, "/a/c/b"),
-                (404, "/a/b/c"), (500, "/a/b/c/d"), (500, "/a/b?foo"), (400, "/a/b/yes")
-            ],
-            with: [
-                (None, "/"), (None, "/"), (None, "/"), (None, "/"),
-                (None, "/a"), (None, "/a"), (None, "/a"), (None, "/a"),
-                (None, "/a/b"), (None, "/a/b"), (None, "/a/b"), (None, "/a/b")
-            ]
-        }
+    #[test]
+    fn test_catch_vs_catch_any_ty() {
+        let router = make_router_catches([
+            (None, "/", None),
+            (None, "/", Some(TypeId::of::<()>()))
+        ]).unwrap();
 
-        // Check that we prefer specific to default.
-        assert_catcher_routing! {
-            catch: [(400, "/"), (404, "/"), (None, "/")],
-            reqs: [
-                (400, "/"), (400, "/bar"), (400, "/foo/bar"),
-                (404, "/"), (404, "/bar"), (404, "/foo/bar"),
-                (405, "/"), (405, "/bar"), (406, "/foo/bar")
-            ],
-            with: [
-                (400, "/"), (400, "/"), (400, "/"),
-                (404, "/"), (404, "/"), (404, "/"),
-                (None, "/"), (None, "/"), (None, "/")
-            ]
-        }
-
-        // Check that we prefer longer prefixes over specific.
-        assert_catcher_routing! {
-            catch: [(None, "/a/b"), (404, "/a"), (422, "/a")],
-            reqs: [
-                (404, "/a/b"), (404, "/a/b/c"), (422, "/a/b/c"),
-                (404, "/a"), (404, "/a/c"), (404, "/a/cat/bar"),
-                (422, "/a"), (422, "/a/c"), (422, "/a/cat/bar")
-            ],
-            with: [
-                (None, "/a/b"), (None, "/a/b"), (None, "/a/b"),
-                (404, "/a"), (404, "/a"), (404, "/a"),
-                (422, "/a"), (422, "/a"), (422, "/a")
-            ]
-        }
-
-        // Just a fun one.
-        assert_catcher_routing! {
-            catch: [(None, "/"), (None, "/a/b"), (500, "/a/b/c"), (500, "/a/b")],
-            reqs: [(404, "/a/b/c"), (500, "/a/b"), (400, "/a/b/d"), (500, "/a/b/c/d?foo")],
-            with: [(None, "/a/b"), (500, "/a/b"), (None, "/a/b"), (500, "/a/b/c")]
-        }
+        assert!(
+            catches_any(&router, Status::BadRequest, "/", |_| None).unwrap().type_id().is_none()
+        );
+        assert!(
+            catches_any(&router, Status::BadRequest, "/", |_| Some(&()))
+                .unwrap()
+                .type_id()
+                .is_some()
+        );
     }
 }
