@@ -256,7 +256,7 @@ impl<'r> FromRequest<'r> for FlashMessage<'r> {
                 Ok(i) if i <= kv.len() => Ok(Flash::named(&kv[..i], &kv[i..], req)),
                 _ => Err(())
             }
-        }).or_error(Status::BadRequest)
+        }).or_forward(Status::BadRequest)
     }
 }
 
