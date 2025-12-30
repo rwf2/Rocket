@@ -28,6 +28,7 @@ sqlx_macros = ["sqlx/macros"]
 # diesel features
 diesel_postgres = ["diesel-async/postgres", "diesel-async/deadpool", "deadpool", "diesel"]
 diesel_mysql = ["diesel-async/mysql", "diesel-async/deadpool", "deadpool", "diesel"]
+diesel_sqlite = ["diesel-async/sqlite", "diesel-async/deadpool", "deadpool", "diesel"]
 # implicit features: mongodb
 
 [dependencies.rocket]
