@@ -50,7 +50,7 @@
 //! ```rust
 //! # use rocket::post;
 //! # type S = Option<String>;
-//! # type E = std::convert::Infallible;
+//! # type E = std::io::Error;
 //! #[post("/", data = "<my_val>")]
 //! fn hello(my_val: Result<S, E>) { /* ... */ }
 //! ```

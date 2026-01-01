@@ -11,13 +11,13 @@ fn set() -> Flash<&'static str> {
 }
 
 #[get("/unused")]
-fn unused(flash: Option<FlashMessage<'_>>) -> Option<()> {
-    flash.map(|_| ())
+fn unused(flash: Result<FlashMessage<'_>, ()>) -> Option<()> {
+    flash.ok().map(|_| ())
 }
 
 #[get("/use")]
-fn used(flash: Option<FlashMessage<'_>>) -> Option<String> {
-    flash.map(|f| f.message().into())
+fn used(flash: Result<FlashMessage<'_>, ()>) -> Option<String> {
+    flash.ok().map(|f| f.message().into())
 }
 
 mod flash_lazy_remove_tests {

@@ -626,18 +626,20 @@ For example, given the following route:
 ```rust
 # #[macro_use] extern crate rocket;
 # fn main() {}
+# use std::num::ParseIntError;
 
 #[get("/<id>/<name>?<age>")]
-fn person(id: Option<usize>, name: &str, age: Option<u8>) { /* .. */ }
+fn person(id: Result<usize, ParseIntError>, name: &str, age: Option<u8>) { /* .. */ }
 ```
 
 URIs to `person` can be created as follows:
 
 ```rust
 # #[macro_use] extern crate rocket;
+# use std::num::ParseIntError;
 
 # #[get("/<id>/<name>?<age>")]
-# fn person(id: Option<usize>, name: &str, age: Option<u8>) { /* .. */ }
+# fn person(id: Result<usize, ParseIntError>, name: &str, age: Option<u8>) { /* .. */ }
 
 // with unnamed parameters, in route path declaration order
 let mike = uri!(person(101, "Mike Smith", Some(28)));
@@ -765,9 +767,10 @@ generated.
 
 ```rust
 # #[macro_use] extern crate rocket;
+# use std::num::ParseIntError;
 
 #[get("/<id>/<name>?<age>")]
-fn person(id: Option<usize>, name: &str, age: Option<u8>) { /* .. */ }
+fn person(id: Result<usize, ParseIntError>, name: &str, age: Option<u8>) { /* .. */ }
 
 // Note that `id` is `Option<usize>` in the route, but `id` in `uri!` _cannot_
 // be an `Option`. `age`, on the other hand, _must_ be an `Option` (or `Result`

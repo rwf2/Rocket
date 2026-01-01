@@ -106,7 +106,7 @@ use crate::http::uncased::AsUncased;
 /// |------------------------|-------------|-------------------|--------|--------|----------------------------------------------------|
 /// | [`Strict<T>`]          | **strict**  | if `strict` `T`   | if `T` | if `T` | `T: FromForm`                                      |
 /// | [`Lenient<T>`]         | **lenient** | if `lenient` `T`  | if `T` | if `T` | `T: FromForm`                                      |
-/// | `Option<T>`            | **strict**  | `None`            | if `T` | if `T` | Infallible, `T: FromForm`                          |
+/// | `Option<T>`            | **strict**  | `None`            | if `T` | if `T` | `T: FromForm`                          |
 /// | [`Result<T>`]          | _inherit_   | `T::finalize()`   | if `T` | if `T` | Infallible, `T: FromForm`                          |
 /// | `Vec<T>`               | _inherit_   | `vec![]`          | if `T` | if `T` | `T: FromForm`                                      |
 /// | [`HashMap<K, V>`]      | _inherit_   | `HashMap::new()`  | if `V` | if `V` | `K: FromForm + Eq + Hash`, `V: FromForm`           |
@@ -150,6 +150,12 @@ use crate::http::uncased::AsUncased;
 /// [`RangeToInclusive<T>`]: https://doc.rust-lang.org/stable/std/ops/struct.RangeToInclusive.html
 ///
 /// ## Additional Notes
+///
+///   * **`Option<T>` where `T: FromForm`**
+///
+///     `Option` is no longer Infallible. It now checks (depending on the strictness)
+///     for whether any values were passed in, and returns an error if any values were passed in,
+///     and the inner `T` failed to parse.
 ///
 ///   * **`Vec<T>` where `T: FromForm`**
 ///
@@ -814,24 +820,51 @@ impl<'v, K, V> FromForm<'v> for BTreeMap<K, V>
     }
 }
 
+pub struct OptionFormCtx<'v, T: FromForm<'v>> {
+    strict: bool,
+    has_field: bool,
+    inner: T::Context,
+}
+
 #[crate::async_trait]
 impl<'v, T: FromForm<'v>> FromForm<'v> for Option<T> {
-    type Context = <T as FromForm<'v>>::Context;
+    type Context = OptionFormCtx<'v, T>;
 
-    fn init(_: Options) -> Self::Context {
-        T::init(Options { strict: true })
+    fn init(opts: Options) -> Self::Context {
+        OptionFormCtx {
+            strict: opts.strict,
+            has_field: false,
+            inner: T::init(Options { strict: true }),
+        }
     }
 
     fn push_value(ctxt: &mut Self::Context, field: ValueField<'v>) {
-        T::push_value(ctxt, field)
+        ctxt.has_field = true;
+        T::push_value(&mut ctxt.inner, field)
     }
 
     async fn push_data(ctxt: &mut Self::Context, field: DataField<'v, '_>) {
-        T::push_data(ctxt, field).await
+        ctxt.has_field = true;
+        T::push_data(&mut ctxt.inner, field).await
     }
 
     fn finalize(this: Self::Context) -> Result<'v, Self> {
-        Ok(T::finalize(this).ok())
+        if this.has_field {
+            match T::finalize(this.inner) {
+                Ok(v) => Ok(Some(v)),
+                Err(errors) => {
+                    if this.strict ||
+                        errors.iter().any(|e| e.kind != ErrorKind::Missing)
+                    {
+                        Err(errors)
+                    } else {
+                        Ok(None)
+                    }
+                }
+            }
+        } else {
+            Ok(None)
+        }
     }
 }
 

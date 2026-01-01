@@ -84,8 +84,7 @@ pub type Outcome<S, E> = outcome::Outcome<S, (Status, E), Status>;
 ///   If the `Outcome` is [`Error`], the request will fail with the given
 ///   status code and error. The designated error [`Catcher`](crate::Catcher)
 ///   will be used to respond to the request. Note that users can request types
-///   of `Result<S, E>` and `Option<S>` to catch `Error`s and retrieve the
-///   error value.
+///   of `Result<S, E>` to catch `Error`s and retrieve the error value.
 ///
 /// * **Forward**(Status)
 ///
@@ -177,9 +176,9 @@ pub type Outcome<S, E> = outcome::Outcome<S, (Status, E), Status>;
 ///
 ///     The type `T` is derived from the incoming request using `T`'s
 ///     `FromRequest` implementation. If the derivation is a `Success`, the
-///     derived value is returned in `Some`. Otherwise, a `None` is returned.
-///
-///     _This implementation always returns successfully._
+///     derived value is returned in `Some`. If the derivation is a `Forward`,
+///     the result is `None`, and if the derivation is an `Error`, the `Error`
+///     is preserved.
 ///
 ///   * **Result&lt;T, T::Error>** _where_ **T: FromRequest**
 ///
@@ -188,6 +187,14 @@ pub type Outcome<S, E> = outcome::Outcome<S, (Status, E), Status>;
 ///     returned in `Ok`. If the derivation is an `Error`, the error value is
 ///     returned in `Err`. If the derivation is a `Forward`, the request is
 ///     forwarded with the same status code as the original forward.
+///
+///   * **Outcome&lt;T, T::Error>** _where_ **T: FromRequest**
+///
+///     The type `T` is derived from the incoming request using `T`'s
+///     `FromRequest` implementation. The `Outcome` is then provided to the handler,
+///     reguardless of what it returned.
+///
+///     _This guard **always** succeeds_
 ///
 /// [`Config`]: crate::config::Config
 ///
@@ -521,12 +528,13 @@ impl<'r, T: FromRequest<'r>> FromRequest<'r> for Result<T, T::Error> {
 
 #[crate::async_trait]
 impl<'r, T: FromRequest<'r>> FromRequest<'r> for Option<T> {
-    type Error = Infallible;
+    type Error = T::Error;
 
-    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Infallible> {
+    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
         match T::from_request(request).await {
             Success(val) => Success(Some(val)),
-            Error(_) | Forward(_) => Success(None),
+            Forward(_) => Success(None),
+            Error(e) => Error(e)
         }
     }
 }

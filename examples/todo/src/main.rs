@@ -86,8 +86,8 @@ async fn delete(id: i32, conn: DbConn) -> Result<Flash<Redirect>, Template> {
 }
 
 #[get("/")]
-async fn index(flash: Option<FlashMessage<'_>>, conn: DbConn) -> Template {
-    let flash = flash.map(FlashMessage::into_inner);
+async fn index(flash: Result<FlashMessage<'_>, ()>, conn: DbConn) -> Template {
+    let flash = flash.ok().map(FlashMessage::into_inner);
     Template::render("index", Context::raw(&conn, flash).await)
 }
 

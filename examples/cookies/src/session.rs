@@ -53,8 +53,8 @@ fn login(_user: User) -> Redirect {
 }
 
 #[get("/login", rank = 2)]
-fn login_page(flash: Option<FlashMessage<'_>>) -> Template {
-    Template::render("login", flash)
+fn login_page(flash: Result<FlashMessage<'_>, ()>) -> Template {
+    Template::render("login", flash.ok())
 }
 
 #[post("/login", data = "<login>")]

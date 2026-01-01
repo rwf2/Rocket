@@ -304,7 +304,7 @@ will be routed as follows:
   You'll also find a route's rank logged in brackets during application launch:
   `GET /user/<id> [3] (user_str)`.
 
-Forwards can be _caught_ by using a `Result` or `Option` type. For example, if
+Forwards can be _caught_ by using a `Option` type. For example, if
 the type of `id` in the `user` function was `Result<usize, &str>`, then `user`
 would never forward. An `Ok` variant would indicate that `<id>` was a valid
 `usize`, while an `Err` would indicate that `<id>` was not a `usize`. The
@@ -313,7 +313,7 @@ would never forward. An `Ok` variant would indicate that `<id>` was a valid
 ! tip: It's not just forwards that can be caught!
 
   In general, when any guard fails for any reason, including parameter guards,
-  you can use an `Option` or `Result` type in its place to catch the error.
+  you can use a `Result` type in its place to catch the error.
 
 By the way, if you were to omit the `rank` parameter in the `user_str` or
 `user_int` routes, Rocket would emit an error and abort launch, indicating that
@@ -545,8 +545,7 @@ it always succeeds. The user is redirected to a log in page.
 ### Fallible Guards
 
 A failing or forwarding guard can be "caught" in handler, preventing it from
-failing or forwarding, via the `Option<T>` and `Result<T, E>` guards. When a
-guard `T` fails or forwards, `Option<T>` will be `None`. If a guard `T` fails
+failing or forwarding, via `Result<T, E>` guards. If a guard `T` fails
 with error `E`, `Result<T, E>` will be `Err(E)`.
 
 As an example, for the `User` guard above, instead of allowing the guard to
@@ -572,7 +571,7 @@ fn admin_panel_user(user: Option<User>) -> Result<&'static str, Redirect> {
 }
 ```
 
-If the `User` guard forwards or fails, the `Option` will be `None`. If it
+If the `User` guard forwards, the `Option` will be `None`. If it
 succeeds, it will be `Some(User)`.
 
 For guards that may fail (and not just forward), the `Result<T, E>` guard allows
@@ -932,14 +931,14 @@ If a `POST /todo` request arrives, the form data will automatically be parsed
 into the `Task` structure. If the data that arrives isn't of the correct
 Content-Type, the request is forwarded. If the data doesn't parse or is simply
 invalid, a customizable error is returned. As before, a forward or error can
-be caught by using the `Option` and `Result` types:
+be caught by using the `Result` types:
 
 ```rust
-# use rocket::{post, form::Form};
+# use rocket::{post, form::{Form, Errors}};
 # type Task<'r> = &'r str;
 
 #[post("/todo", data = "<task>")]
-fn new(task: Option<Form<Task<'_>>>) { /* .. */ }
+fn new(task: Result<Form<Task<'_>>, Errors<'_>>) { /* .. */ }
 ```
 
 ### Multipart
