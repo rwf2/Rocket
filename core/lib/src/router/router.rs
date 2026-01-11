@@ -6,6 +6,8 @@ use crate::http::{Method, Status};
 use crate::{Route, Catcher};
 use crate::router::Collide;
 
+use super::matcher::{paths_match, queries_match, formats_match};
+
 #[derive(Debug)]
 pub(crate) struct Router<T>(T);
 
@@ -102,6 +104,38 @@ impl Router<Finalized> {
             .into_iter()
             .flat_map(move |routes| routes.iter().map(move |&i| &self.routes[i]))
             .filter(move |r| r.matches(req))
+    }
+
+    pub(crate) fn matches_except_formats<'r, 'a: 'r>(
+        &'a self,
+        req: &'r Request<'r>
+    ) -> bool {
+        self.route_map.get(&req.method())
+            .into_iter()
+            .flatten()
+            .any(|&route|
+                paths_match(&self.routes[route], req)
+                &&
+                queries_match(&self.routes[route], req)
+                &&
+                !formats_match(&self.routes[route], req))
+    }
+
+    const ALL_METHODS: &'static [Method] = &[
+        Method::Get, Method::Put, Method::Post, Method::Delete, Method::Options,
+        Method::Head, Method::Trace, Method::Connect, Method::Patch,
+    ];
+
+    pub(crate) fn matches_except_method<'r, 'a: 'r>(
+        &'a self,
+        req: &'r Request<'r>
+    ) -> bool {
+        Self::ALL_METHODS
+            .iter()
+            .filter(|method| *method != &req.method())
+            .filter_map(|method| self.route_map.get(method))
+            .flatten()
+            .any(|route| paths_match(&self.routes[*route], req))
     }
 
     // For many catchers, using aho-corasick or similar should be much faster.
@@ -394,6 +428,25 @@ mod test {
         let router = router_with_routes(&["/prefix/<a..>"]);
         assert!(route(&router, Get, "/").is_none());
         assert!(route(&router, Get, "/prefi/").is_none());
+    }
+
+    fn has_mismatched_method<'a>(
+        router: &'a Router<Finalized>,
+        method: Method, uri: &'a str
+    ) -> bool {
+        let client = Client::debug_with(vec![]).expect("client");
+        let request = client.req(method, Origin::parse(uri).unwrap());
+        router.matches_except_method(&request)
+    }
+
+    #[test]
+    fn test_bad_method_routing() {
+        let router = router_with_routes(&["/hello"]);
+        assert!(route(&router, Put, "/hello").is_none());
+        assert!(has_mismatched_method(&router, Put, "/hello"));
+        assert!(has_mismatched_method(&router, Post, "/hello"));
+
+        assert!(! has_mismatched_method(&router, Get, "/hello"));
     }
 
     /// Asserts that `$to` routes to `$want` given `$routes` are present.

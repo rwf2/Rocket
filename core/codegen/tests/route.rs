@@ -105,7 +105,7 @@ fn test_full_route() {
     assert_eq!(response.status(), Status::NotFound);
 
     let response = client.post(format!("/1{}", uri)).body(simple).dispatch();
-    assert_eq!(response.status(), Status::NotFound);
+    assert_eq!(response.status(), Status::UnsupportedMediaType);
 
     let response = client
         .post(format!("/1{}", uri))
@@ -117,7 +117,7 @@ fn test_full_route() {
             sky, name.percent_decode().unwrap(), "A A", "inside", path, simple, expected_uri));
 
     let response = client.post(format!("/2{}", uri)).body(simple).dispatch();
-    assert_eq!(response.status(), Status::NotFound);
+    assert_eq!(response.status(), Status::UnsupportedMediaType);
 
     let response = client
         .post(format!("/2{}", uri))
