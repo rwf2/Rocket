@@ -571,7 +571,7 @@ pub fn launch(args: TokenStream, input: TokenStream) -> TokenStream {
 ///
 /// The attribute accepts a single string parameter of name `value`
 /// corresponding to the string to use to match against for the decorated
-/// variant. In the example above, the the strings `"fourth"`, `"FOUrth"`,
+/// variant. In the example above, the strings `"fourth"`, `"FOUrth"`,
 /// `"fiFTH"` and so on would parse as `MyValue::Third`.
 ///
 /// [`FromFormField`]: ../rocket/form/trait.FromFormField.html
