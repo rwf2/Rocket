@@ -25,7 +25,7 @@ pub fn complete<I, P, O>(input: &mut Pear<I>, p: P) -> input::Result<O, I>
     (p()?, eof()?).0
 }
 
-/// TODO: Have a way to ask for for preference in ambiguity resolution.
+/// TODO: Have a way to ask for preference in ambiguity resolution.
 ///   * An ordered [Preference] is probably best.
 ///   * Need to filter/uniqueify. See `uri-pref`.
 /// Once we have this, we should probably set the default so that `authority` is

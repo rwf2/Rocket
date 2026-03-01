@@ -571,7 +571,7 @@ pub fn launch(args: TokenStream, input: TokenStream) -> TokenStream {
 ///
 /// The attribute accepts a single string parameter of name `value`
 /// corresponding to the string to use to match against for the decorated
-/// variant. In the example above, the the strings `"fourth"`, `"FOUrth"`,
+/// variant. In the example above, the strings `"fourth"`, `"FOUrth"`,
 /// `"fiFTH"` and so on would parse as `MyValue::Third`.
 ///
 /// [`FromFormField`]: ../rocket/form/trait.FromFormField.html
@@ -1403,7 +1403,7 @@ pub fn catchers(input: TokenStream) -> TokenStream {
 ///
 /// ## Prefixes and Suffixes
 ///
-/// A route URI can be be optionally prefixed and/or suffixed by a URI generated
+/// A route URI can be optionally prefixed and/or suffixed by a URI generated
 /// from a string literal or an arbitrary expression. This takes the form
 /// `uri!(prefix, foo(v1, v2, v3), suffix)`, where both `prefix` and `suffix`
 /// are optional, and either `prefix` or `suffix` may be `_` to specify the

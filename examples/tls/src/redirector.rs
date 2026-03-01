@@ -36,7 +36,7 @@ impl Redirector {
         Redirector(port)
     }
 
-    // Launch an instance of Rocket than handles redirection on `self.port`.
+    // Launch an instance of Rocket that handles redirection on `self.port`.
     pub async fn try_launch(self, config: Config) -> Result<Rocket<Ignite>, Error> {
         rocket::span_info!("HTTP -> HTTPS Redirector" => {
             info!(from = self.0, to = config.tls_addr.port(),  "redirecting");
