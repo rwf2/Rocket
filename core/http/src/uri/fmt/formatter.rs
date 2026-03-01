@@ -329,7 +329,7 @@ impl Formatter<'_, Query> {
                 // by recursive (nested) calls to `write_raw`. The string is
                 // pushed in `PrefixGuard` here and then popped in `Drop`.
                 // `prefixes` is modified nowhere else, and no concrete-lifetime
-                // strings leak from the the vector. As a result, it is
+                // strings leak from the vector. As a result, it is
                 // impossible for a `prefix` to be accessed incorrectly as:
                 //
                 //   * Rust _guarantees_ `prefix` is valid for this method

@@ -101,7 +101,7 @@ use self::Outcome::*;
 pub enum Outcome<S, E, F> {
     /// Contains the success value.
     Success(S),
-    /// Contains the error error value.
+    /// Contains the error value.
     Error(E),
     /// Contains the value to forward on.
     Forward(F),

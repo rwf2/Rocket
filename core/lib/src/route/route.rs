@@ -259,7 +259,7 @@ impl Route {
 
     /// Prefix `base` to any existing mount point base in `self`.
     ///
-    /// If the the current mount point base is `/`, then the base is replaced by
+    /// If the current mount point base is `/`, then the base is replaced by
     /// `base`. Otherwise, `base` is prefixed to the existing `base`.
     ///
     /// Panics if `base` is not a valid route URI without dynamic parameters.
