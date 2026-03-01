@@ -115,7 +115,7 @@ jobs:
         with:
           key: ${{ matrix.test.name }}-${{ steps.toolchain.outputs.cachekey }}
 
-      # Don't run out of disk space on Windows. C: has much much space than D:.
+      # Don't run out of disk space on Windows. C: has much more space than D:.
       - name: Switch Disk (Windows)
         if: matrix.platform.name == 'Windows'
         run: |
