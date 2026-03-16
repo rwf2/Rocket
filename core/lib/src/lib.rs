@@ -148,6 +148,7 @@ pub mod fs;
 pub mod http;
 pub mod listener;
 pub mod shutdown;
+pub mod prelude;
 #[cfg(feature = "tls")]
 #[cfg_attr(nightly, doc(cfg(feature = "tls")))]
 pub mod tls;
