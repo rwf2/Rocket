@@ -317,22 +317,26 @@ enabled and support configured via the `tls.mutual` config parameter:
 
    This implicitly enables the `tls` feature.
 
-  2. Configure a CA certificate chain via the `tls.mutual.ca_certs`
+  2. Configure CA certificates via the `tls.mutual.ca_certs`
      configuration parameter. With the default provider, this can be done via
      `Rocket.toml` as:
 
    ```toml,ignore
    [default.tls.mutual]
-   ca_certs = "path/to/ca_certs.pem" # Path or bytes to DER-encoded X.509 TLS cert chain.
+   ca_certs = "path/to/ca_certs.pem" # Path or bytes to CA certificates.
    mandatory = true                  # when absent, defaults to false
    ```
+
+   When configured as a file, `ca_certs` may point to a PEM bundle containing
+   one or more CA chains. Concatenating multiple CA chains into a single bundle
+   is supported.
 
 The `tls.mutual` parameter is expected to be a dictionary that deserializes into a
 [`MutualTls`] structure:
 
 | key         | required  | type                                                        |
 |-------------|-----------|-------------------------------------------------------------|
-| `ca_certs`  | **_yes_** | Path or bytes to DER-encoded X.509 TLS cert chain.          |
+| `ca_certs`  | **_yes_** | Path or bytes to CA certificates.                           |
 | `mandatory` | no        | Boolean controlling whether the client _must_ authenticate. |
 
 [`MtlsConfig`]: @api/master/rocket/mtls/struct.MtlsConfig.html
