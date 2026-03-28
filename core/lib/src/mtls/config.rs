@@ -17,11 +17,11 @@ use crate::tls::{Result, Error};
 ///
 ///   * `ca_certs`
 ///
-///     A required path to a PEM file or raw bytes to a DER-encoded X.509 TLS
-///     certificate chain for the certificate authority to verify client
-///     certificates against. When a path is configured in a file, such as
-///     `Rocket.toml`, relative paths are interpreted as relative to the source
-///     file's directory.
+///     A required path to a PEM file or bundle, or raw bytes containing
+///     certificate authority certificates for verifying client certificates.
+///     When a path is configured in a file, such as `Rocket.toml`, relative
+///     paths are interpreted as relative to the source file's directory. PEM
+///     bundles may contain concatenated CA chains.
 ///
 ///   * `mandatory`
 ///
@@ -60,9 +60,9 @@ use crate::tls::{Result, Error};
 /// request guard can be used to retrieve client certificates in routes.
 #[derive(PartialEq, Debug, Clone, Deserialize, Serialize)]
 pub struct MtlsConfig {
-    /// Path to a PEM file with, or raw bytes for, DER-encoded Certificate
-    /// Authority certificates which will be used to verify client-presented
-    /// certificates.
+    /// Path to a PEM file or bundle with, or raw bytes containing,
+    /// Certificate Authority certificates which will be used to verify
+    /// client-presented certificates.
     // TODO: Support more than one CA root.
     pub(crate) ca_certs: Either<RelativePathBuf, Vec<u8>>,
     /// Whether the client is required to present a certificate.
@@ -77,10 +77,10 @@ pub struct MtlsConfig {
 }
 
 impl MtlsConfig {
-    /// Constructs a `MtlsConfig` from a path to a PEM file with a certificate
-    /// authority `ca_certs` DER-encoded X.509 TLS certificate chain. This
-    /// method does no validation; it simply creates an [`MtlsConfig`] for later
-    /// use.
+    /// Constructs a `MtlsConfig` from a path to a PEM file or bundle with
+    /// certificate authority certificates. The file may contain concatenated
+    /// CA chains. This method does no validation; it simply creates an
+    /// [`MtlsConfig`] for later use.
     ///
     /// These certificates will be used to verify client-presented certificates
     /// in TLS connections.
@@ -99,9 +99,9 @@ impl MtlsConfig {
         }
     }
 
-    /// Constructs a `MtlsConfig` from a byte buffer to a certificate authority
-    /// `ca_certs` DER-encoded X.509 TLS certificate chain. This method does no
-    /// validation; it simply creates an [`MtlsConfig`] for later use.
+    /// Constructs a `MtlsConfig` from a byte buffer containing certificate
+    /// authority certificates. This method does no validation; it simply
+    /// creates an [`MtlsConfig`] for later use.
     ///
     /// These certificates will be used to verify client-presented certificates
     /// in TLS connections.
