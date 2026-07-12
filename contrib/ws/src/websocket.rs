@@ -134,7 +134,7 @@ impl WebSocket {
     /// # use rocket_ws as ws;
     ///
     /// // Use `Stream!`, which internally calls `WebSocket::stream()`.
-    /// #[get("/echo?stream")]
+    /// #[get("/echo/stream")]
     /// fn echo_stream(ws: ws::WebSocket) -> ws::Stream!['static] {
     ///     ws::Stream! { ws =>
     ///         for await message in ws {
@@ -144,7 +144,7 @@ impl WebSocket {
     /// }
     ///
     /// // Use a raw stream.
-    /// #[get("/echo?compose")]
+    /// #[get("/echo/compose")]
     /// fn echo_compose(ws: ws::WebSocket) -> ws::Stream!['static] {
     ///     ws.stream(|io| io)
     /// }
