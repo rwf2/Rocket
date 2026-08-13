@@ -103,7 +103,7 @@
 //! Drivers have a varying degree of support for graceful shutdown, affected by
 //! the `Type::init()` fairing on Rocket shutdown.
 //!
-//! ## `deadpool` (v0.12)
+//! ## `deadpool` (v0.13)
 //!
 //! | Database | Feature                     | [`Pool`] Type               | [`Connection`] Deref                 |
 //! |----------|-----------------------------|-----------------------------|--------------------------------------|

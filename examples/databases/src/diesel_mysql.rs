@@ -37,7 +37,7 @@ diesel::table! {
 async fn create(mut db: Connection<Db>, mut post: Json<Post>) -> Result<Created<Json<Post>>> {
     diesel::define_sql_function!(fn last_insert_id() -> BigInt);
 
-    let post = db.transaction(|mut conn| Box::pin(async move {
+    let post = db.transaction(async |mut conn| {
         diesel::insert_into(posts::table)
             .values(&*post)
             .execute(&mut conn)
@@ -49,7 +49,7 @@ async fn create(mut db: Connection<Db>, mut post: Json<Post>) -> Result<Created<
             .await?);
 
         Ok::<_, diesel::result::Error>(post)
-    })).await?;
+    }).await?;
 
     Ok(Created::new("/").body(post))
 }

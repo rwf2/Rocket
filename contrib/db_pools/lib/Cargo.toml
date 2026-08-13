@@ -41,7 +41,7 @@ path = "../codegen"
 version = "0.1.0"
 
 [dependencies.deadpool]
-version = "0.12.1"
+version = "0.13.1"
 default-features = false
 features = ["rt_tokio_1", "managed"]
 optional = true
@@ -65,13 +65,13 @@ features = ["compat-3-0-0", "rustls-tls"]
 optional = true
 
 [dependencies.diesel-async]
-version = "0.6.0"
+version = "0.9.2"
 default-features = false
 features = ["async-connection-wrapper"]
 optional = true
 
 [dependencies.diesel]
-version = "2.1"
+version = "2.3.12"
 default-features = false
 optional = true
 
