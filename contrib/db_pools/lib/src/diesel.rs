@@ -95,6 +95,10 @@ pub use diesel_async::AsyncMysqlConnection;
 #[cfg(feature = "diesel_postgres")]
 pub use diesel_async::AsyncPgConnection;
 
+#[doc(inline)]
+#[cfg(feature = "diesel_sqlite")]
+pub use diesel_async::sync_connection_wrapper::SyncConnectionWrapper;
+
 /// Alias of a `Result` with an error type of [`Debug`] for a `diesel::Error`.
 ///
 /// `QueryResult` is a [`Responder`](rocket::response::Responder) when `T` (the
@@ -150,3 +154,25 @@ pub type MysqlPool = Pool<AsyncMysqlConnection>;
 /// ```
 #[cfg(feature = "diesel_postgres")]
 pub type PgPool = Pool<AsyncPgConnection>;
+
+/// Type alias for an `async` pool of Sqlite connections for `async` [diesel].
+///
+/// ```rust
+/// # extern crate rocket;
+/// # #[cfg(feature = "diesel_sqlite")] {
+/// # use rocket::get;
+/// use rocket_db_pools::{Database, Connection};
+/// use rocket_db_pools::diesel::{SqlitePool, prelude::*};
+///
+/// #[derive(Database)]
+/// #[database("my_sqlite_db_name")]
+/// struct Db(SqlitePool);
+///
+/// #[get("/")]
+/// async fn use_db(mut db: Connection<Db>) {
+///     /* .. */
+/// }
+/// # }
+/// ```
+#[cfg(feature = "diesel_sqlite")]
+pub type SqlitePool = Pool<SyncConnectionWrapper<SqliteConnection>>;
