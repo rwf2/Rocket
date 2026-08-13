@@ -28,6 +28,7 @@ sqlx_macros = ["sqlx/macros"]
 # diesel features
 diesel_postgres = ["diesel-async/postgres", "diesel-async/deadpool", "deadpool", "diesel"]
 diesel_mysql = ["diesel-async/mysql", "diesel-async/deadpool", "deadpool", "diesel"]
+diesel_sqlite = ["diesel-async/sqlite", "diesel-async/deadpool", "deadpool", "diesel"]
 # implicit features: mongodb
 
 [dependencies.rocket]
@@ -40,7 +41,7 @@ path = "../codegen"
 version = "0.1.0"
 
 [dependencies.deadpool]
-version = "0.12.1"
+version = "0.13"
 default-features = false
 features = ["rt_tokio_1", "managed"]
 optional = true
@@ -64,13 +65,13 @@ features = ["compat-3-0-0", "rustls-tls"]
 optional = true
 
 [dependencies.diesel-async]
-version = "0.6.0"
+version = "0.9.2"
 default-features = false
 features = ["async-connection-wrapper"]
 optional = true
 
 [dependencies.diesel]
-version = "2.1"
+version = "2.3.12"
 default-features = false
 optional = true
 
