@@ -323,8 +323,8 @@ environment, we provide only the following general guidelines:
 
   * **Enable debug logging if the application misbehaves.**
 
-    The default log level in `--release` (the release profile) is `critical`.
+    The default log level in `--release` (the release profile) is `error`.
     This level may omit messages helpful in understanding application
-    misbehavior. To reenable those messages, set `ROCKET_LOG_LEVEL=debug`.
+    misbehavior. To enable all messages, set `ROCKET_LOG_LEVEL=debug`.
 
 [configuration profile]: ../configuration/#profiles

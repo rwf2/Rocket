@@ -92,7 +92,7 @@ run`. You should see the following:
    >> limits: [..]
    >> tls: disabled
    >> temp dir: /tmp
-   >> log level: normal
+   >> log level: info
    >> cli colors: true
 🛰  Routes:
    >> (index) GET /
