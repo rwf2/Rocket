@@ -1,7 +1,10 @@
-use std::path::Path;
+use std::{fs, path::Path};
 use std::error::Error;
 
+#[cfg(feature = "tera")]
 use tera::{Context, Tera};
+#[cfg(feature = "tera2")]
+use tera2::{Context, Tera};
 use rocket::serde::Serialize;
 
 use crate::engine::Engine;
@@ -36,12 +39,14 @@ impl Engine for Tera {
     }
 
     fn render<C: Serialize>(&self, template: &str, context: C) -> Option<String> {
+        // We only need this block for tera v1
+        #[cfg(feature = "tera")]
         if self.get_template(template).is_err() {
             error!(template, "requested template does not exist");
             return None;
         };
 
-        let tera_ctx = Context::from_serialize(context)
+        let tera_ctx = Context::from_serialize(&context)
             .map_err(|e| error!("Tera context error: {}.", e))
             .ok()?;
 

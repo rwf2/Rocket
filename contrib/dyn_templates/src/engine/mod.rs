@@ -5,10 +5,12 @@ use rocket::serde::Serialize;
 
 use crate::template::TemplateInfo;
 
-#[cfg(feature = "tera")]
+#[cfg(any(feature = "tera", feature = "tera2"))]
 mod tera;
 #[cfg(feature = "tera")]
 use ::tera::Tera;
+#[cfg(feature = "tera2")]
+use ::tera2::Tera;
 
 #[cfg(feature = "handlebars")]
 mod handlebars;
@@ -69,7 +71,7 @@ pub struct Engines {
     /// This field is only available when the `tera` feature is enabled. When
     /// calling methods on the `Tera` instance, ensure you use types imported
     /// from `rocket_dyn_templates::tera` to avoid version mismatches.
-    #[cfg(feature = "tera")]
+    #[cfg(any(feature = "tera", feature = "tera2"))]
     pub tera: Tera,
 
     /// The Handlebars templating engine.
@@ -93,7 +95,7 @@ pub struct Engines {
 
 impl Engines {
     pub(crate) const ENABLED_EXTENSIONS: &'static [&'static str] = &[
-        #[cfg(feature = "tera")] Tera::EXT,
+        #[cfg(any(feature = "tera", feature = "tera2"))] Tera::EXT,
         #[cfg(feature = "handlebars")] Handlebars::EXT,
         #[cfg(feature = "minijinja")] Environment::EXT,
     ];
@@ -109,7 +111,7 @@ impl Engines {
         }
 
         Some(Engines {
-            #[cfg(feature = "tera")]
+            #[cfg(any(feature = "tera", feature = "tera2"))]
             tera: match inner::<Tera>(templates) {
                 Some(tera) => tera,
                 None => return None
@@ -133,7 +135,7 @@ impl Engines {
         info: &TemplateInfo,
         context: C,
     ) -> Option<String> {
-        #[cfg(feature = "tera")] {
+        #[cfg(any(feature = "tera", feature = "tera2"))] {
             if info.engine_ext == Tera::EXT {
                 return Engine::render(&self.tera, name, context);
             }
@@ -156,7 +158,7 @@ impl Engines {
 
     /// Returns iterator over template (name, engine_extension).
     pub(crate) fn templates(&self) -> impl Iterator<Item = (&str, &'static str)> {
-        #[cfg(feature = "tera")]
+        #[cfg(any(feature = "tera", feature = "tera2"))]
         let tera = self.tera.get_template_names().map(|name| (name, Tera::EXT));
 
         #[cfg(feature = "handlebars")]
@@ -167,7 +169,7 @@ impl Engines {
         let minijinja = self.minijinja.templates()
             .map(|(name, _)| (name, Environment::EXT));
 
-        #[cfg(not(feature = "tera"))] let tera = std::iter::empty();
+        #[cfg(all(not(feature = "tera"), not(feature = "tera2")))] let tera = std::iter::empty();
         #[cfg(not(feature = "handlebars"))] let handlebars = std::iter::empty();
         #[cfg(not(feature = "minijinja"))] let minijinja = std::iter::empty();
 

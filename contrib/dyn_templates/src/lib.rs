@@ -180,12 +180,18 @@
 #![doc(html_favicon_url = "https://rocket.rs/images/favicon.ico")]
 #![doc(html_logo_url = "https://rocket.rs/images/logo-boxed.png")]
 
+#[cfg(all(feature = "tera", feature = "tera2"))]
+compile_error!("features \"tera\" and \"tera2\" are mutually exclusive — enable only one");
+
 #[macro_use] extern crate rocket;
 
 #[doc(inline)]
 #[cfg(feature = "tera")]
 /// The tera templating engine library, reexported.
 pub use tera;
+
+#[cfg(feature = "tera2")]
+pub use tera2 as tera;
 
 #[doc(inline)]
 #[cfg(feature = "handlebars")]
