@@ -180,8 +180,8 @@
 #![doc(html_favicon_url = "https://rocket.rs/images/favicon.ico")]
 #![doc(html_logo_url = "https://rocket.rs/images/logo-boxed.png")]
 
-#[cfg(all(feature = "v1", feature = "v2"))]
-compile_error!("features \"v1\" and \"v2\" are mutually exclusive — enable only one");
+#[cfg(all(feature = "tera", feature = "tera2"))]
+compile_error!("features \"tera\" and \"tera2\" are mutually exclusive — enable only one");
 
 #[macro_use] extern crate rocket;
 
