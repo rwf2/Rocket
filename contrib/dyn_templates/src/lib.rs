@@ -187,6 +187,9 @@
 /// The tera templating engine library, reexported.
 pub use tera;
 
+#[cfg(feature = "tera2")]
+pub use tera2 as tera;
+
 #[doc(inline)]
 #[cfg(feature = "handlebars")]
 /// The handlebars templating engine library, reexported.
