@@ -317,6 +317,40 @@ macro_rules! pub_request_impl {
         self.header(crate::http::ContentType::JSON).body(json)
     }
 
+    /// Sets the body to `value` serialized as XML with `Content-Type`
+    /// [`ContentType::XML`](crate::http::ContentType::XML).
+    ///
+    /// If `value` fails to serialize, the body is set to empty. The
+    /// `Content-Type` header is _always_ set.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    #[doc = $import]
+    /// use rocket::serde::Serialize;
+    /// use rocket::http::ContentType;
+    ///
+    /// #[derive(Serialize)]
+    /// struct Task {
+    ///     id: usize,
+    ///     complete: bool,
+    /// }
+    ///
+    /// # Client::_test(|_, request, _| {
+    /// let task = Task { id: 10, complete: false };
+    ///
+    /// let request: LocalRequest = request;
+    /// let req = request.xml(&task);
+    /// assert_eq!(req.content_type(), Some(&ContentType::XML));
+    /// # });
+    /// ```
+    #[cfg(feature = "xml")]
+    #[cfg_attr(nightly, doc(cfg(feature = "xml")))]
+    pub fn xml<T: crate::serde::Serialize>(self, value: &T) -> Self {
+        let xml = quick_xml::se::to_string(value).unwrap_or_default();
+        self.header(crate::http::ContentType::XML).body(xml)
+    }
+
     /// Sets the body to `value` serialized as MessagePack with `Content-Type`
     /// [`ContentType::MsgPack`](crate::http::ContentType::MsgPack).
     ///

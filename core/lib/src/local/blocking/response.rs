@@ -78,6 +78,13 @@ impl LocalResponse<'_> {
         serde_json::from_reader(self).ok()
     }
 
+    #[cfg(feature = "xml")]
+    fn _into_xml<T: Send + 'static>(self) -> Option<T>
+        where T: serde::de::DeserializeOwned
+    {
+        quick_xml::de::from_reader(io::BufReader::new(self)).ok()
+    }
+
     #[cfg(feature = "msgpack")]
     fn _into_msgpack<T: Send + 'static>(self) -> Option<T>
         where T: serde::de::DeserializeOwned

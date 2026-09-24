@@ -144,6 +144,42 @@ macro_rules! pub_response_impl {
         self._into_json() $(.$suffix)?
     }
 
+    /// Consumes `self` and deserializes its body as XML without buffering in
+    /// memory.
+    ///
+    /// If deserialization fails or the body is unset in the response, returns
+    /// `None`. Otherwise, returns `Some`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    #[doc = $doc_prelude]
+    /// use rocket::serde::Deserialize;
+    ///
+    /// #[derive(Deserialize)]
+    /// struct Task {
+    ///     id: usize,
+    ///     complete: bool,
+    ///     text: String,
+    /// }
+    ///
+    /// # Client::_test(|_, _, response| {
+    /// let response: LocalResponse = response;
+    /// let task = response.into_xml::<Task>();
+    /// # });
+    /// ```
+    #[cfg(feature = "xml")]
+    #[cfg_attr(nightly, doc(cfg(feature = "xml")))]
+    pub $($prefix)? fn into_xml<T>(self) -> Option<T>
+        where T: Send + serde::de::DeserializeOwned + 'static
+    {
+        if self._response().body().is_none() {
+            return None;
+        }
+
+        self._into_xml() $(.$suffix)?
+    }
+
     /// Consumes `self` and deserializes its body as MessagePack without
     /// buffering in memory.
     ///
