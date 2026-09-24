@@ -83,6 +83,7 @@ function test_contrib() {
     mongodb
     diesel_mysql
     diesel_postgres
+    diesel_sqlite
   )
 
   SYNC_DB_POOLS_FEATURES=(

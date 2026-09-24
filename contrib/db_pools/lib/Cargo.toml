@@ -53,7 +53,7 @@ features = ["rt_tokio_1"]
 optional = true
 
 [dependencies.deadpool-redis]
-version = "0.16"
+version = "0.23.1"
 default-features = false
 features = ["rt_tokio_1"]
 optional = true

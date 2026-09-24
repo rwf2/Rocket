@@ -108,7 +108,7 @@
 //! | Database | Feature                     | [`Pool`] Type               | [`Connection`] Deref                 |
 //! |----------|-----------------------------|-----------------------------|--------------------------------------|
 //! | Postgres | `deadpool_postgres` (v0.14) | [`deadpool_postgres::Pool`] | [`deadpool_postgres::ClientWrapper`] |
-//! | Redis    | `deadpool_redis` (v0.16)    | [`deadpool_redis::Pool`]    | [`deadpool_redis::Connection`]       |
+//! | Redis    | `deadpool_redis` (v0.23)    | [`deadpool_redis::Pool`]    | [`deadpool_redis::Connection`]       |
 //!
 //! On shutdown, new connections are denied. Shutdown _does not_ wait for
 //! connections to be returned.
@@ -141,11 +141,11 @@
 //!
 //! ## `diesel` (v2)
 //!
-//! | Database | Feature           | [`Pool`] Type          | [`Connection`] Deref                                         |
-//! |----------|-------------------|------------------------|--------------------------------------------------------------|
-//! | Postgres | `diesel_postgres` | [`diesel::PgPool`]     | [`diesel::AsyncPgConnection`]                                |
-//! | MySQL    | `diesel_mysql`    | [`diesel::MysqlPool`]  | [`diesel::AsyncMysqlConnection`]                             |
-//! | SQLite   | `diesel_sqlite`   | [`diesel::SqlitePool`] | [`diesel::SyncConnectionWrapper<diesel::SqliteConnection>>`] |
+//! | Database | Feature           | [`Pool`] Type          | [`Connection`] Deref                                        |
+//! |----------|-------------------|------------------------|-------------------------------------------------------------|
+//! | Postgres | `diesel_postgres` | [`diesel::PgPool`]     | [`diesel::AsyncPgConnection`]                               |
+//! | MySQL    | `diesel_mysql`    | [`diesel::MysqlPool`]  | [`diesel::AsyncMysqlConnection`]                            |
+//! | SQLite   | `diesel_sqlite`   | [`diesel::SqlitePool`] | [`diesel::SyncConnectionWrapper<diesel::SqliteConnection>`] |
 //!
 //! See [`diesel`] for usage details.
 //!
