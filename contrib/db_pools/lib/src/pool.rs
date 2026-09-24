@@ -251,7 +251,9 @@ mod sqlx {
 
             if let Some(ref exts) = __config.extensions {
                 for ext in exts {
-                    *o = std::mem::take(o).extension(ext.clone());
+                    // SAFETY: Extensions are named by the application's
+                    // configuration, which is trusted.
+                    *o = unsafe { std::mem::take(o).extension(ext.clone()) };
                 }
             }
         }

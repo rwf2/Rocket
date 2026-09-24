@@ -76,9 +76,9 @@ default-features = false
 optional = true
 
 [dependencies.sqlx]
-version = "0.8"
+version = "0.9"
 default-features = false
-features = ["runtime-tokio-rustls"]
+features = ["runtime-tokio", "tls-rustls"]
 optional = true
 
 [dependencies.log]

@@ -113,7 +113,7 @@
 //! On shutdown, new connections are denied. Shutdown _does not_ wait for
 //! connections to be returned.
 //!
-//! ## `sqlx` (v0.7)
+//! ## `sqlx` (v0.9)
 //!
 //! | Database | Feature         | [`Pool`] Type        | [`Connection`] Deref                     |
 //! |----------|-----------------|----------------------|------------------------------------------|
@@ -121,12 +121,12 @@
 //! | MySQL    | `sqlx_mysql`    | [`sqlx::MySqlPool`]  | [`sqlx::pool::PoolConnection<MySql>`]    |
 //! | SQLite   | `sqlx_sqlite`   | [`sqlx::SqlitePool`] | [`sqlx::pool::PoolConnection<Sqlite>`]   |
 //!
-//! [`sqlx::PgPool`]: https://docs.rs/sqlx/0.6/sqlx/type.PgPool.html
-//! [`sqlx::MySqlPool`]: https://docs.rs/sqlx/0.6/sqlx/type.MySqlPool.html
-//! [`sqlx::SqlitePool`]: https://docs.rs/sqlx/0.6/sqlx/type.SqlitePool.html
-//! [`sqlx::pool::PoolConnection<Postgres>`]: https://docs.rs/sqlx/0.6/sqlx/pool/struct.PoolConnection.html
-//! [`sqlx::pool::PoolConnection<MySql>`]: https://docs.rs/sqlx/0.6/sqlx/pool/struct.PoolConnection.html
-//! [`sqlx::pool::PoolConnection<Sqlite>`]: https://docs.rs/sqlx/0.6/sqlx/pool/struct.PoolConnection.html
+//! [`sqlx::PgPool`]: https://docs.rs/sqlx/0.9/sqlx/type.PgPool.html
+//! [`sqlx::MySqlPool`]: https://docs.rs/sqlx/0.9/sqlx/type.MySqlPool.html
+//! [`sqlx::SqlitePool`]: https://docs.rs/sqlx/0.9/sqlx/type.SqlitePool.html
+//! [`sqlx::pool::PoolConnection<Postgres>`]: https://docs.rs/sqlx/0.9/sqlx/pool/struct.PoolConnection.html
+//! [`sqlx::pool::PoolConnection<MySql>`]: https://docs.rs/sqlx/0.9/sqlx/pool/struct.PoolConnection.html
+//! [`sqlx::pool::PoolConnection<Sqlite>`]: https://docs.rs/sqlx/0.9/sqlx/pool/struct.PoolConnection.html
 //!
 //! On shutdown, new connections are denied. Shutdown waits for connections to
 //! be returned.
@@ -161,7 +161,7 @@
 //!
 //! ```toml
 //! [dependencies.sqlx]
-//! version = "0.7"
+//! version = "0.9"
 //! default-features = false
 //! features = ["macros", "migrate"]
 //!
