@@ -45,7 +45,7 @@ impl DuplexStream {
     }
 
     /// Close the stream now. This does not typically need to be called.
-    pub async fn close(&mut self, msg: Option<CloseFrame<'_>>) -> Result<()> {
+    pub async fn close(&mut self, msg: Option<CloseFrame>) -> Result<()> {
         self.0.close(msg).await
     }
 }

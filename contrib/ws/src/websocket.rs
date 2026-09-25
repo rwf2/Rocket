@@ -46,10 +46,8 @@ impl WebSocket {
     /// #
     /// #[get("/echo")]
     /// fn echo_stream(ws: ws::WebSocket) -> ws::Stream!['static] {
-    ///     let ws = ws.config(ws::Config {
-    ///         max_send_queue: Some(5),
-    ///         ..Default::default()
-    ///     });
+    ///     let ws = ws.config(ws::Config::default()
+    ///         .max_write_buffer_size(1 << 20));
     ///
     ///     ws::Stream! { ws =>
     ///         for await message in ws {
