@@ -188,6 +188,35 @@ pub trait FromFormField<'v>: Send + Sized {
         Err(field.unexpected())?
     }
 
+    /// Parses a multipart value field with its original body bytes.
+    ///
+    /// `field.value` contains the decoded text. `bytes` contains the original
+    /// bytes before text decoding, without multipart headers or delimiters.
+    /// The default implementation calls [`Self::from_value()`] once. Override
+    /// this method to preserve binary contents in multipart value fields.
+    /// URL-encoded and manually parsed values still use `from_value`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::form::{self, FromFormField, ValueField};
+    ///
+    /// struct Bytes<'r>(&'r [u8]);
+    ///
+    /// impl<'r> FromFormField<'r> for Bytes<'r> {
+    ///     fn from_value(field: ValueField<'r>) -> form::Result<'r, Self> {
+    ///         Ok(Bytes(field.value.as_bytes()))
+    ///     }
+    ///
+    ///     fn from_value_with_bytes(_: ValueField<'r>, bytes: &'r [u8]) -> form::Result<'r, Self> {
+    ///         Ok(Bytes(bytes))
+    ///     }
+    /// }
+    /// ```
+    fn from_value_with_bytes(field: ValueField<'v>, _bytes: &'v [u8]) -> Result<'v, Self> {
+        Self::from_value(field)
+    }
+
     /// Parse a value of `T` from a form data field.
     ///
     /// The default implementation returns an error of
@@ -253,6 +282,13 @@ impl<'v, T: FromFormField<'v>> FromForm<'v> for T {
         if ctxt.should_push() {
             ctxt.field_value = Some(field.value);
             ctxt.push(field.name, Self::from_value(field))
+        }
+    }
+
+    fn push_value_with_bytes(ctxt: &mut Self::Context, field: ValueField<'v>, bytes: &'v [u8]) {
+        if ctxt.should_push() {
+            ctxt.field_value = Some(field.value);
+            ctxt.push(field.name, Self::from_value_with_bytes(field, bytes))
         }
     }
 
@@ -347,6 +383,10 @@ impl<'v> FromFormField<'v> for bool {
 impl<'v> FromFormField<'v> for Capped<&'v [u8]> {
     fn from_value(field: ValueField<'v>) -> Result<'v, Self> {
         Ok(Capped::from(field.value.as_bytes()))
+    }
+
+    fn from_value_with_bytes(_: ValueField<'v>, bytes: &'v [u8]) -> Result<'v, Self> {
+        Ok(Capped::from(bytes))
     }
 
     async fn from_data(f: DataField<'v, '_>) -> Result<'v, Self> {

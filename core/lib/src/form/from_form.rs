@@ -203,7 +203,8 @@ use crate::http::uncased::AsUncased;
 ///
 /// `FromForm` describes a push-based parser for Rocket's [field wire format].
 /// Fields are preprocessed into either [`ValueField`]s or [`DataField`]s which
-/// are then pushed to the parser in [`FromForm::push_value()`] or
+/// are then pushed to the parser in [`FromForm::push_value()`],
+/// [`FromForm::push_value_with_bytes()`], or
 /// [`FromForm::push_data()`], respectively. Both url-encoded forms and
 /// multipart forms are supported. All url-encoded form fields are preprocessed
 /// as [`ValueField`]s. Multipart form fields with Content-Types are processed
@@ -539,6 +540,26 @@ pub trait FromForm<'r>: Send + Sized {
     /// Processes the value field `field`.
     fn push_value(ctxt: &mut Self::Context, field: ValueField<'r>);
 
+    /// Processes a multipart value field with its original body bytes.
+    ///
+    /// `field.value` contains the decoded text, while `bytes` contains the
+    /// original bytes before text decoding, without multipart headers or
+    /// delimiters. Rocket calls this method instead of `push_value` for
+    /// multipart value fields. URL-encoded and manually parsed value fields
+    /// continue to use `push_value`.
+    ///
+    /// The default implementation calls [`Self::push_value()`] once. Wrappers
+    /// should forward this method to their inner form guard to preserve raw
+    /// bytes for guards such as [`TempFile`](crate::fs::TempFile). Forwarding
+    /// only `push_value` continues to work, but passes only decoded text.
+    fn push_value_with_bytes(
+        ctxt: &mut Self::Context,
+        field: ValueField<'r>,
+        _bytes: &'r [u8]
+    ) {
+        Self::push_value(ctxt, field)
+    }
+
     /// Processes the data field `field`.
     async fn push_data(ctxt: &mut Self::Context, field: DataField<'r, '_>);
 
@@ -619,6 +640,10 @@ impl<'v, T: FromForm<'v> + 'v> FromForm<'v> for Vec<T> {
 
     fn push_value(this: &mut Self::Context, field: ValueField<'v>) {
         T::push_value(this.context(&field.name), field.shift());
+    }
+
+    fn push_value_with_bytes(this: &mut Self::Context, field: ValueField<'v>, bytes: &'v [u8]) {
+        T::push_value_with_bytes(this.context(&field.name), field.shift(), bytes);
     }
 
     async fn push_data(this: &mut Self::Context, field: DataField<'v, '_>) {
@@ -728,6 +753,14 @@ impl<'v, K, V> MapContext<'v, K, V>
         }
     }
 
+    fn push_value_with_bytes(&mut self, field: ValueField<'v>, bytes: &'v [u8]) {
+        match self.push(field.name) {
+            Some(Either::Left(ctxt)) => K::push_value_with_bytes(ctxt, field.shift(), bytes),
+            Some(Either::Right(ctxt)) => V::push_value_with_bytes(ctxt, field.shift(), bytes),
+            _ => {}
+        }
+    }
+
     async fn push_data(&mut self, field: DataField<'v, '_>) {
         match self.push(field.name) {
             Some(Either::Left(ctxt)) => K::push_data(ctxt, field.shift()).await,
@@ -782,6 +815,10 @@ impl<'v, K, V> FromForm<'v> for HashMap<K, V>
         ctxt.push_value(field);
     }
 
+    fn push_value_with_bytes(ctxt: &mut Self::Context, field: ValueField<'v>, bytes: &'v [u8]) {
+        ctxt.push_value_with_bytes(field, bytes);
+    }
+
     async fn push_data(ctxt: &mut Self::Context, field: DataField<'v, '_>) {
         ctxt.push_data(field).await;
     }
@@ -805,6 +842,10 @@ impl<'v, K, V> FromForm<'v> for BTreeMap<K, V>
         ctxt.push_value(field);
     }
 
+    fn push_value_with_bytes(ctxt: &mut Self::Context, field: ValueField<'v>, bytes: &'v [u8]) {
+        ctxt.push_value_with_bytes(field, bytes);
+    }
+
     async fn push_data(ctxt: &mut Self::Context, field: DataField<'v, '_>) {
         ctxt.push_data(field).await;
     }
@@ -826,6 +867,10 @@ impl<'v, T: FromForm<'v>> FromForm<'v> for Option<T> {
         T::push_value(ctxt, field)
     }
 
+    fn push_value_with_bytes(ctxt: &mut Self::Context, field: ValueField<'v>, bytes: &'v [u8]) {
+        T::push_value_with_bytes(ctxt, field, bytes)
+    }
+
     async fn push_data(ctxt: &mut Self::Context, field: DataField<'v, '_>) {
         T::push_data(ctxt, field).await
     }
@@ -845,6 +890,10 @@ impl<'v, T: FromForm<'v>> FromForm<'v> for Result<'v, T> {
 
     fn push_value(ctxt: &mut Self::Context, field: ValueField<'v>) {
         T::push_value(ctxt, field)
+    }
+
+    fn push_value_with_bytes(ctxt: &mut Self::Context, field: ValueField<'v>, bytes: &'v [u8]) {
+        T::push_value_with_bytes(ctxt, field, bytes)
     }
 
     async fn push_data(ctxt: &mut Self::Context, field: DataField<'v, '_>) {
@@ -898,6 +947,14 @@ impl<'v, A: FromForm<'v>, B: FromForm<'v>> FromForm<'v> for (A, B) {
         }
     }
 
+    fn push_value_with_bytes(ctxt: &mut Self::Context, field: ValueField<'v>, bytes: &'v [u8]) {
+        match ctxt.context(field.name) {
+            Ok(Either::Left(ctxt)) => A::push_value_with_bytes(ctxt, field.shift(), bytes),
+            Ok(Either::Right(ctxt)) => B::push_value_with_bytes(ctxt, field.shift(), bytes),
+            Err(e) => ctxt.errors.push(e),
+        }
+    }
+
     async fn push_data(ctxt: &mut Self::Context, field: DataField<'v, '_>) {
         match ctxt.context(field.name) {
             Ok(Either::Left(ctxt)) => A::push_data(ctxt, field.shift()).await,
@@ -929,6 +986,10 @@ impl<'v, T: FromForm<'v> + Sync> FromForm<'v> for Arc<T> {
 
     fn push_value(ctxt: &mut Self::Context, field: ValueField<'v>) {
         T::push_value(ctxt, field)
+    }
+
+    fn push_value_with_bytes(ctxt: &mut Self::Context, field: ValueField<'v>, bytes: &'v [u8]) {
+        T::push_value_with_bytes(ctxt, field, bytes)
     }
 
     async fn push_data(ctxt: &mut Self::Context, field: DataField<'v, '_>) {
@@ -964,6 +1025,14 @@ macro_rules! impl_via_proxy {
 
                 fn push_value(ctxt: &mut Self::Context, field: ValueField<'v>) {
                     <proxy::$T<$($G),*>>::push_value(ctxt, field)
+                }
+
+                fn push_value_with_bytes(
+                    ctxt: &mut Self::Context,
+                    field: ValueField<'v>,
+                    bytes: &'v [u8]
+                ) {
+                    <proxy::$T<$($G),*>>::push_value_with_bytes(ctxt, field, bytes)
                 }
 
                 async fn push_data(ctxt: &mut Self::Context, field: DataField<'v, '_>) {

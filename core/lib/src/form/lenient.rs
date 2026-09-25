@@ -88,6 +88,11 @@ impl<'v, T: FromForm<'v>> FromForm<'v> for Lenient<T> {
     }
 
     #[inline(always)]
+    fn push_value_with_bytes(ctxt: &mut Self::Context, field: ValueField<'v>, bytes: &'v [u8]) {
+        T::push_value_with_bytes(ctxt, field, bytes)
+    }
+
+    #[inline(always)]
     async fn push_data(ctxt: &mut Self::Context, field: DataField<'v, '_>) {
         T::push_data(ctxt, field).await
     }

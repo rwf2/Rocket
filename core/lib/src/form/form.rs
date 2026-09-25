@@ -319,14 +319,17 @@ impl<'r, T: FromForm<'r>> FromData<'r> for Form<T> {
     type Error = Errors<'r>;
 
     async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> Outcome<'r, Self> {
-        use either::Either;
+        use crate::form::parser::Field;
 
         let mut parser = try_outcome!(Parser::new(req, data).await);
         let mut context = T::init(Options::Lenient);
         while let Some(field) = parser.next().await {
             match field {
-                Ok(Either::Left(value)) => T::push_value(&mut context, value),
-                Ok(Either::Right(data)) => T::push_data(&mut context, data).await,
+                Ok(Field::Value(value)) => T::push_value(&mut context, value),
+                Ok(Field::ValueWithBytes(value, bytes)) => {
+                    T::push_value_with_bytes(&mut context, value, bytes);
+                }
+                Ok(Field::Data(data)) => T::push_data(&mut context, data).await,
                 Err(e) => T::push_error(&mut context, e),
             }
         }

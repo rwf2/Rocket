@@ -8,6 +8,8 @@ use crate::fs::FileName;
 /// Rocket preprocesses all form fields into either [`ValueField`]s or
 /// [`DataField`]s. All fields from url-encoded forms, and fields without
 /// Content-Types from multipart forms, are preprocessed as a `ValueField`.
+/// Multipart value fields also supply their original bytes through
+/// [`FromForm::push_value_with_bytes()`](crate::form::FromForm::push_value_with_bytes).
 #[derive(Debug, Clone)]
 pub struct ValueField<'r> {
     /// The (decoded) name of the form field.

@@ -70,6 +70,7 @@ tempfile = "3"
 async-trait = "0.1.43"
 async-stream = "0.3.2"
 multer = { version = "3.1.0", features = ["tokio-io"] }
+encoding_rs = "0.8"
 tokio-stream = { version = "0.1.6", features = ["signal", "time"] }
 cookie = { version = "0.18", features = ["percent-encode"] }
 futures = { version = "0.3.30", default-features = false, features = ["std"] }

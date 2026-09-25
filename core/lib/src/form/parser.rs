@@ -1,5 +1,7 @@
+use std::borrow::Cow;
+
 use multer::Multipart;
-use either::Either;
+use encoding_rs::{Encoding, UTF_8};
 
 use crate::request::{Request, local_cache_once};
 use crate::data::{Data, Limits, Outcome};
@@ -8,11 +10,16 @@ use crate::form::prelude::*;
 
 type Result<'r, T> = std::result::Result<T, Error<'r>>;
 
-type Field<'r, 'i> = Either<ValueField<'r>, DataField<'r, 'i>>;
+pub enum Field<'r, 'i> {
+    Value(ValueField<'r>),
+    ValueWithBytes(ValueField<'r>, &'r [u8]),
+    Data(DataField<'r, 'i>),
+}
 
 pub struct MultipartParser<'r, 'i> {
     request: &'r Request<'i>,
     buffer: &'r SharedStack<String>,
+    bytes: &'r SharedStack<Vec<u8>>,
     source: Multipart<'r>,
     done: bool,
 }
@@ -77,6 +84,7 @@ impl<'r, 'i> Parser<'r, 'i> {
         Ok(Parser::Multipart(MultipartParser {
             request: req,
             buffer: local_cache_once!(req, SharedStack::new()),
+            bytes: local_cache_once!(req, SharedStack::new()),
             source: Multipart::with_reader_with_constraints(stream, boundary, constraints),
             done: false,
         }))
@@ -85,7 +93,7 @@ impl<'r, 'i> Parser<'r, 'i> {
     pub async fn next(&mut self) -> Option<Result<'r, Field<'r, 'i>>> {
         match self {
             Parser::Multipart(ref mut p) => p.next().await,
-            Parser::RawStr(ref mut p) => p.next().map(|f| Ok(Either::Left(f)))
+            Parser::RawStr(ref mut p) => p.next().map(|f| Ok(Field::Value(f)))
         }
     }
 }
@@ -181,7 +189,7 @@ impl<'r, 'i> MultipartParser<'r, 'i> {
                 }
             };
 
-            Either::Right(DataField {
+            Field::Data(DataField {
                 content_type,
                 request: self.request,
                 name: NameView::new(name),
@@ -189,18 +197,24 @@ impl<'r, 'i> MultipartParser<'r, 'i> {
                 data: Data::from(field),
             })
         } else {
-            let (mut buf, len) = match field.name() {
-                Some(s) => (s.to_string(), s.len()),
-                None => (String::new(), 0)
-            };
-
-            match field.text().await {
-                Ok(text) => buf.push_str(&text),
+            let name = self.buffer.push(field.name().unwrap_or(""));
+            let encoding = field.content_type()
+                .and_then(|mime| mime.get_param("charset"))
+                .and_then(|charset| Encoding::for_label(charset.as_str().as_bytes()))
+                .unwrap_or(UTF_8);
+            let bytes = match field.bytes().await {
+                Ok(bytes) => self.bytes.push(bytes.to_vec()),
                 Err(e) => return Some(Err(e.into())),
             };
 
-            let name_val = self.buffer.push_split(buf, len);
-            Either::Left(ValueField::from(name_val))
+            // Match multer's text decoding, including BOM handling, while
+            // retaining the original bytes for binary value guards.
+            let value = match encoding.decode(bytes).0 {
+                Cow::Borrowed(value) => value,
+                Cow::Owned(value) => self.buffer.push(value),
+            };
+
+            Field::ValueWithBytes(ValueField::from((name, value)), bytes)
         };
 
         Some(Ok(field))

@@ -21,6 +21,13 @@ use either::Either;
 /// when the `TempFile` handle is dropped unless it is persisted with
 /// [`TempFile::persist_to()`] or copied with [`TempFile::copy_to()`].
 ///
+/// Multipart value fields (those without a `Content-Type`) are buffered in
+/// memory and preserve their original bytes, including invalid UTF-8 and byte
+/// order marks. Like other value fields, they are subject to the `data-form`
+/// limit instead of the individual `file` limit. Custom form wrappers must
+/// forward [`FromForm::push_value_with_bytes()`](crate::form::FromForm::push_value_with_bytes)
+/// to preserve these bytes when passing a value field to `TempFile`.
+///
 /// # Hazards
 ///
 /// Temporary files are cleaned by system file cleaners periodically. While an
@@ -540,6 +547,11 @@ impl<'v> FromFormField<'v> for Capped<TempFile<'v>> {
     fn from_value(field: ValueField<'v>) -> Result<Self, Errors<'v>> {
         let n = N { written: field.value.len() as u64, complete: true  };
         Ok(Capped::new(TempFile::Buffered { content: field.value.as_bytes() }, n))
+    }
+
+    fn from_value_with_bytes(_: ValueField<'v>, bytes: &'v [u8]) -> Result<Self, Errors<'v>> {
+        let n = N { written: bytes.len() as u64, complete: true };
+        Ok(Capped::new(TempFile::Buffered { content: bytes }, n))
     }
 
     async fn from_data(

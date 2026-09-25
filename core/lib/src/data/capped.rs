@@ -230,6 +230,15 @@ macro_rules! impl_strict_from_form_field_from_capped {
                 Ok(capped.value)
             }
 
+            fn from_value_with_bytes(f: ValueField<'v>, bytes: &'v [u8]) -> Result<'v, Self> {
+                let capped = <Capped<$T> as FromFormField<'v>>::from_value_with_bytes(f, bytes)?;
+                if !capped.is_complete() {
+                    Err((None, Some(capped.n.written)))?;
+                }
+
+                Ok(capped.value)
+            }
+
             async fn from_data(field: DataField<'v, '_>) -> Result<'v, Self> {
                 let capped = <Capped<$T> as FromFormField<'v>>::from_data(field);
                 let capped = capped.await?;

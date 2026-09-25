@@ -371,6 +371,15 @@ impl<'v, T: FromForm<'v>> FromForm<'v> for Contextual<'v, T> {
         T::push_value(val_ctxt, field);
     }
 
+    fn push_value_with_bytes(
+        (ref mut val_ctxt, ctxt): &mut Self::Context,
+        field: ValueField<'v>,
+        bytes: &'v [u8]
+    ) {
+        ctxt.values.entry(field.name.source()).or_default().push(field.value);
+        T::push_value_with_bytes(val_ctxt, field, bytes);
+    }
+
     async fn push_data((ref mut val_ctxt, ctxt): &mut Self::Context, field: DataField<'v, '_>) {
         ctxt.data_fields.insert(field.name.source());
         T::push_data(val_ctxt, field).await;

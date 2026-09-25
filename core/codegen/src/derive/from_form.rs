@@ -197,6 +197,20 @@ pub fn derive_from_form(input: proc_macro::TokenStream) -> TokenStream {
             })))
         )
         .inner_mapper(MapperBuild::new()
+            .with_output(|_, output| quote! {
+                fn push_value_with_bytes(
+                    __c: &mut Self::Context,
+                    __f: #_form::ValueField<'r>,
+                    __bytes: &'r [u8]
+                ) {
+                    #output
+                }
+            })
+            .try_fields_map(|_, f| fields_map(f, |ty, ctxt| quote_spanned!(ty.span() => {
+                <#ty as #_form::FromForm<'r>>::push_value_with_bytes(#ctxt, __f.shift(), __bytes);
+            })))
+        )
+        .inner_mapper(MapperBuild::new()
             .try_input_map(|mapper, input| {
                 let (ctxt_ty, gen) = context_type(input)?;
                 let (_, ty_gen, _) = gen.split_for_impl();
