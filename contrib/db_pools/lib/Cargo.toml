@@ -87,16 +87,18 @@ optional = true
 [dependencies.tokio-postgres]
 version = "0.7"
 default-features = false
+features = ["runtime"]
 optional = true
 
 [dependencies.tokio-postgres-rustls]
-version = "0.13"
+version = "0.14"
 default-features = false
 optional = true
 
 [dependencies.rustls]
 version = "0.23"
 default-features = false
+features = ["ring", "std", "tls12"]
 optional = true
 
 [dependencies.rustls-native-certs]

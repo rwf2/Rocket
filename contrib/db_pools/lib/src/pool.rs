@@ -152,17 +152,40 @@ pub trait Pool: Sized + Send + 'static {
     async fn close(&self);
 }
 
-#[cfg(feature = "postgres_rustls_native_certs")]
+/// Returns a TLS connector for `tokio-postgres` that verifies servers against
+/// the platform's native root certificates, or those in `SSL_CERT_FILE` and
+/// `SSL_CERT_DIR` when set.
+///
+/// Failing to find root certificates is not an error here: connections that
+/// don't use TLS are unaffected, and those that do fail to verify the server.
+#[cfg(all(
+    feature = "postgres_rustls_native_certs",
+    any(feature = "deadpool_postgres", feature = "diesel_postgres")
+))]
 fn tokio_postgres_tls_provider() -> tokio_postgres_rustls::MakeRustlsConnect {
-    let mut roots = rustls::RootCertStore::empty();
+    use std::sync::Arc;
 
-    let certs = rustls_native_certs::load_native_certs()
-        .expect("native certs should be available");
-    for cert in certs {
-        roots.add(cert).expect("native root cert should be valid");
+    let native = rustls_native_certs::load_native_certs();
+    for e in &native.errors {
+        rocket::warn!("failed to load native root certificates: {e}");
     }
 
-    let config = rustls::ClientConfig::builder()
+    let mut roots = rustls::RootCertStore::empty();
+    let (added, ignored) = roots.add_parsable_certificates(native.certs);
+    if ignored > 0 {
+        rocket::warn!("ignored {ignored} unparsable native root certificate(s)");
+    }
+
+    if added == 0 {
+        rocket::warn!("no root certificates found: postgres TLS connections will fail\n\
+            set `SSL_CERT_FILE` or `SSL_CERT_DIR` to trust a custom CA bundle");
+    }
+
+    // Use `ring` directly: there is no process-wide `CryptoProvider` by default.
+    let provider = Arc::new(rustls::crypto::ring::default_provider());
+    let config = rustls::ClientConfig::builder_with_provider(provider)
+        .with_safe_default_protocol_versions()
+        .expect("ring's default provider supports the default protocol versions")
         .with_root_certificates(roots)
         .with_no_client_auth();
 

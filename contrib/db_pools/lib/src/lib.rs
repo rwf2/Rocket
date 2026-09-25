@@ -113,6 +113,8 @@
 //! On shutdown, new connections are denied. Shutdown _does not_ wait for
 //! connections to be returned.
 //!
+//! See [Postgres TLS](#postgres-tls) to connect to Postgres over TLS.
+//!
 //! ## `sqlx` (v0.9)
 //!
 //! | Database | Feature         | [`Pool`] Type        | [`Connection`] Deref                     |
@@ -151,6 +153,27 @@
 //!
 //! On shutdown, new connections are denied. Shutdown _does not_ wait for
 //! connections to be returned.
+//!
+//! See [Postgres TLS](#postgres-tls) to connect to Postgres over TLS.
+//!
+//! ## Postgres TLS
+//!
+//! By default, the `deadpool_postgres` and `diesel_postgres` drivers connect
+//! _without_ TLS: a URL with `sslmode=require` fails to connect. To enable TLS
+//! for these drivers, also enable the `postgres_rustls_native_certs` feature:
+//!
+//! ```toml
+//! [dependencies.rocket_db_pools]
+//! version = "0.1.0"
+//! features = ["diesel_postgres", "postgres_rustls_native_certs"]
+//! ```
+//!
+//! TLS is then used as directed by the `sslmode` parameter in the URL. The
+//! server's certificate is verified against the platform's native root
+//! certificates. To trust a private CA, as used by some hosted databases, set
+//! the `SSL_CERT_FILE` environment variable to a PEM bundle containing it.
+//!
+//! The `sqlx_postgres` driver supports TLS without additional features.
 //!
 //! ## Enabling Additional Driver Features
 //!

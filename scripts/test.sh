@@ -84,6 +84,7 @@ function test_contrib() {
     diesel_mysql
     diesel_postgres
     diesel_sqlite
+    "deadpool_postgres,diesel_postgres,postgres_rustls_native_certs"
   )
 
   SYNC_DB_POOLS_FEATURES=(
