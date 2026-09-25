@@ -33,17 +33,15 @@ pub(crate) trait Engine: Send + Sync + Sized + 'static {
 /// types from the respective templating engine library. These types should be
 /// imported from the reexported crate at the root of `rocket_dyn_templates` to
 /// avoid version mismatches. For instance, when registering a Tera filter, the
-/// [`tera::Value`] and [`tera::Result`] types are required. Import them from
-/// `rocket_dyn_templates::tera`. The example below illustrates this:
+/// [`tera::Value`] and [`tera::TeraResult`] types are required. Import them
+/// from `rocket_dyn_templates::tera`. The example below illustrates this:
 ///
 /// ```rust
 /// # #[cfg(feature = "tera")] {
-/// use std::collections::HashMap;
-///
 /// use rocket_dyn_templates::{Template, Engines};
 /// use rocket_dyn_templates::tera::{self, Value};
 ///
-/// fn my_filter(value: &Value, _: &HashMap<String, Value>) -> tera::Result<Value> {
+/// fn my_filter(value: &Value, _: tera::Kwargs, _: &tera::State) -> tera::TeraResult<Value> {
 ///     # /*
 ///     ...
 ///     # */ unimplemented!();
@@ -62,7 +60,7 @@ pub(crate) trait Engine: Send + Sync + Sized + 'static {
 /// ```
 ///
 /// [`tera::Value`]: crate::tera::Value
-/// [`tera::Result`]: crate::tera::Result
+/// [`tera::TeraResult`]: crate::tera::TeraResult
 pub struct Engines {
     /// A `Tera` templating engine.
     ///

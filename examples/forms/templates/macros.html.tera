@@ -1,63 +1,62 @@
-{% macro value_for(name) %}
+{% component value_for(name, @values) %}
     {%- if name in values -%}
-        {{- values | get(key=name) | first -}}
+        {{- values[name] | first -}}
     {%- endif -%}
-{% endmacro value_for %}
+{% endcomponent value_for %}
 
-{% macro errors_for(name) %}
+{% component errors_for(name, @errors) %}
     {%- if name in errors -%}
-        {% set field_errors = errors | get(key=name) %}
-        {% for error in field_errors %}
+        {% for error in errors[name] %}
             <p class="text-error is-marginless">{{ error.msg }}</p>
         {% endfor %}
     {%- endif -%}
-{% endmacro errors_for %}
+{% endcomponent errors_for %}
 
-{% macro input(type, label, name, value="") %}
+{% component input(type, label, name, value = "", @errors) %}
     <label for="{{ name }}">{{ label }}</label>
     <input type="{{ type }}"
            name="{{ name }}"
            id="{{ name }}"
-           value='{{ self::value_for(name=name) }}'
+           value='{{ <value_for name={name} /> }}'
            {% if name in errors %} class="error" {% endif %}
     />
 
-    {{ self::errors_for(name=name) }}
-{% endmacro input %}
+    {{ <errors_for name={name} /> }}
+{% endcomponent input %}
 
-{% macro checkbox(name, label, value="yes") %}
+{% component checkbox(name, label, value = "yes", @values, @errors) %}
     <label {% if name in errors %} class="bd-error" {% endif %}>
     <input type="checkbox" name="{{ name }}" value={{ value }}
     {% if name in values %}
-        {% set field_values = values | get(key=name) %}
-        {% if field_values is containing(value) %}
+        {% if values[name] is containing(pat=value) %}
             checked
         {% endif %}
     {% endif %}
     >
         {{ label }}
     </label>
-{% endmacro checkbox %}
+{% endcomponent checkbox %}
 
-{% macro textarea(label, name, placeholder="", max=250) %}
+{% component textarea(label, name, placeholder = "", max = 250, @errors) %}
     <label for="{{ name }}">{{ label }}</label>
     <textarea placeholder="{{ placeholder }}"
         name="{{ name }}" id="{{ name }}" rows="8" cols="40"
         {% if name in errors %} class="error" {% endif %}
     >
-        {{- self::value_for(name=name) -}}
+        {{- <value_for name={name} /> -}}
     </textarea>
 
-    {{ self::errors_for(name=name) }}
-{% endmacro textarea %}
+    {{ <errors_for name={name} /> }}
+{% endcomponent textarea %}
 
-{% macro select(label, name, options) %}
+{% component select(label, name, options) %}
     <label for="{{ name }}">{{ label }}</label>
     <select name="{{ name }}" id="{{ name }}">
+        {% set selected = <value_for name={name} /> %}
         {% for value in options %}
             <option value="{{ value }}"
-                {% if self::value_for(name=name) == value %} selected {% endif %}
+                {% if selected == value %} selected {% endif %}
             >{{ value }}</option>
         {% endfor %}
     </select>
-{% endmacro select %}
+{% endcomponent select %}

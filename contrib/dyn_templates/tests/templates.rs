@@ -211,7 +211,7 @@ mod tera_tests {
     const UNESCAPED_EXPECTED: &'static str
         = "\nh_start\ntitle: _test_\nh_end\n\n\n<script />\n\nfoot";
     const ESCAPED_EXPECTED: &'static str
-        = "\nh_start\ntitle: _test_\nh_end\n\n\n&lt;script &#x2F;&gt;\n\nfoot";
+        = "\nh_start\ntitle: _test_\nh_end\n\n\n&lt;script /&gt;\n\nfoot";
 
     #[async_test]
     async fn test_tera_templates() {
@@ -246,6 +246,35 @@ mod tera_tests {
         let req = client.get("/");
         let metadata = Metadata::from_request(&req).await.unwrap();
         assert!(metadata.contains_template("tera/[test]/html_test"));
+    }
+
+    #[test]
+    fn test_tera_escaping() {
+        use rocket::local::blocking::Client;
+
+        let root = tempfile::tempdir().unwrap();
+        let dir = root.path().join("sub");
+        std::fs::create_dir(&dir).unwrap();
+        for file in ["a.html.tera", "b.xml.tera", "c.htm.tera", "d.txt.tera", "e.tera"] {
+            std::fs::write(dir.join(file), "{{ v }}").unwrap();
+        }
+
+        let figment = Config::figment().merge(("template_dir", root.path()));
+        let rocket = rocket::custom(figment)
+            .attach(Template::custom(|engines| {
+                engines.tera.add_raw_template("raw.html", "{{ v }}").unwrap();
+                engines.tera.add_raw_template("raw", "{{ v }}").unwrap();
+            }));
+
+        let client = Client::debug(rocket).unwrap();
+        let render = |name| Template::show(client.rocket(), name, context! { v: "<b>" });
+        for name in ["sub/a", "sub/b", "sub/c", "raw.html"] {
+            assert_eq!(render(name).unwrap(), "&lt;b&gt;", "{name} should be escaped");
+        }
+
+        for name in ["sub/d", "sub/e", "raw"] {
+            assert_eq!(render(name).unwrap(), "<b>", "{name} should not be escaped");
+        }
     }
 
     // u128 is not supported. enable when it is.

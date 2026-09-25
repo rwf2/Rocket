@@ -28,7 +28,7 @@
 //!      | [MiniJinja]  | `.j2`     | `${ROCKET_ROOT}/templates/index.html.j2`   |
 //!
 //!      [configurable]: #configuration
-//!      [Tera]: https://docs.rs/crate/tera/1
+//!      [Tera]: https://docs.rs/crate/tera/2
 //!      [Handlebars]: https://docs.rs/crate/handlebars/6
 //!      [MiniJinja]: https://docs.rs/minijinja/2
 //!
