@@ -1,6 +1,6 @@
 use super::task::Task;
 
-use rand::{self, Rng, distr::Alphanumeric};
+use rand::{self, RngExt, distr::Alphanumeric};
 
 use rocket::local::asynchronous::Client;
 use rocket::http::{Status, ContentType};

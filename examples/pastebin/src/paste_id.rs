@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 use std::path::{Path, PathBuf};
 
-use rand::Rng;
+use rand::RngExt;
 use rocket::request::FromParam;
 
 /// A _probably_ unique paste ID.

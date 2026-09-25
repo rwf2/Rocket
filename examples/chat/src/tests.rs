@@ -1,6 +1,6 @@
 use std::ops::Range;
 
-use rand::{rng, Rng};
+use rand::{rng, RngExt};
 use rand::distr::Alphanumeric;
 
 use rocket::http::{ContentType, Status};

@@ -168,7 +168,7 @@ Before we continue, we'll need to make a few design decisions.
     use std::borrow::Cow;
     use std::path::{Path, PathBuf};
 
-    use rand::{self, Rng};
+    use rand::{self, RngExt};
 
     /// A _probably_ unique paste ID.
     pub struct PasteId<'a>(Cow<'a, str>);
@@ -227,7 +227,7 @@ Before we continue, we'll need to make a few design decisions.
     ```toml
     [dependencies]
     ## existing Rocket dependencies...
-    rand = "0.9"
+    rand = "0.10"
     ```
 
     Ensure that your application builds with the new code:
