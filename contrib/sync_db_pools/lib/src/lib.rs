@@ -318,7 +318,7 @@
 //! | MySQL    | [Diesel]              | `2`       | [`diesel::MysqlConnection`]    | `diesel_mysql_pool`    |
 //! | Postgres | [Rust-Postgres]       | `0.19`    | [`postgres::Client`]           | `postgres_pool`        |
 //! | Sqlite   | [`Rusqlite`]          | `0.39`    | [`rusqlite::Connection`]       | `sqlite_pool`          |
-//! | Memcache | [`memcache`]          | `0.17`    | [`memcache::Client`]           | `memcache_pool`        |
+//! | Memcache | [`memcache`]          | `0.21`    | [`memcache::Client`]           | `memcache_pool`        |
 //!
 //! [Diesel]: https://diesel.rs
 //! [`diesel::SqliteConnection`]: https://docs.rs/diesel/2/diesel/sqlite/struct.SqliteConnection.html
@@ -330,7 +330,7 @@
 //! [`rusqlite::Connection`]: https://docs.rs/rusqlite/0.39/rusqlite/struct.Connection.html
 //! [`diesel::PgConnection`]: http://docs.diesel.rs/diesel/pg/struct.PgConnection.html
 //! [`memcache`]: https://github.com/aisk/rust-memcache
-//! [`memcache::Client`]: https://docs.rs/memcache/0.17/memcache/struct.Client.html
+//! [`memcache::Client`]: https://docs.rs/memcache/0.21/memcache/struct.Client.html
 //!
 //! The above table lists all the supported database adapters in this library.
 //! In order to use particular `Poolable` type that's included in this library,
