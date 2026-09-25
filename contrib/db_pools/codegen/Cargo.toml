@@ -17,7 +17,8 @@ proc-macro = true
 workspace = true
 
 [dependencies]
-devise = "0.4"
+devise = "0.5"
+proc-macro2-diagnostics = { version = "0.11", features = ["nightly"] }
 quote = "1"
 
 [dev-dependencies]
