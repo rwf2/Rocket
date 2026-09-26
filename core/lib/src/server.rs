@@ -116,16 +116,17 @@ impl Rocket<Ignite> {
         if let (Some(addr), Some(tls)) = (endpoint.tcp(), endpoint.tls_config()) {
             use crate::error::ErrorKind;
 
-            let h3listener = crate::listener::quic::QuicListener::bind(addr, tls.clone())
+            let quic = crate::listener::quic::bind(addr, tls)
                 .map_err(|e| ErrorKind::Bind(Some(endpoint.clone()), Box::new(e)))
                 .await?;
 
-            let rocket = self.into_orbit(vec![h3listener.endpoint()?, endpoint]);
+            let quic_endpoint = crate::listener::Endpoint::Quic(quic.local_addr()?).with_tls(tls);
+            let rocket = self.into_orbit(vec![quic_endpoint, endpoint]);
             let rocket = orbit_callback(rocket).await?;
 
             let http12 = tokio::task::spawn(rocket.clone().serve12(listener));
-            let http3 = tokio::task::spawn(rocket.clone().serve3(h3listener));
-            let (r1, r2) = tokio::join!(http12, http3);
+            let http3 = tokio::task::spawn(rocket.clone().serve3(quic));
+            let (r1, r2) = futures::join!(http12, http3);
             r1.map_err(|e| ErrorKind::Liftoff(Err(rocket.clone()), e))??;
             r2.map_err(|e| ErrorKind::Liftoff(Err(rocket.clone()), e))??;
             return Ok(rocket);
@@ -199,28 +200,60 @@ impl Rocket<Orbit> {
     }
 
     #[cfg(feature = "http3-preview")]
-    async fn serve3(self: Arc<Self>, listener: crate::listener::quic::QuicListener) -> Result<()> {
-        let rocket = self.clone();
-        let listener = Arc::new(listener);
-        while let Some(Some(accept)) = listener.accept().race(rocket.shutdown()).await.left() {
-            let (listener, rocket) = (listener.clone(), rocket.clone());
+    async fn serve3(self: Arc<Self>, endpoint: quinn::Endpoint) -> Result<()> {
+        use std::future::IntoFuture;
+        use either::Either;
+        use crate::listener::{Endpoint, quic::{self, QuicRx}};
+
+        while let Some(Some(incoming)) = endpoint.accept().race(self.shutdown()).await.left() {
+            let rocket = self.clone();
             spawn_inspect(|e: &io::Error| log_server_error(e), async move {
-                let mut stream = listener.connect(accept).race_io(rocket.shutdown()).await?;
-                while let Some(mut conn) = stream.accept().race_io(rocket.shutdown()).await? {
-                    let rocket = rocket.clone();
+                let conn = incoming.into_future()
+                    .map_err(io::Error::other)
+                    .race_io(rocket.shutdown())
+                    .await?;
+
+                let remote = Endpoint::Quic(conn.remote_address()).assume_tls();
+                let (certs, sni) = (quic::certificates(&conn), quic::server_name(&conn));
+                let meta = ConnectionMeta::new(Ok(remote), certs, sni.as_deref());
+                let mut h3 = quic::Connection::new(h3_quinn::Connection::new(conn))
+                    .map_err(io::Error::other)
+                    .await?;
+
+                loop {
+                    let resolver = match h3.accept().race(rocket.shutdown()).await {
+                        Either::Left(Ok(Some(resolver))) => resolver,
+                        Either::Left(Ok(None)) => break,
+                        Either::Left(Err(e)) if e.is_h3_no_error() => break,
+                        Either::Left(Err(e)) => return Err(io::Error::other(e)),
+                        Either::Right(_) => {
+                            // Send `GOAWAY` so the client makes no new requests, then
+                            // let in-flight requests finish within the grace period.
+                            h3.shutdown(0).await.map_err(io::Error::other)?;
+                            let _ = h3.accept().race(rocket.shutdown.grace.clone()).await;
+                            break;
+                        }
+                    };
+
+                    let (rocket, meta) = (rocket.clone(), meta.clone());
                     spawn_inspect(|e: &io::Error| log_server_error(e), async move {
-                        let meta = ConnectionMeta::new(conn.endpoint(), None, None);
-                        let rx = conn.rx.cancellable(rocket.shutdown.clone());
+                        let (req, stream) = resolver.resolve_request()
+                            .map_err(io::Error::other)
+                            .race_io(rocket.shutdown())
+                            .await?;
+
+                        let (mut tx, rx) = stream.split();
+                        let rx = QuicRx(rx).cancellable(rocket.shutdown.clone());
                         let response = rocket.clone()
-                            .service(conn.parts, rx, None, meta)
+                            .service(req.into_parts().0, rx, None, meta)
                             .map_err(io::Error::other)
                             .race_io(rocket.shutdown.mercy.clone())
                             .await?;
 
                         let grace = rocket.shutdown.grace.clone();
-                        match conn.tx.send_response(response).race(grace).await.left() {
+                        match quic::send_response(&mut tx, response).race(grace).await.left() {
                             Some(result) => result,
-                            None => Ok(conn.tx.cancel()),
+                            None => Ok(tx.stop_stream(h3::error::Code::H3_REQUEST_CANCELLED)),
                         }
                     });
                 }
@@ -229,6 +262,9 @@ impl Rocket<Orbit> {
             });
         }
 
+        // Refuse new connections and give existing ones a chance to close.
+        endpoint.set_server_config(None);
+        endpoint.wait_idle().race(self.shutdown.mercy.clone()).await;
         Ok(())
     }
 }
