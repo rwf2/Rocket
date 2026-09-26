@@ -31,7 +31,7 @@ indexmap = "2"
 ref-cast = "1.0"
 uncased = "0.9.10"
 either = "1"
-pear = "0.2.9"
+pear = "0.3"
 memchr = "2"
 stable-pattern = "0.1"
 cookie = { version = "0.18", features = ["percent-encode"] }
