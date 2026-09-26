@@ -31,7 +31,7 @@ json = ["serde_json"]
 xml = ["quick-xml"]
 msgpack = ["rmp-serde"]
 uuid = ["uuid_", "rocket_http/uuid"]
-tls = ["rustls", "tokio-rustls", "rustls-pemfile"]
+tls = ["rustls", "tokio-rustls"]
 mtls = ["tls", "x509-parser"]
 tokio-macros = ["tokio/macros"]
 trace = ["tracing-subscriber", "tinyvec", "thread_local", "rustls?/logging", "tokio-rustls?/logging", "multer/log", "h3?/tracing", "h3-quinn?/tracing"]
@@ -106,7 +106,7 @@ default-features = false
 features = ["io"]
 
 [dependencies.rustls]
-version = "0.23"
+version = "0.23.14"
 default-features = false
 features = ["ring", "std", "tls12"]
 optional = true
@@ -115,10 +115,6 @@ optional = true
 version = "0.26"
 default-features = false
 features = ["tls12", "ring"]
-optional = true
-
-[dependencies.rustls-pemfile]
-version = "2.1.0"
 optional = true
 
 [dependencies.quinn]

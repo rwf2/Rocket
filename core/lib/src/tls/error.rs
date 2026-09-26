@@ -1,11 +1,13 @@
+use rustls::pki_types::pem;
+
 pub type Result<T, E = Error> = std::result::Result<T, E>;
 
 #[derive(Debug)]
 pub enum KeyError {
     BadKeyCount(usize),
-    Io(std::io::Error),
+    Pem(pem::Error),
     Unsupported(rustls::Error),
-    BadItem(rustls_pemfile::Item),
+    BadItem(pem::SectionKind),
 }
 
 #[derive(Debug)]
@@ -14,7 +16,8 @@ pub enum Error {
     Bind(Box<dyn std::error::Error + Send + 'static>),
     Tls(rustls::Error),
     Mtls(rustls::server::VerifierBuilderError),
-    CertChain(std::io::Error),
+    Pem(pem::Error),
+    CertChain(pem::Error),
     PrivKey(KeyError),
     CertAuth(rustls::Error),
     Config(figment::Error),
@@ -28,6 +31,7 @@ impl std::fmt::Display for Error {
             Io(e) => write!(f, "i/o error during tls binding: {e}"),
             Tls(e) => write!(f, "tls configuration error: {e}"),
             Mtls(e) => write!(f, "mtls verifier error: {e}"),
+            Pem(e) => write!(f, "failed to process pem data: {e}"),
             CertChain(e) => write!(f, "failed to process certificate chain: {e}"),
             PrivKey(e) => write!(f, "failed to process private key: {e}"),
             CertAuth(e) => write!(f, "failed to process certificate authority: {e}"),
@@ -42,7 +46,7 @@ impl std::fmt::Display for KeyError {
         use KeyError::*;
 
         match self {
-            Io(e) => write!(f, "error reading key file: {e}"),
+            Pem(e) => write!(f, "error reading key file: {e}"),
             BadKeyCount(0) => write!(f, "no valid keys found. is the file malformed?"),
             BadKeyCount(n) => write!(f, "expected exactly 1 key, found {n}"),
             Unsupported(e) => write!(f, "key is valid but is unsupported: {e}"),
@@ -54,7 +58,7 @@ impl std::fmt::Display for KeyError {
 impl std::error::Error for KeyError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
-            KeyError::Io(e) => Some(e),
+            KeyError::Pem(e) => Some(e),
             KeyError::Unsupported(e) => Some(e),
             _ => None,
         }
@@ -67,6 +71,7 @@ impl std::error::Error for Error {
             Error::Io(e) => Some(e),
             Error::Tls(e) => Some(e),
             Error::Mtls(e) => Some(e),
+            Error::Pem(e) => Some(e),
             Error::CertChain(e) => Some(e),
             Error::PrivKey(e) => Some(e),
             Error::CertAuth(e) => Some(e),
@@ -91,6 +96,12 @@ impl From<rustls::Error> for Error {
 impl From<rustls::server::VerifierBuilderError> for Error {
     fn from(value: rustls::server::VerifierBuilderError) -> Self {
         Error::Mtls(value)
+    }
+}
+
+impl From<pem::Error> for Error {
+    fn from(e: pem::Error) -> Self {
+        Error::Pem(e)
     }
 }
 

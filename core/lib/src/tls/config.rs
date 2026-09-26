@@ -6,7 +6,7 @@ use figment::value::magic::{Either, RelativePathBuf};
 use serde::{Deserialize, Serialize};
 use indexmap::IndexSet;
 use rustls::crypto::{ring, CryptoProvider};
-use rustls::pki_types::{CertificateDer, PrivateKeyDer};
+use rustls::pki_types::{CertificateDer, PrivateKeyDer, pem::{PemObject, SectionKind}};
 use rustls::server::{ServerSessionMemoryCache, ServerConfig, WebPkiClientVerifier};
 
 use crate::tls::resolver::DynResolver;
@@ -495,23 +495,17 @@ impl TlsConfig {
 /// Loads certificates from `reader`.
 impl TlsConfig {
     pub(crate) fn load_certs(&self) -> Result<Vec<CertificateDer<'static>>> {
-        rustls_pemfile::certs(&mut self.certs_reader()?)
+        CertificateDer::pem_reader_iter(self.certs_reader()?)
             .collect::<Result<_, _>>()
             .map_err(Error::CertChain)
     }
 
     /// Load and decode the private key  from `reader`.
     pub(crate) fn load_key(&self) -> Result<PrivateKeyDer<'static>> {
-        use rustls_pemfile::Item::*;
-
-        let mut keys = rustls_pemfile::read_all(&mut self.key_reader()?)
-            .map(|result| result.map_err(KeyError::Io)
-                .and_then(|item| match item {
-                    Pkcs1Key(key) => Ok(key.into()),
-                    Pkcs8Key(key) => Ok(key.into()),
-                    Sec1Key(key) => Ok(key.into()),
-                    _ => Err(KeyError::BadItem(item))
-                })
+        let mut keys = <(SectionKind, Vec<u8>)>::pem_reader_iter(self.key_reader()?)
+            .map(|result| result.map_err(KeyError::Pem)
+                .and_then(|(kind, der)| PrivateKeyDer::from_pem(kind, der)
+                    .ok_or(KeyError::BadItem(kind)))
             )
             .collect::<Result<Vec<PrivateKeyDer<'static>>, _>>()?;
 

@@ -12,7 +12,7 @@ thiserror = "1.0"
 procspawn = "1"
 pretty_assertions = "1.4.0"
 ipc-channel = "0.18"
-rustls-pemfile = "2.1"
+rustls-pki-types = { version = "1.9", features = ["std"] }
 inventory = "0.3.15"
 
 [dependencies.nix]

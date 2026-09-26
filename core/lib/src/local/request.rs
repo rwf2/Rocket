@@ -246,10 +246,10 @@ macro_rules! pub_request_impl {
     #[cfg_attr(nightly, doc(cfg(feature = "mtls")))]
     pub fn identity<C: std::io::Read>(mut self, reader: C) -> Self {
         use std::sync::Arc;
+        use rustls::pki_types::{CertificateDer, pem::PemObject};
         use crate::listener::Certificates;
 
-        let mut reader = std::io::BufReader::new(reader);
-        self._request_mut().connection.peer_certs = rustls_pemfile::certs(&mut reader)
+        self._request_mut().connection.peer_certs = CertificateDer::pem_reader_iter(reader)
             .collect::<Result<Vec<_>, _>>()
             .map(|certs| Arc::new(Certificates::from(certs)))
             .ok();
