@@ -172,38 +172,36 @@ error: invalid or unknown media type
 90 | #[get("/", format = "text//foo")]
    |                     ^^^^^^^^^^^
 
-error: expected key/value `key = value`
-  --> tests/ui-fail-nightly/route-attribute-general-syntax.rs:95:18
+error: expected literal, found bare path "CONNECT"
+  --> tests/ui-fail-nightly/route-attribute-general-syntax.rs:95:9
    |
 95 | #[route(CONNECT, "/")]
-   |                  ^^^
+   |         ^^^^^^^
 
-error: invalid or unknown HTTP method
+error: expected literal, found bare path "FIX"
   --> tests/ui-fail-nightly/route-attribute-general-syntax.rs:98:9
    |
 98 | #[route(FIX, "/")]
    |         ^^^
-   |
-   = help: known methods: GET, HEAD, POST, PUT, DELETE, CONNECT, OPTIONS, TRACE, PATCH, ACL, BASELINE-CONTROL, BIND, CHECKIN, CHECKOUT, COPY, LABEL, LINK, LOCK, MERGE, MKACTIVITY, MKCALENDAR, MKCOL, MKREDIRECTREF, MKWORKSPACE, MOVE, ORDERPATCH, PROPFIND, PROPPATCH, REBIND, REPORT, SEARCH, UNBIND, UNCHECKOUT, UNLINK, UNLOCK, UPDATE, UPDATEREDIRECTREF, VERSION-CONTROL
 
-error: invalid or unknown HTTP method
-   --> tests/ui-fail-nightly/route-attribute-general-syntax.rs:101:9
+error: invalid route URI: expected token '/' but found 'h' at index 0
+   --> tests/ui-fail-nightly/route-attribute-general-syntax.rs:101:10
     |
 101 | #[route("hi", "/")]
-    |         ^^^^
+    |          ^
     |
-    = help: known methods: GET, HEAD, POST, PUT, DELETE, CONNECT, OPTIONS, TRACE, PATCH, ACL, BASELINE-CONTROL, BIND, CHECKIN, CHECKOUT, COPY, LABEL, LINK, LOCK, MERGE, MKACTIVITY, MKCALENDAR, MKCOL, MKREDIRECTREF, MKWORKSPACE, MOVE, ORDERPATCH, PROPFIND, PROPPATCH, REBIND, REPORT, SEARCH, UNBIND, UNCHECKOUT, UNLINK, UNLOCK, UPDATE, UPDATEREDIRECTREF, VERSION-CONTROL
+    = help: expected URI in origin form: "/path/<param>"
 
-error: expected key/value `key = value`
-   --> tests/ui-fail-nightly/route-attribute-general-syntax.rs:104:16
+error: invalid route URI: expected token '/' but found 'G' at index 0
+   --> tests/ui-fail-nightly/route-attribute-general-syntax.rs:104:10
     |
 104 | #[route("GET", "/")]
-    |                ^^^
+    |          ^
+    |
+    = help: expected URI in origin form: "/path/<param>"
 
-error: expected method ident or string, found integer literal
+error: invalid value: expected string literal
    --> tests/ui-fail-nightly/route-attribute-general-syntax.rs:107:9
     |
 107 | #[route(120, "/")]
     |         ^^^
-    |
-    = help: known methods: GET, HEAD, POST, PUT, DELETE, CONNECT, OPTIONS, TRACE, PATCH, ACL, BASELINE-CONTROL, BIND, CHECKIN, CHECKOUT, COPY, LABEL, LINK, LOCK, MERGE, MKACTIVITY, MKCALENDAR, MKCOL, MKREDIRECTREF, MKWORKSPACE, MOVE, ORDERPATCH, PROPFIND, PROPPATCH, REBIND, REPORT, SEARCH, UNBIND, UNCHECKOUT, UNLINK, UNLOCK, UPDATE, UPDATEREDIRECTREF, VERSION-CONTROL

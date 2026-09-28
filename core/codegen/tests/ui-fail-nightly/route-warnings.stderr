@@ -28,8 +28,13 @@ warning: `data` used with non-payload-supporting method
 22 | #[get("/", data = "<_foo>")]
    |            ^^^^^^^^^^^^^^^
    |
-   = note: 'GET' does not typically support payloads
+note: 'GET' does not typically support payloads
+  --> tests/ui-fail-nightly/route-warnings.rs:22:3
+   |
+22 | #[get("/", data = "<_foo>")]
+   |   ^^^
    = note: apply `#[suppress(dubious_payload)]` before the item to suppress this lint
+   = note: this warning originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 warning: `data` used with non-payload-supporting method
   --> tests/ui-fail-nightly/route-warnings.rs:25:13
@@ -37,8 +42,13 @@ warning: `data` used with non-payload-supporting method
 25 | #[head("/", data = "<_foo>")]
    |             ^^^^^^^^^^^^^^^
    |
-   = note: 'HEAD' does not typically support payloads
+note: 'HEAD' does not typically support payloads
+  --> tests/ui-fail-nightly/route-warnings.rs:25:3
+   |
+25 | #[head("/", data = "<_foo>")]
+   |   ^^^^
    = note: apply `#[suppress(dubious_payload)]` before the item to suppress this lint
+   = note: this warning originates in the attribute macro `head` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: checking for warnings!
   --> tests/ui-fail-nightly/route-warnings.rs:33:5

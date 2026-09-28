@@ -35,7 +35,7 @@ error: named structs are not supported
 note: error occurred while deriving `FromFormField`
   --> tests/ui-fail-nightly/from_form_field.rs:9:10
    |
-9  | #[derive(FromFormField)]
+ 9 | #[derive(FromFormField)]
    |          ^^^^^^^^^^^^^
    = note: this error originates in the derive macro `FromFormField` (in Nightly builds, run with -Z macro-backtrace for more info)
 

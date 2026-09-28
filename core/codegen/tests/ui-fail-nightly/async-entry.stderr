@@ -114,14 +114,6 @@ error[E0728]: `await` is only allowed inside `async` functions and blocks
 73 |         let _ = rocket::build().launch().await;
    |                                          ^^^^^ only allowed inside `async` functions and blocks
 
-error[E0277]: `main` has invalid return type `Rocket<Build>`
-  --> tests/ui-fail-nightly/async-entry.rs:94:20
-   |
-94 | async fn main() -> rocket::Rocket<rocket::Build> {
-   |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `main` can only return types that implement `Termination`
-   |
-   = help: consider using `()`, or a `Result`
-
 error[E0308]: mismatched types
   --> tests/ui-fail-nightly/async-entry.rs:35:9
    |
@@ -146,6 +138,14 @@ error[E0308]: mismatched types
    = note: expected struct `Rocket<Build>`
               found struct `std::string::String`
 
+error[E0277]: `main` has invalid return type `Rocket<Build>`
+  --> tests/ui-fail-nightly/async-entry.rs:94:20
+   |
+94 | async fn main() -> rocket::Rocket<rocket::Build> {
+   |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `main` can only return types that implement `Termination`
+   |
+   = help: consider using `()`, or a `Result`
+
 error[E0308]: mismatched types
   --> tests/ui-fail-nightly/async-entry.rs:24:21
    |
@@ -165,6 +165,9 @@ error[E0308]: mismatched types
 error[E0308]: mismatched types
   --> tests/ui-fail-nightly/async-entry.rs:35:9
    |
+33 |     async fn rocket() -> String {
+   |                          ------ expected due to this
+34 |         let _ = rocket::build().launch().await;
 35 |         rocket::build()
    |         ^^^^^^^^^^^^^^^ expected `String`, found `Rocket<Build>`
    |
@@ -174,6 +177,9 @@ error[E0308]: mismatched types
 error[E0308]: mismatched types
   --> tests/ui-fail-nightly/async-entry.rs:44:9
    |
+42 |     async fn rocket() -> _ {
+   |                          - expected due to this
+43 |         let _ = rocket::build().launch().await;
 44 |         "hi".to_string()
    |         ^^^^^^^^^^^^^^^^ expected `Rocket<Build>`, found `String`
    |
