@@ -134,9 +134,19 @@ impl Catcher {
     /// assert!(b_count > a_count);
     /// ```
     pub fn matches(&self, status: Status, request: &Request<'_>) -> bool {
-        self.code.map_or(true, |code| code == status.code)
-            && self.base().segments().prefix_of(request.uri().path().segments())
+        self.code.map_or(true, |code| code == status.code) && base_matches(self, request)
     }
+}
+
+fn base_matches(catcher: &Catcher, req: &Request<'_>) -> bool {
+    // Like a route's, the base isn't percent-decoded but the request path is.
+    let base = catcher.base();
+    let req_segments = req.uri().path().segments();
+    if base.raw_segments().count() > req_segments.num() {
+        return false;
+    }
+
+    base.raw_segments().zip(req_segments).all(|(a, b)| a.is_empty() || a == b)
 }
 
 fn methods_match(route: &Route, req: &Request<'_>) -> bool {

@@ -326,10 +326,10 @@ impl<'a> Reference<'a> {
     /// assert!(!Reference::parse("http:/foo//bar").unwrap().is_normalized());
     /// assert!(!Reference::parse("foo:bar?baz&&bop#c").unwrap().is_normalized());
     ///
-    /// // Recall that `uri!()` normalizes static input.
-    /// assert!(uri!("http:/foo//bar").is_normalized());
-    /// assert!(uri!("foo:bar?baz&&bop#c").is_normalized());
-    /// assert!(uri!("http://rocket.rs///foo////bar#cat").is_normalized());
+    /// // `uri!()` requires normalized static input.
+    /// assert!(uri!("http:/foo/bar").is_normalized());
+    /// assert!(uri!("foo:bar?baz&bop#c").is_normalized());
+    /// assert!(uri!("http://rocket.rs/foo/bar#cat").is_normalized());
     /// ```
     pub fn is_normalized(&self) -> bool {
         let normalized_query = self.query().map_or(true, |q| q.is_normalized());
@@ -412,13 +412,13 @@ impl<'a> Reference<'a> {
     pub(crate) fn with_query_fragment_of(mut self, other: Reference<'a>) -> Self {
         if let Some(query) = other.query {
             if self.query().is_none() {
-                self.query = Some(Data::new(query.value.into_concrete(&self.source)));
+                self.query = Some(Data::new(query.value.into_concrete(&other.source)));
             }
         }
 
         if let Some(frag) = other.fragment {
             if self.fragment().is_none() {
-                self.fragment = Some(IndexedStr::from(frag.into_concrete(&self.source)));
+                self.fragment = Some(IndexedStr::from(frag.into_concrete(&other.source)));
             }
         }
 

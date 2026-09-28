@@ -1,4 +1,5 @@
 use std::ops::Deref;
+use std::borrow::Cow;
 
 use indexmap::IndexMap;
 use devise::{Spanned, ext::TypeExt};
@@ -7,6 +8,7 @@ use syn::{Expr, Ident, LitStr, Path, Token, Type};
 use syn::parse::{self, Parse, ParseStream, Parser};
 use syn::punctuated::Punctuated;
 use proc_macro2::{TokenStream, TokenTree, Span};
+use percent_encoding::{utf8_percent_encode, AsciiSet};
 use rocket_http::uri::{Error, Reference};
 
 use crate::http::uri::{Uri, Origin, Absolute, fmt};
@@ -35,14 +37,14 @@ pub enum Args {
     Named(Punctuated<Arg, Token![,]>),
 }
 
-/// A string literal parsed as a URI.
+/// A string literal parsed as a normalized URI.
 #[derive(Debug)]
 pub struct UriLit(Uri<'static>, Span);
 
-/// An expression in a URI slot (prefix, suffix, or literal).
+/// An expression in a URI prefix or suffix slot.
 #[derive(Debug)]
 pub enum UriExpr {
-    /// A string literal parsed as a URI.
+    /// A string literal parsed as a normalized URI.
     Uri(UriLit),
     /// An expression that will be typechecked to be some URI kind.
     Expr(Expr),
@@ -198,18 +200,22 @@ impl Parse for RouteInvocation {
     }
 }
 
+impl UriLit {
+    fn new(uri: Uri<'_>, span: Span) -> syn::Result<Self> {
+        if !uri.is_normalized() {
+            let expected = uri.into_normalized();
+            return err(span, format!("URI must be normalized; expected \"{}\"", expected));
+        }
+
+        Ok(UriLit(uri.into_owned(), span))
+    }
+}
+
 impl Parse for UriLit {
     fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
         let string = input.parse::<StringLit>()?;
-        let uri = match Uri::parse_any(&string) {
-            Ok(uri) => uri.into_owned(),
-            Err(e) => {
-                let span = string.subspan(e.index() + 1..(e.index() + 2));
-                return err(span, format!("invalid URI: {}", e));
-            }
-        };
-
-        Ok(UriLit(uri, string.span()))
+        let uri = Uri::parse_any(&string).or_else(|e| uri_err(&string, e))?;
+        UriLit::new(uri, string.span())
     }
 }
 
@@ -309,7 +315,7 @@ impl Parse for InternalUriParams {
         // Validation should always succeed since this macro can only be called
         // if the route attribute succeeded, implying a valid route URI.
         let route_uri = Origin::parse_route(&route_uri_str)
-            .map(|o| o.into_normalized().into_owned())
+            .map(|o| o.into_owned())
             .map_err(|_| input.error("internal error: invalid route URI"))?;
 
         let content;
@@ -479,18 +485,28 @@ impl UriExpr {
         }
 
         let lit = input.parse::<StringLit>()?;
-        let uri = Uri::parse::<Origin<'_>>(&lit)
-            .or_else(|e| Uri::parse::<Absolute<'_>>(&lit).map_err(|e2| (e, e2)))
-            .map_err(|(e1, e2)| if lit.starts_with('/') { e1 } else { e2 })
-            .or_else(|e| uri_err(&lit, e))?;
+        if lit.starts_with('/') {
+            let base = Origin::parse_base(&lit).or_else(|e| uri_err(&lit, e))?;
+            if base.query().is_some() {
+                return err(lit.span(), "URI prefix cannot contain query part");
+            }
 
-        if matches!(&uri, Uri::Origin(o) if o.query().is_some())
-            || matches!(&uri, Uri::Absolute(a) if a.query().is_some())
-        {
+            let uri = UriLit::new(base.into(), lit.span())?;
+            return Ok(Some(UriExpr::Uri(uri)));
+        }
+
+        let encoded = Cow::from(utf8_percent_encode(&lit, &AsciiSet::EMPTY));
+        let uri = Absolute::parse(&encoded).or_else(|e| match encoded {
+            Cow::Borrowed(_) => uri_err(&lit, e),
+            Cow::Owned(ref uri) => err(lit.span(), format!("invalid URI {uri:?}: {e}")),
+        })?;
+
+        if uri.query().is_some() {
             return err(lit.span(), "URI prefix cannot contain query part");
         }
 
-        Ok(Some(UriExpr::Uri(UriLit(uri.into_owned(), lit.span()))))
+        let uri = UriLit::new(uri.into(), lit.span())?;
+        Ok(Some(UriExpr::Uri(uri)))
     }
 
     fn parse_suffix(input: ParseStream<'_>) -> syn::Result<Option<Self>> {
@@ -508,24 +524,8 @@ impl UriExpr {
             return err(lit.span(), "URI suffix must contain only query and/or fragment");
         }
 
-        // This is a bit of finagling to get the types to match up how we'd
-        // like. A URI like `?foo` will parse as a `Reference`, since that's
-        // what it is. But if we left this as is, we'd convert Origins and
-        // Absolutes to References on suffix appendage when we don't need to.
-        // This is because anything + a Reference _must_ result in a Reference
-        // since the resulting URI could have a fragment. Since here we know
-        // that's not the case, we lie and say it's Absolute since an Absolute
-        // can't contain a fragment, so an Origin + Absolute suffix is still an
-        // Origin, and likewise for an Absolute.
-        let uri = match uri.fragment() {
-            None => {
-                let query = uri.query().map(|q| q.as_str());
-                Uri::Absolute(Absolute::const_new("", None, "", query))
-            }
-            Some(_) => Uri::Reference(uri)
-        };
-
-        Ok(Some(UriExpr::Uri(UriLit(uri.into_owned(), lit.span()))))
+        let uri = UriLit::new(uri.into(), lit.span())?;
+        Ok(Some(UriExpr::Uri(uri)))
     }
 }
 
@@ -552,9 +552,25 @@ impl ToTokens for UriLit {
     }
 }
 
+// Origin literals are mount points, so encode their route syntax.
+//
+// A query-only suffix like `?foo` parses as a `Reference`, whose type allows a
+// fragment. Appending a `Reference` would turn an `Origin` or `Absolute` prefix
+// into a `Reference`. Since the literal has no fragment, emit it as an `Absolute`
+// so an `Origin` prefix stays `Origin` and an `Absolute` prefix stays `Absolute`.
 impl ToTokens for UriExpr {
     fn to_tokens(&self, t: &mut TokenStream) {
         match self {
+            UriExpr::Uri(UriLit(Uri::Origin(base), span)) => {
+                let path = crate::http_codegen::encode_path(base.path());
+                let uri = Origin::path_only(path);
+                crate::http_codegen::Origin(&uri, *span).to_tokens(t);
+            }
+            UriExpr::Uri(UriLit(Uri::Reference(uri), span)) if uri.fragment().is_none() => {
+                let query = uri.query().map(|q| q.as_str());
+                let uri = Absolute::const_new("", None, "", query);
+                crate::http_codegen::Absolute(&uri, *span).to_tokens(t);
+            }
             UriExpr::Uri(uri) => uri.to_tokens(t),
             UriExpr::Expr(e) => e.to_tokens(t),
         }

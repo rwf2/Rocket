@@ -233,6 +233,26 @@ impl<'a> Origin<'a> {
         Ok(Origin::new(path, query))
     }
 
+    // Parses an `Origin` like `parse_route()` but disallows dynamic segments.
+    // This is a mount point, or base. Don't use this outside of Rocket!
+    #[doc(hidden)]
+    pub fn parse_base(string: &'a str) -> Result<Origin<'a>, Error<'a>> {
+        use pear::error::Expected;
+
+        let origin = Origin::parse_route(string)?;
+        let dynamic = origin.path().raw_segments()
+            .find(|s| s.starts_with('<') && s.ends_with('>'));
+
+        if let Some(segment) = dynamic {
+            return Err(Error {
+                expected: Expected::token(None::<&u8>, Some(b'<')),
+                index: segment.as_ptr() as usize - string.as_ptr() as usize,
+            });
+        }
+
+        Ok(origin)
+    }
+
     /// Parses the string `string` into an `Origin`. Never allocates on success.
     /// May allocate on error.
     ///
@@ -362,8 +382,8 @@ impl<'a> Origin<'a> {
     /// Returns `true` if `self` is normalized. Otherwise, returns `false`.
     ///
     /// See [Normalization](Self#normalization) for more information on what it
-    /// means for an origin URI to be normalized. Note that `uri!()` always
-    /// normalizes static input.
+    /// means for an origin URI to be normalized. Note that `uri!()` requires
+    /// normalized static input.
     ///
     /// # Example
     ///
@@ -378,8 +398,8 @@ impl<'a> Origin<'a> {
     /// assert!(!Origin::parse("/a/b/c//d").unwrap().is_normalized());
     /// assert!(!Origin::parse("/a?q&&b").unwrap().is_normalized());
     ///
-    /// assert!(uri!("/a/b/c//d").is_normalized());
-    /// assert!(uri!("/a?q&&b").is_normalized());
+    /// assert!(uri!("/a/b/c/d").is_normalized());
+    /// assert!(uri!("/a?q&b").is_normalized());
     /// ```
     pub fn is_normalized(&self) -> bool {
         self.path().is_normalized(true) && self.query().map_or(true, |q| q.is_normalized())
@@ -567,6 +587,32 @@ impl std::fmt::Display for Origin<'_> {
 #[cfg(test)]
 mod tests {
     use super::Origin;
+
+    #[test]
+    fn whitespace_normalization() {
+        for (input, expected) in [
+            ("/a ", "/a "),
+            ("/ \t", "/ \t"),
+            ("/a\u{a0}", "/a\u{a0}"),
+            ("/a//b ", "/a/b "),
+            ("/a? x ", "/a? x "),
+            ("/a? x&&y ", "/a? x&y "),
+        ] {
+            let origin = Origin::parse_route(input).unwrap();
+            assert_eq!(origin.is_normalized(), input == expected, "{input:?}");
+            assert_eq!(origin.into_normalized(), expected);
+        }
+    }
+
+    #[test]
+    fn base_validation() {
+        for input in ["", "a", " /a", "/a/<id>", "/häcker/<id>"] {
+            assert!(Origin::parse_base(input).is_err(), "{input:?}");
+        }
+
+        let error = Origin::parse_base("/häcker/<id>").unwrap_err();
+        assert_eq!(error.index(), "/häcker/".len());
+    }
 
     fn seg_count(path: &str, expected: usize) -> bool {
         let origin = Origin::parse(path).unwrap();

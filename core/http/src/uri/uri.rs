@@ -131,6 +131,69 @@ impl<'a> Uri<'a> {
         crate::parse::uri::from_str(string)
     }
 
+    /// Returns `true` if the contained URI is normalized.
+    ///
+    /// Delegates to [`Origin::is_normalized()`], [`Absolute::is_normalized()`],
+    /// or [`Reference::is_normalized()`]. Authorities and asterisks are always
+    /// normalized.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::http::uri::Uri;
+    ///
+    /// assert!(Uri::parse_any("*").unwrap().is_normalized());
+    /// assert!(Uri::parse_any("/a/b?x&y").unwrap().is_normalized());
+    /// assert!(!Uri::parse_any("/a//b?x&&y").unwrap().is_normalized());
+    /// ```
+    pub fn is_normalized(&self) -> bool {
+        match self {
+            Uri::Origin(uri) => uri.is_normalized(),
+            Uri::Absolute(uri) => uri.is_normalized(),
+            Uri::Reference(uri) => uri.is_normalized(),
+            Uri::Authority(_) | Uri::Asterisk(_) => true,
+        }
+    }
+
+    /// Normalizes the contained URI in-place, preserving its variant.
+    /// Does nothing if it is already [normalized](Self::is_normalized()).
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::http::uri::Uri;
+    ///
+    /// let mut uri = Uri::parse_any("/a//b?x&&y").unwrap();
+    /// uri.normalize();
+    /// assert_eq!(uri.to_string(), "/a/b?x&y");
+    /// assert!(uri.is_normalized());
+    /// ```
+    pub fn normalize(&mut self) {
+        match self {
+            Uri::Origin(uri) => uri.normalize(),
+            Uri::Absolute(uri) => uri.normalize(),
+            Uri::Reference(uri) => uri.normalize(),
+            Uri::Authority(_) | Uri::Asterisk(_) => {},
+        }
+    }
+
+    /// Normalizes the contained URI, preserving its variant.
+    /// Does nothing if it is already [normalized](Self::is_normalized()).
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rocket::http::uri::Uri;
+    ///
+    /// let uri = Uri::parse_any("http:/a//b?x&&y#f").unwrap().into_normalized();
+    /// assert_eq!(uri.to_string(), "http:/a/b?x&y#f");
+    /// assert!(uri.is_normalized());
+    /// ```
+    pub fn into_normalized(mut self) -> Self {
+        self.normalize();
+        self
+    }
+
     /// Returns the internal instance of `Origin` if `self` is a `Uri::Origin`.
     /// Otherwise, returns `None`.
     ///
@@ -498,14 +561,22 @@ mod tests {
         fn normalize(uri: &str) -> String {
             use crate::uri::Uri;
 
-            match Uri::parse_any(uri).unwrap() {
-                Uri::Origin(uri) => uri.into_normalized().to_string(),
-                Uri::Absolute(uri) => uri.into_normalized().to_string(),
-                Uri::Reference(uri) => uri.into_normalized().to_string(),
-                uri => uri.to_string(),
-            }
+            let uri = Uri::parse_any(uri).unwrap();
+            let normalized = uri.clone().into_normalized();
+            assert!(normalized.is_normalized());
+            assert_eq!(uri.is_normalized(), uri == normalized);
+            assert_eq!(std::mem::discriminant(&uri), std::mem::discriminant(&normalized));
+
+            let mut uri = uri;
+            uri.normalize();
+            assert_eq!(uri, normalized);
+            normalized.to_string()
         }
 
+        assert_eq!(normalize("*"), "*");
+        assert_eq!(normalize("example.com:80"), "example.com:80");
+        assert_eq!(normalize("http:/a//b?x&&y"), "http:/a/b?x&y");
+        assert_eq!(normalize("a//b?x&&y#f"), "a/b?x&y#f");
         assert_eq!(normalize("/#"), "/#");
 
         assert_eq!(normalize("/"), "/");

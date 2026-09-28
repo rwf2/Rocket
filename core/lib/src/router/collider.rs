@@ -141,7 +141,7 @@ impl Catcher {
     /// assert!(!a.collides_with(&b));
     /// ```
     pub fn collides_with(&self, other: &Self) -> bool {
-        self.code == other.code && self.base().segments().eq(other.base().segments())
+        self.code == other.code && self.base().raw_segments().eq(other.base().raw_segments())
     }
 }
 
@@ -511,5 +511,23 @@ mod tests {
         assert!(!catchers_collide(None, "/a/b", None, "/a/b/c"));
         assert!(!catchers_collide(None, "/b", None, "/a/b/c"));
         assert!(!catchers_collide(None, "/", None, "/a/b/c"));
+
+        assert!(!catchers_collide(404, "/m n", 404, "/m%20n"));
+        assert!(!catchers_collide(404, "/häcker", 404, "/h%C3%A4cker"));
+    }
+
+    #[test]
+    fn catcher_utf8_collisions() {
+        assert!(catchers_collide(404, "/häcker", 404, "/häcker"));
+        assert!(catchers_collide(None, "/m n", None, "/m n"));
+        assert!(catchers_collide(None, "/m%20n", None, "/m%20n"));
+    }
+
+    #[test]
+    fn mounted_route_collisions() {
+        let route = |base| dummy_route(false, Get, "/x").rebase(base);
+        assert!(route("/häcker").collides_with(&route("/häcker")));
+        assert!(!route("/häcker").collides_with(&route("/h%C3%A4cker")));
+        assert!(!route("/m n").collides_with(&route("/m%20n")));
     }
 }

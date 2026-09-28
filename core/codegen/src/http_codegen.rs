@@ -34,6 +34,17 @@ pub struct Reference<'a>(pub &'a http::uri::Reference<'a>, pub Span);
 #[derive(Debug)]
 pub struct Asterisk(pub http::uri::Asterisk, pub Span);
 
+// Percent-encode each segment of a normalized route path or mount point.
+pub fn encode_path(path: http::uri::Path<'_>) -> String {
+    let mut encoded = String::with_capacity(path.len());
+    for segment in path.raw_segments() {
+        encoded.push('/');
+        encoded.push_str(segment.percent_encode().as_str());
+    }
+
+    encoded
+}
+
 impl FromMeta for Status {
     fn from_meta(meta: &MetaItem) -> Result<Self> {
         let num = usize::from_meta(meta)?;
@@ -146,7 +157,6 @@ impl<T: ToTokens> ToTokens for Optional<T> {
 impl ToTokens for Origin<'_> {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let (origin, span) = (self.0, self.1);
-        let origin = origin.clone().into_normalized();
         define_spanned_export!(span => _uri);
 
         let path = origin.path().as_str();
@@ -161,7 +171,6 @@ impl ToTokens for Absolute<'_> {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let (absolute, span) = (self.0, self.1);
         define_spanned_export!(span => _uri);
-        let absolute = absolute.clone().into_normalized();
 
         let scheme = absolute.scheme();
         let auth = Optional(absolute.authority().map(|a| Authority(a, span)));
@@ -191,7 +200,6 @@ impl ToTokens for Reference<'_> {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         let (reference, span) = (self.0, self.1);
         define_spanned_export!(span => _uri);
-        let reference = reference.clone().into_normalized();
 
         let scheme = Optional(reference.scheme());
         let auth = Optional(reference.authority().map(|a| Authority(a, span)));

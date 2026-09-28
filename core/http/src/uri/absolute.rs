@@ -250,8 +250,8 @@ impl<'a> Absolute<'a> {
     /// Returns `true` if `self` is normalized. Otherwise, returns `false`.
     ///
     /// See [Normalization](#normalization) for more information on what it
-    /// means for an absolute URI to be normalized. Note that `uri!()` always
-    /// returns a normalized version of its static input.
+    /// means for an absolute URI to be normalized. Note that `uri!()` requires
+    /// normalized static input.
     ///
     /// # Example
     ///
@@ -260,7 +260,7 @@ impl<'a> Absolute<'a> {
     /// use rocket::http::uri::Absolute;
     ///
     /// assert!(uri!("http://rocket.rs").is_normalized());
-    /// assert!(uri!("http://rocket.rs///foo////bar").is_normalized());
+    /// assert!(uri!("http://rocket.rs/foo/bar").is_normalized());
     ///
     /// assert!(Absolute::parse("http:/").unwrap().is_normalized());
     /// assert!(Absolute::parse("http://").unwrap().is_normalized());

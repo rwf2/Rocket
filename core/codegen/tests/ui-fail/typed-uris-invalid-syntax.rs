@@ -35,4 +35,6 @@ fn main() {
     uri!("ftp:?", index);
     uri!("ftp:", index, "foo#bar");
     uri!("ftp:", index, "foo?bar");
+    uri!("https://example.com ", index);
+    uri!("https://example.com/foo/ \t", index);
 }

@@ -690,5 +690,18 @@ mod test {
             reqs: [(404, "/a/b/c"), (500, "/a/b"), (400, "/a/b/d"), (500, "/a/b/c/d?foo")],
             with: [(None, "/a/b"), (500, "/a/b"), (None, "/a/b"), (500, "/a/b/c")]
         }
+
+        // Check that bases, like routes, aren't percent-decoded when matching.
+        assert_catcher_routing! {
+            catch: [(None, "/"), (None, "/m%20n"), (None, "/häcker")],
+            reqs: [
+                (404, "/m%2520n"), (404, "/m%2520n/x"), (404, "/m%20n/x"),
+                (404, "/h%C3%A4cker"), (404, "/h%C3%A4cker/x"), (404, "/h%25C3%25A4cker/x")
+            ],
+            with: [
+                (None, "/m%20n"), (None, "/m%20n"), (None, "/"),
+                (None, "/häcker"), (None, "/häcker"), (None, "/")
+            ]
+        }
     }
 }

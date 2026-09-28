@@ -184,14 +184,12 @@ impl Route {
     /// Creates a new route with the given method, path, and handler with a base
     /// of `/` and a computed [default rank](#default-ranking).
     ///
+    /// The URI is normalized before use. Unlike a strict [`Origin`](uri::Origin),
+    /// route URIs are allowed to contain any UTF-8 characters.
+    ///
     /// # Panics
     ///
     /// Panics if `path` is not a valid Rocket route URI.
-    ///
-    /// A valid route URI is any valid [`Origin`](uri::Origin) URI that is
-    /// normalized, that is, does not contain any empty segments except for an
-    /// optional trailing slash. Unlike a strict `Origin`, route URIs are also
-    /// allowed to contain any UTF-8 characters.
     ///
     /// # Example
     ///
@@ -215,14 +213,12 @@ impl Route {
     /// a base of `/`. If `rank` is `None`, the computed [default
     /// rank](#default-ranking) is used.
     ///
+    /// The URI is normalized before use. Unlike a strict [`Origin`](uri::Origin),
+    /// route URIs are allowed to contain any UTF-8 characters.
+    ///
     /// # Panics
     ///
     /// Panics if `path` is not a valid Rocket route URI.
-    ///
-    /// A valid route URI is any valid [`Origin`](uri::Origin) URI that is
-    /// normalized, that is, does not contain any empty segments except for an
-    /// optional trailing slash. Unlike a strict `Origin`, route URIs are also
-    /// allowed to contain any UTF-8 characters.
     ///
     /// # Example
     ///
@@ -266,33 +262,38 @@ impl Route {
     /// If the the current mount point base is `/`, then the base is replaced by
     /// `base`. Otherwise, `base` is prefixed to the existing `base`.
     ///
+    /// Panics if `base` is not a valid route URI without dynamic parameters.
+    ///
     /// ```rust
     /// use rocket::Route;
     /// use rocket::http::Method;
     /// # use rocket::route::dummy_handler as handler;
-    /// # use rocket::uri;
     ///
     /// // The default base is `/`.
     /// let index = Route::new(Method::Get, "/foo/bar", handler);
     ///
     /// // Since the base is `/`, rebasing replaces the base.
-    /// let rebased = index.rebase(uri!("/boo"));
+    /// let rebased = index.rebase("/boo");
     /// assert_eq!(rebased.uri.base(), "/boo");
     ///
     /// // Now every rebase prefixes.
-    /// let rebased = rebased.rebase(uri!("/base"));
+    /// let rebased = rebased.rebase("/base");
     /// assert_eq!(rebased.uri.base(), "/base/boo");
     ///
     /// // Rebasing to `/` does nothing.
-    /// let rebased = rebased.rebase(uri!("/"));
+    /// let rebased = rebased.rebase("/");
     /// assert_eq!(rebased.uri.base(), "/base/boo");
     ///
     /// // Note that trailing slashes are preserved:
     /// let index = Route::new(Method::Get, "/foo", handler);
-    /// let rebased = index.rebase(uri!("/boo/"));
+    /// let rebased = index.rebase("/boo/");
     /// assert_eq!(rebased.uri.base(), "/boo/");
     /// ```
-    pub fn rebase(mut self, base: uri::Origin<'_>) -> Self {
+    #[track_caller]
+    pub fn rebase(mut self, base: &str) -> Self {
+        let base = uri::Origin::parse_base(base)
+            .expect("expected valid route base")
+            .into_normalized();
         let new_base = match self.uri.base().as_str() {
             "/" => base.path().to_string(),
             _ => format!("{}{}", base.path(), self.uri.base()),
@@ -310,7 +311,7 @@ impl Route {
     /// `mapper` is called with the current base. The returned `String` is used
     /// as the new base if it is a valid URI. If the returned base URI contains
     /// a query, it is ignored. Returns an error if the base produced by
-    /// `mapper` is not a valid origin URI.
+    /// `mapper` is not a valid route URI without dynamic parameters.
     ///
     /// # Example
     ///
@@ -318,7 +319,6 @@ impl Route {
     /// use rocket::Route;
     /// use rocket::http::Method;
     /// # use rocket::route::dummy_handler as handler;
-    /// # use rocket::uri;
     ///
     /// let index = Route::new(Method::Get, "/foo/bar", handler);
     /// assert_eq!(index.uri.base(), "/");
@@ -334,7 +334,7 @@ impl Route {
     ///
     /// // Note that this produces different `base` results than `rebase`!
     /// # let index = old_index.clone();
-    /// let rebased = index.rebase(uri!("/boo"));
+    /// let rebased = index.rebase("/boo");
     /// assert_eq!(rebased.uri.base(), "/boo");
     /// assert_eq!(rebased.uri.unmounted().path(), "/foo/bar");
     /// assert_eq!(rebased.uri.path(), "/boo/foo/bar");

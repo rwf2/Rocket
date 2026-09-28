@@ -87,8 +87,9 @@ impl FromMeta for RouteUri {
                 .map(|i| string.subspan((1 + i)..(1 + i + 2)))
                 .unwrap_or_else(|| string.span());
 
-            return Err(span.error("route URIs cannot contain empty segments")
-                .note(format!("expected \"{}\", found \"{}\"", normalized, origin)));
+            return Err(span.error("route URIs must be normalized")
+                .note(format!("expected {:?}, found {:?}",
+                    normalized.to_string(), origin.to_string())));
         }
 
         let path_span = string.subspan(1..origin.path().len() + 1);

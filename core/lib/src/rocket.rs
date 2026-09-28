@@ -19,7 +19,6 @@ use crate::fairing::{Fairing, Fairings};
 use crate::phase::{Phase, Build, Building, Ignite, Igniting, Orbit, Orbiting};
 use crate::phase::{Stateful, StateRef, StateRefMut, State};
 use crate::http::uri::Origin;
-use crate::http::ext::IntoOwned;
 use crate::error::{Error, ErrorKind};
 
 /// The application server itself.
@@ -240,15 +239,13 @@ impl Rocket<Build> {
     }
 
     #[track_caller]
-    fn load<'a, B, T, F, M>(mut self, kind: &str, base: B, items: Vec<T>, m: M, f: F) -> Self
-        where B: TryInto<Origin<'a>> + Clone + fmt::Display,
-              B::Error: fmt::Display,
-              M: Fn(&Origin<'a>, T) -> T,
+    fn load<T, F, M>(mut self, kind: &str, base: &str, items: Vec<T>, m: M, f: F) -> Self
+        where M: Fn(&str, T) -> T,
               F: Fn(&mut Self, T),
               T: Clone + Trace,
     {
-        let mut base = match base.clone().try_into() {
-            Ok(origin) => origin.into_owned(),
+        let mut base = match Origin::parse_base(base) {
+            Ok(origin) => origin,
             Err(e) => {
                 error!(%base, location = %Location::caller(), "invalid {kind} base uri: {e}");
                 panic!("aborting due to {} base error", kind);
@@ -261,7 +258,7 @@ impl Rocket<Build> {
         }
 
         for unmounted_item in items {
-            f(&mut self, m(&base, unmounted_item.clone()))
+            f(&mut self, m(base.path().as_str(), unmounted_item.clone()))
         }
 
         self
@@ -274,6 +271,12 @@ impl Rocket<Build> {
     /// the route's URI. The URI resulting from joining the `base` URI and the
     /// route URI is called the route's _effective URI_, as this is the URI used
     /// for request matching during routing.
+    ///
+    /// Like a route URI, a `base` is never percent-decoded. Instead, it is
+    /// compared against the percent-decoded path of an incoming request. As
+    /// such, a `base` may contain any UTF-8 characters, and `%` is an ordinary
+    /// character: a `base` of `/häcker` matches requests to `/h%C3%A4cker/..`,
+    /// and a `base` of `/a%20b` matches requests to `/a%2520b/..`.
     ///
     /// A `base` URI is not allowed to have a query part. If a `base` _does_
     /// have a query part, it is ignored when producing the effective URI.
@@ -308,7 +311,7 @@ impl Rocket<Build> {
     ///
     /// Panics if either:
     ///
-    ///   * the `base` mount point is not a valid origin URI without dynamic
+    ///   * the `base` mount point is not a valid route URI without dynamic
     ///     parameters
     ///
     ///   * any route URI is not a valid origin URI. (**Note:** _This kind of
@@ -358,21 +361,22 @@ impl Rocket<Build> {
     /// ```
     #[must_use]
     #[track_caller]
-    pub fn mount<'a, B, R>(self, base: B, routes: R) -> Self
-        where B: TryInto<Origin<'a>> + Clone + fmt::Display,
-              B::Error: fmt::Display,
-              R: Into<Vec<Route>>
+    pub fn mount<R>(self, base: &str, routes: R) -> Self
+        where R: Into<Vec<Route>>
     {
         self.load("route", base, routes.into(),
-            |base, route| route.rebase(base.clone()),
+            |base, route| route.rebase(base),
             |r, route| r.0.routes.push(route))
     }
 
     /// Registers all of the catchers in the supplied vector, scoped to `base`.
     ///
+    /// As with [`Rocket::mount()`], `base` is never percent-decoded. Instead,
+    /// it is compared against the percent-decoded path of the erroring request.
+    ///
     /// # Panics
     ///
-    /// Panics if `base` is not a valid static path: a valid origin URI without
+    /// Panics if `base` is not a valid static path: a valid route URI without
     /// dynamic parameters.
     ///
     /// # Examples
@@ -397,13 +401,11 @@ impl Rocket<Build> {
     /// }
     /// ```
     #[must_use]
-    pub fn register<'a, B, C>(self, base: B, catchers: C) -> Self
-        where B: TryInto<Origin<'a>> + Clone + fmt::Display,
-              B::Error: fmt::Display,
-              C: Into<Vec<Catcher>>
+    pub fn register<C>(self, base: &str, catchers: C) -> Self
+        where C: Into<Vec<Catcher>>
     {
         self.load("catcher", base, catchers.into(),
-            |base, catcher| catcher.rebase(base.clone()),
+            |base, catcher| catcher.rebase(base),
             |r, catcher| r.0.catchers.push(catcher))
     }
 

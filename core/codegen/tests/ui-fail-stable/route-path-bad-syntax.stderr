@@ -19,28 +19,28 @@ error: invalid route URI: expected token '/' but found 'a' at index 0
 11 | #[get("a/b/c")]
    |        ^
 
-error: route URIs cannot contain empty segments
+error: route URIs must be normalized
        = note: expected "/a/b", found "/a///b"
   --> tests/ui-fail-stable/route-path-bad-syntax.rs:14:10
    |
 14 | #[get("/a///b")]
    |          ^^
 
-error: route URIs cannot contain empty segments
+error: route URIs must be normalized
        = note: expected "/?bat", found "/?bat&&"
   --> tests/ui-fail-stable/route-path-bad-syntax.rs:17:13
    |
 17 | #[get("/?bat&&")]
    |             ^^
 
-error: route URIs cannot contain empty segments
+error: route URIs must be normalized
        = note: expected "/?bat", found "/?bat&&"
   --> tests/ui-fail-stable/route-path-bad-syntax.rs:20:13
    |
 20 | #[get("/?bat&&")]
    |             ^^
 
-error: route URIs cannot contain empty segments
+error: route URIs must be normalized
        = note: expected "/a/b/", found "/a/b//"
   --> tests/ui-fail-stable/route-path-bad-syntax.rs:23:12
    |

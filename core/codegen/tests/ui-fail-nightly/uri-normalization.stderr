@@ -1,0 +1,71 @@
+error: URI must be normalized; expected "/foo/"
+ --> tests/ui-fail-nightly/uri-normalization.rs:7:10
+  |
+7 |     uri!("/foo///");
+  |          ^^^^^^^^^
+
+error: URI must be normalized; expected "/foo?x&y"
+ --> tests/ui-fail-nightly/uri-normalization.rs:8:10
+  |
+8 |     uri!("/foo?x&&y");
+  |          ^^^^^^^^^^^
+
+error: URI must be normalized; expected "https://example.com/foo"
+ --> tests/ui-fail-nightly/uri-normalization.rs:9:10
+  |
+9 |     uri!("https://example.com//foo");
+  |          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: URI must be normalized; expected "https://example.com?x&y"
+  --> tests/ui-fail-nightly/uri-normalization.rs:10:10
+   |
+10 |     uri!("https://example.com?x&&y");
+   |          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: URI must be normalized; expected "foo/bar#f"
+  --> tests/ui-fail-nightly/uri-normalization.rs:11:10
+   |
+11 |     uri!("foo//bar#f");
+   |          ^^^^^^^^^^^^
+
+error: URI must be normalized; expected "?x&y#f"
+  --> tests/ui-fail-nightly/uri-normalization.rs:12:10
+   |
+12 |     uri!("?x&&y#f");
+   |          ^^^^^^^^^
+
+error: URI must be normalized; expected "/foo/bar"
+  --> tests/ui-fail-nightly/uri-normalization.rs:14:10
+   |
+14 |     uri!("/foo//bar", index);
+   |          ^^^^^^^^^^^
+
+error: URI must be normalized; expected "http:///"
+  --> tests/ui-fail-nightly/uri-normalization.rs:15:10
+   |
+15 |     uri!("http:////", index);
+   |          ^^^^^^^^^^^
+
+error: URI must be normalized; expected "https://example.com/foo"
+  --> tests/ui-fail-nightly/uri-normalization.rs:16:10
+   |
+16 |     uri!("https://example.com//foo", index);
+   |          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: URI must be normalized; expected "?x&y"
+  --> tests/ui-fail-nightly/uri-normalization.rs:18:20
+   |
+18 |     uri!(_, index, "?x&&y");
+   |                    ^^^^^^^
+
+error: URI must be normalized; expected "?x&y#f"
+  --> tests/ui-fail-nightly/uri-normalization.rs:19:20
+   |
+19 |     uri!(_, index, "?x&&y#f");
+   |                    ^^^^^^^^^
+
+error: URI must be normalized; expected "?x"
+  --> tests/ui-fail-nightly/uri-normalization.rs:20:25
+   |
+20 |     uri!("/foo", index, "?x&");
+   |                         ^^^^^

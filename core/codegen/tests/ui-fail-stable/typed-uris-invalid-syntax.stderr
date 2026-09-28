@@ -76,7 +76,7 @@ error: expected 1, 2, or 3 arguments, found 4
 24 |     uri!("/mount", simple(10, "hi"), "#foo", "?foo");
    |                                              ^^^^^^
 
-error: invalid URI: unexpected token '<' at index 7
+error: invalid URI: unexpected token: '<' at index 7
   --> tests/ui-fail-stable/typed-uris-invalid-syntax.rs:25:18
    |
 25 |     uri!("/mount/<id>", simple);
@@ -143,6 +143,18 @@ error: URI suffix must contain only query and/or fragment
    |
 37 |     uri!("ftp:", index, "foo?bar");
    |                         ^^^^^^^^^
+
+error: invalid URI: unexpected token ' ' at index 19
+  --> tests/ui-fail-stable/typed-uris-invalid-syntax.rs:38:30
+   |
+38 |     uri!("https://example.com ", index);
+   |                              ^
+
+error: invalid URI: unexpected token ' ' at index 24
+  --> tests/ui-fail-stable/typed-uris-invalid-syntax.rs:39:35
+   |
+39 |     uri!("https://example.com/foo/ \t", index);
+   |                                   ^
 
 error: route expects 2 parameters but 0 were supplied
        = note: route `simple` has uri "/<_id>/<_name>"

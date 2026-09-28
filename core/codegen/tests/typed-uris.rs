@@ -12,6 +12,7 @@ macro_rules! assert_uri_eq {
     ($($uri:expr => $expected:expr,)+) => {
         $(
             let actual = $uri;
+            assert!(actual.is_normalized(), "{}", actual);
             let expected = rocket::http::uri::Uri::parse_any($expected).expect("valid URI");
             if actual != expected {
                 panic!("\nURI mismatch: got {}, expected {}\nGot) {:?}\nExpected) {:?}\n",
@@ -203,19 +204,16 @@ fn check_route_prefix_suffix() {
         uri!("/another", simple(id = 23)) => "/another/23",
         uri!("/foo") => "/foo",
         uri!("/foo/") => "/foo/",
-        uri!("/foo///") => "/foo/",
         uri!("/foo/bar/") => "/foo/bar/",
     }
 
     assert_uri_eq! {
         uri!("http://rocket.rs", index) => "http://rocket.rs",
         uri!("http://rocket.rs/", index) => "http://rocket.rs/",
-        uri!("http://rocket.rs///", index) => "http://rocket.rs/",
         uri!("http://rocket.rs/foo", index) => "http://rocket.rs/foo",
         uri!("http://rocket.rs/foo/", index) => "http://rocket.rs/foo/",
         uri!("http://", index) => "http://",
         uri!("http:///", index) => "http:///",
-        uri!("http:////", index) => "http:///",
         uri!("ftp:/", index) => "ftp:/",
     }
 
@@ -671,6 +669,117 @@ fn test_route_uri_normalization_with_prefix() {
         uri!("/bar/", world()) => "/bar/world",
         uri!("/foo/bar", world()) => "/foo/bar/world",
         uri!("/foo/bar/", world()) => "/foo/bar/world",
+        uri!("https://example.com/foo/", world) => "https://example.com/foo/world",
+    }
+}
+
+#[test]
+fn test_runtime_uri_normalization() {
+    use rocket::http::uri::{Absolute, Origin, Reference};
+
+    #[get("/world")] fn world() {}
+    #[get("/<a>/<b>")] fn pair(a: &str, b: &str) {}
+    #[get("/?fixed&<q..>")] fn query(q: &str) {}
+
+    let origin = Origin::parse("/foo//bar/").unwrap();
+    let absolute = Absolute::parse("https://example.com//foo///").unwrap();
+    let suffix = Absolute::parse("scheme:?x&&y&").unwrap();
+    let reference = Reference::parse("?x&&y&#f").unwrap();
+
+    assert_uri_eq! {
+        uri!(origin.clone(), index) => "/foo/bar/",
+        uri!(origin, world) => "/foo/bar/world",
+        uri!(absolute.clone(), index) => "https://example.com/foo/",
+        uri!(absolute, world) => "https://example.com/foo/world",
+
+        uri!(_, index, suffix.clone()) => "/?x&y",
+        uri!("/foo", index, suffix.clone()) => "/foo?x&y",
+        uri!("https://example.com", index, suffix) => "https://example.com?x&y",
+        uri!(_, index, reference.clone()) => "/?x&y#f",
+        uri!("/foo", index, reference.clone()) => "/foo?x&y#f",
+        uri!("https://example.com", index, reference.clone()) => "https://example.com?x&y#f",
+
+        uri!(pair("", "b")) => "/b",
+        uri!(pair("a", "")) => "/a/",
+        uri!(pair("", "")) => "/",
+        uri!("/foo", pair("", "b")) => "/foo/b",
+        uri!("https://example.com/foo/", pair("", "b")) => "https://example.com/foo/b",
+        uri!(_, pair("", "b"), reference.clone()) => "/b?x&y#f",
+        uri!("/foo", pair("", "b"), reference.clone()) => "/foo/b?x&y#f",
+        uri!("https://example.com/foo/", pair("", "b"), reference) =>
+            "https://example.com/foo/b?x&y#f",
+        uri!(query("")) => "/?fixed",
+        uri!("/foo", query(""), "?ignored#f") => "/foo?fixed#f",
+    }
+}
+
+#[test]
+fn test_parsed_uri_suffix() {
+    use rocket::http::uri::{Absolute, Origin, Reference};
+
+    for suffix in [
+        Reference::parse("?x#fragment").unwrap(),
+        Reference::parse_owned("?x#fragment".to_string()).unwrap(),
+    ] {
+        assert_uri_eq! {
+            uri!(_, index, suffix.clone()) => "/?x#fragment",
+            uri!(Origin::parse("/prefix").unwrap(), index, suffix.clone()) => "/prefix?x#fragment",
+            uri!(Absolute::parse("https://example.com/prefix").unwrap(), index, suffix.clone())
+                => "https://example.com/prefix?x#fragment",
+            uri!(_, simple3(123), suffix) => "/?id=123#fragment",
+        }
+    }
+}
+
+#[test]
+fn test_prefix_encoding() {
+    // Generated URI construction must not use this `None`.
+    struct None;
+
+    #[get("/world")] fn world() {}
+    #[get("/?kind=yes")] fn query() {}
+
+    assert_uri_eq! {
+        uri!("/häcker", world) => "/h%C3%A4cker/world",
+        uri!("/foo/", query) => "/foo/?kind=yes",
+        uri!("/foo/", query, "#fragment") => "/foo/?kind=yes#fragment",
+        uri!("/foo%20", index) => "/foo%2520",
+        uri!("/foo bar", world) => "/foo%20bar/world",
+        uri!("/foo /bar", world) => "/foo%20/bar/world",
+        uri!("/foo ", world) => "/foo%20/world",
+        uri!("/foo#bar", index, "#fragment") => "/foo%23bar#fragment",
+        uri!("/foo%2Fbar", world) => "/foo%252Fbar/world",
+        uri!(uri!("/foo%20"), index) => "/foo%20",
+        uri!("https://example.com/foo%20", world) => "https://example.com/foo%20/world",
+        uri!("https://example.com/häcker", world) => "https://example.com/h%C3%A4cker/world",
+        uri!("https://example.com", index) => "https://example.com",
+        uri!("https://example.com/foo\u{a0}", world) => "https://example.com/foo%C2%A0/world",
+        uri!("https://example.com/foo/", query, "#fragment")
+            => "https://example.com/foo/?kind=yes#fragment",
+    }
+}
+
+#[test]
+fn test_route_uri_encoding() {
+    #[get("/a%20b")] fn static_path() {}
+    #[get("/a b/c")] fn static_space() {}
+    #[get("/a ?b ")] fn static_trailing_space() {}
+    #[get("/wörld")] fn static_utf8() {}
+    #[get("/a%20b/<x>")] fn dynamic_path(x: &str) {}
+    #[get("/q?a%20b&c=d+e")] fn static_query() {}
+    #[get("/q?a%20b&<x>")] fn dynamic_query(x: &str) {}
+
+    assert_uri_eq! {
+        uri!(static_path) => "/a%2520b",
+        uri!(static_space) => "/a%20b/c",
+        uri!(static_trailing_space) => "/a%20?b%20",
+        uri!(static_utf8) => "/w%C3%B6rld",
+        uri!(dynamic_path("y")) => "/a%2520b/y",
+        uri!(static_query) => "/q?a%2520b&c=d%2Be",
+        uri!(dynamic_query("y")) => "/q?a%2520b&x=y",
+        uri!("/häcker", static_path) => "/h%C3%A4cker/a%2520b",
+        uri!("/h%C3%A4cker", static_path) => "/h%25C3%25A4cker/a%2520b",
+        uri!(uri!("/h%C3%A4cker"), static_path) => "/h%C3%A4cker/a%2520b",
     }
 }
 
