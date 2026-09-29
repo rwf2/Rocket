@@ -66,6 +66,37 @@ pub struct Config {
     pub workers: usize,
     /// Limit on threads to start for blocking tasks. **(default: `512`)**
     pub max_blocking: usize,
+    /// Runtime wake interval in milliseconds; disabled when `0`.
+    /// **(default: `250`)**
+    ///
+    /// Rocket's _runtime waker_ is a separate thread that periodically wakes
+    /// an idle Tokio worker to process I/O and timers. This works around a
+    /// limitation in Tokio: a task that blocks or fails to yield can prevent
+    /// I/O and timers from making progress even when other workers are idle.
+    ///
+    /// This value sets the time between wakeups, in milliseconds. For example,
+    /// the default value of `250` means that the waker requests a wakeup every
+    /// 250 milliseconds. Decreasing this value can reduce the time spent
+    /// stalled at the cost of more wakeup overhead. Increasing the value
+    /// reduces wakeups but permits longer stalls.
+    ///
+    /// To disable the waker, set this value to `0`. This is safe when all code
+    /// executed by Rocket on your behalf, including code in dependencies, is
+    /// _cooperative_: they yield promptly and never block a worker, and
+    /// potentially blocking or long operations are executed on separate threads
+    /// via [`spawn_blocking`] or equivalent. Note that declaring a function
+    /// `async` does not ensure that its code is cooperative.
+    ///
+    /// The waker requires an available worker to restore progress. If every
+    /// worker is occupied by synchronous blocking operations or computations
+    /// that do not yield, progress cannot resume until at least one worker
+    /// becomes available. Single-worker runtimes necessarily fall into this
+    /// category: whenever a task blocks the only worker, there can never be
+    /// another worker to restore progress. As a result, the waker provides no
+    /// benefit on these runtimes and is disabled irrespective of this setting.
+    ///
+    /// [`spawn_blocking`]: crate::tokio::task::spawn_blocking
+    pub wake_interval: u32,
     /// How, if at all, to identify the server via the `Server` header.
     /// **(default: `"Rocket"`)**
     pub ident: Ident,
@@ -191,6 +222,7 @@ impl Config {
             profile: Self::DEBUG_PROFILE,
             workers: num_cpus::get(),
             max_blocking: 512,
+            wake_interval: 250,
             ident: Ident::default(),
             ip_header: Some(Uncased::from_borrowed("X-Real-IP")),
             proxy_proto_header: None,
@@ -345,6 +377,9 @@ impl Config {
     /// The stringy parameter name for setting/extracting [`Config::max_blocking`].
     pub const MAX_BLOCKING: &'static str = "max_blocking";
 
+    /// The stringy parameter name for setting/extracting [`Config::wake_interval`].
+    pub const WAKE_INTERVAL: &'static str = "wake_interval";
+
     /// The stringy parameter name for setting/extracting [`Config::keep_alive`].
     pub const KEEP_ALIVE: &'static str = "keep_alive";
 
@@ -380,7 +415,7 @@ impl Config {
 
     /// An array of all of the stringy parameter names.
     pub const PARAMETERS: &'static [&'static str] = &[
-        Self::WORKERS, Self::MAX_BLOCKING, Self::KEEP_ALIVE, Self::IDENT,
+        Self::WORKERS, Self::MAX_BLOCKING, Self::WAKE_INTERVAL, Self::KEEP_ALIVE, Self::IDENT,
         Self::IP_HEADER, Self::PROXY_PROTO_HEADER, Self::LIMITS,
         Self::SECRET_KEY, Self::TEMP_DIR, Self::LOG_LEVEL, Self::LOG_FORMAT,
         Self::SHUTDOWN, Self::CLI_COLORS,

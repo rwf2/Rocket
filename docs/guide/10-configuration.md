@@ -27,6 +27,7 @@ values:
 | `port`               | `u16`              | Port to serve on.                               | `8000`                        |
 | `workers`*           | `usize`            | Number of threads to use for executing futures. | cpu core count                |
 | `max_blocking`*      | `usize`            | Limit on threads to start for blocking tasks.   | `512`                         |
+| [`wake_interval`]    | `u32`              | Runtime wake interval in ms; disabled when `0`. | `250`                         |
 | `ident`              | `string`, `false`  | If and how to identify via the `Server` header. | `"Rocket"`                    |
 | `ip_header`          | `string`, `false`  | IP header to inspect to get [client's real IP]. | `"X-Real-IP"`                 |
 | `proxy_proto_header` | `string`, `false`  | Header identifying [client to proxy protocol].  | `None`                        |
@@ -46,6 +47,7 @@ parameters are only read from the [default provider](#default-provider).</small>
 
 [client's real IP]: @api/master/rocket/request/struct.Request.html#method.real_ip
 [client to proxy protocol]: @api/master/rocket/request/struct.Request.html#method.proxy_proto
+[`wake_interval`]: #wake-interval
 
 ### Profiles
 
@@ -154,6 +156,7 @@ address = "127.0.0.1"
 port = 8000
 workers = 16
 max_blocking = 512
+wake_interval = 250
 keep_alive = 5
 ident = "Rocket"
 ip_header = "X-Real-IP" # set to `false` to disable
@@ -197,6 +200,7 @@ ROCKET_STRING=Hello
 ROCKET_STRING="Hello There"
 
 ROCKET_KEEP_ALIVE=1
+ROCKET_WAKE_INTERVAL=100
 ROCKET_IDENT=Rocket
 ROCKET_IDENT="Hello Rocket"
 ROCKET_IDENT=false
@@ -453,6 +457,34 @@ synchronous work via [`rocket_sync_db_pools`].
 [`spawn_blocking`]: @tokio/task/fn.spawn_blocking.html
 [`TempFile`]: @api/master/rocket/fs/enum.TempFile.html
 [`rocket_sync_db_pools`]: @api/master/rocket_sync_db_pools/index.html
+
+### Wake Interval
+
+Rocket's _runtime waker_ is a separate thread that periodically wakes an idle
+Tokio worker to process I/O and timers. This works around a limitation in
+Tokio: a task that blocks or fails to yield can prevent I/O and timers from
+making progress even when other workers are idle.
+
+The `wake_interval` parameter sets the time between wakeups, in milliseconds.
+For example, the default value of `250` means that the waker requests a wakeup
+every 250 milliseconds. Decreasing this value can reduce the time spent
+stalled at the cost of more wakeup overhead. Increasing the value reduces
+wakeups but permits longer stalls.
+
+To disable the waker, set `wake_interval` to `0`. This is safe when all code
+executed by Rocket on your behalf, including code in dependencies, is
+[cooperative](../overview/#multitasking): they yield promptly and never block
+a worker, and potentially blocking or long operations are executed on separate
+threads via [`spawn_blocking`] or equivalent. Note that declaring a function
+`async` does not ensure that its code is cooperative.
+
+The waker requires an available worker to restore progress. If every worker
+is occupied by synchronous blocking operations or computations that do not
+yield, progress cannot resume until at least one worker becomes available.
+Current-thread (single-thread) runtimes necessarily fall into this category:
+whenever a task blocks the only worker, there can never be another worker to
+restore progress. As a result, the waker provides no benefit on these runtimes
+and is disabled irrespective of this setting.
 
 ## Extracting Values
 

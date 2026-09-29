@@ -84,6 +84,7 @@ impl Trace for Config {
             cli_colors = %self.cli_colors,
             workers = self.workers,
             max_blocking = self.max_blocking,
+            wake_interval = (self.wake_interval != 0).then_some(self.wake_interval),
             ident = %self.ident,
             ip_header = self.ip_header.as_ref().map(|s| s.as_str()),
             proxy_proto_header = self.proxy_proto_header.as_ref().map(|s| s.as_str()),

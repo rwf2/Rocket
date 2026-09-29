@@ -667,6 +667,8 @@ impl Rocket<Ignite> {
     }
 
     async fn _launch<L: Listener + 'static>(self, listener: L) -> Result<Rocket<Ignite>, Error> {
+        let interval = Duration::from_millis(self.config.wake_interval.into());
+        let _waker = crate::util::RuntimeWaker::start(interval)?;
         let rocket = self.listen_and_serve(listener, |rocket| async move {
             let rocket = Arc::new(rocket);
 

@@ -1,6 +1,7 @@
 mod chain;
 mod reader_stream;
 mod join;
+mod waker;
 
 #[cfg(unix)]
 pub mod unix;
@@ -8,6 +9,7 @@ pub mod unix;
 pub use chain::Chain;
 pub use reader_stream::ReaderStream;
 pub use join::join;
+pub use waker::RuntimeWaker;
 
 #[track_caller]
 pub fn spawn_inspect<E, F, Fut>(or: F, future: Fut)

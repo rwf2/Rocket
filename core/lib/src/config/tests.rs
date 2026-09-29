@@ -113,6 +113,32 @@ fn test_toml_file() {
 }
 
 #[test]
+fn test_wake_interval() {
+    figment::Jail::expect_with(|jail| {
+        assert_eq!(Config::debug_default().wake_interval, 250);
+        assert_eq!(Config::release_default().wake_interval, 250);
+
+        jail.create_file("Rocket.toml", r#"
+            [default]
+            wake_interval = 100
+
+            [custom]
+            wake_interval = 500
+        "#)?;
+
+        assert_eq!(Config::from(Config::figment()).wake_interval, 100);
+        jail.set_env("ROCKET_PROFILE", "custom");
+        assert_eq!(Config::from(Config::figment()).wake_interval, 500);
+        jail.set_env("ROCKET_WAKE_INTERVAL", 0);
+        assert_eq!(Config::from(Config::figment()).wake_interval, 0);
+
+        let figment = Figment::from(Config::debug_default()).merge((Config::WAKE_INTERVAL, 25));
+        assert_eq!(Config::from(figment).wake_interval, 25);
+        Ok(())
+    });
+}
+
+#[test]
 fn test_cli_colors() {
     figment::Jail::expect_with(|jail| {
         jail.create_file("Rocket.toml", r#"
