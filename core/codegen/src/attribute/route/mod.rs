@@ -218,17 +218,23 @@ fn internal_uri_macro_decl(route: &Route) -> TokenStream {
 
     quote_spanned! { Span::call_site() =>
         #[doc(hidden)]
-        #[macro_export]
-        /// Rocket generated URI macro.
-        macro_rules! #inner_macro_name {
-            ($($token:tt)*) => {{
-                rocket::rocket_internal_uri!(#route_uri, (#(#uri_args),*), $($token)*)
-            }};
+        #[allow(nonstandard_style, unused)]
+        pub mod #inner_macro_name {
+            #[doc(hidden)]
+            #[macro_export]
+            /// Rocket generated URI macro.
+            macro_rules! #inner_macro_name {
+                ($($token:tt)*) => {{
+                    rocket::rocket_internal_uri!(#route_uri, (#(#uri_args),*), $($token)*)
+                }};
+            }
+
+            pub use #inner_macro_name as #macro_name;
         }
 
         #[doc(hidden)]
         #[allow(unused)]
-        pub use #inner_macro_name as #macro_name;
+        pub use #inner_macro_name::#macro_name;
     }
 }
 
