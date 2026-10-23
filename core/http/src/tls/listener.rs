@@ -69,6 +69,7 @@ pub struct Config<R> {
     pub prefer_server_order: bool,
     pub ca_certs: Option<R>,
     pub mandatory_mtls: bool,
+    pub http2: bool,
 }
 
 impl TlsListener {
@@ -118,7 +119,7 @@ impl TlsListener {
         tls_config.ignore_client_order = c.prefer_server_order;
 
         tls_config.alpn_protocols = vec![b"http/1.1".to_vec()];
-        if cfg!(feature = "http2") {
+        if c.http2 {
             tls_config.alpn_protocols.insert(0, b"h2".to_vec());
         }
 

@@ -112,7 +112,7 @@ impl Error {
 
     #[inline(always)]
     pub(crate) fn shutdown<E>(rocket: Arc<Rocket<Orbit>>, error: E) -> Error
-        where E: Into<Option<crate::http::hyper::Error>>
+        where E: Into<Option<io::Error>>
     {
         let error = error.into().map(|e| Box::new(e) as Box<dyn StdError + Sync + Send>);
         Error::new(ErrorKind::Shutdown(rocket, error))

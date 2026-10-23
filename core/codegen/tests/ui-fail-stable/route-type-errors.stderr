@@ -126,6 +126,7 @@ help: the trait `FromRequest<'_>` is not implemented for `Q`
  3 | struct Q;
    | ^^^^^^^^
    = help: the following other types implement trait `FromRequest<'r>`:
+             &'r Accept
              &'r ContentType
              &'r CookieJar<'r>
              &'r Host<'r>
@@ -133,7 +134,6 @@ help: the trait `FromRequest<'_>` is not implemented for `Q`
              &'r Route
              &'r State<T>
              &'r rocket::Config
-             &'r rocket::http::Accept
            and $N others
 
 error[E0277]: the trait bound `Q: FromParam<'_>` is not satisfied
@@ -170,6 +170,7 @@ help: the trait `FromRequest<'_>` is not implemented for `Q`
  3 | struct Q;
    | ^^^^^^^^
    = help: the following other types implement trait `FromRequest<'r>`:
+             &'r Accept
              &'r ContentType
              &'r CookieJar<'r>
              &'r Host<'r>
@@ -177,7 +178,6 @@ help: the trait `FromRequest<'_>` is not implemented for `Q`
              &'r Route
              &'r State<T>
              &'r rocket::Config
-             &'r rocket::http::Accept
            and $N others
 
 error[E0277]: the trait bound `Q: FromParam<'_>` is not satisfied

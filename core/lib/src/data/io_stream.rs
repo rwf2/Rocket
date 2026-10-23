@@ -3,6 +3,7 @@ use std::task::{Context, Poll};
 use std::pin::Pin;
 
 use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
+use hyper_util::rt::TokioIo;
 
 use crate::http::hyper::upgrade::Upgraded;
 
@@ -28,7 +29,7 @@ pub struct IoStream {
 
 /// Just in case we want to add stream kinds in the future.
 enum IoStreamKind {
-    Upgraded(Upgraded)
+    Upgraded(TokioIo<Upgraded>)
 }
 
 /// An upgraded connection I/O handler.
@@ -74,7 +75,7 @@ pub trait IoHandler: Send {
 #[doc(hidden)]
 impl From<Upgraded> for IoStream {
     fn from(io: Upgraded) -> Self {
-        IoStream { kind: IoStreamKind::Upgraded(io) }
+        IoStream { kind: IoStreamKind::Upgraded(TokioIo::new(io)) }
     }
 }
 

@@ -20,7 +20,7 @@ default = []
 tls = ["rustls", "tokio-rustls", "rustls-pki-types", "rustls-webpki"]
 rustls-pemfile = []
 mtls = ["tls", "x509-parser"]
-http2 = ["hyper/http2"]
+http2 = ["hyper/http2", "h2"]
 private-cookies = ["cookie/private", "cookie/key-expansion"]
 serde = ["uncased/with-serde-alloc", "serde_"]
 uuid = ["uuid_"]
@@ -29,6 +29,8 @@ uuid = ["uuid_"]
 smallvec = { version = "1.11", features = ["const_generics", "const_new"] }
 percent-encoding = "2"
 http = "0.2"
+# Require the fix for RUSTSEC-2026-0258.
+h2 = { version = "0.4.20", optional = true }
 time = { version = "0.3.47", features = ["formatting", "macros"] }
 indexmap = "2"
 rustls = { version = "0.23.46", optional = true, default-features = false, features = ["ring", "std", "tls12"] }
@@ -53,9 +55,9 @@ version = "0.13"
 optional = true
 
 [dependencies.hyper]
-version = "0.14.9"
+version = "1.12.0"
 default-features = false
-features = ["http1", "runtime", "server", "stream"]
+features = ["http1", "server"]
 
 [dependencies.serde_]
 package = "serde"

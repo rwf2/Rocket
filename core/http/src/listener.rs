@@ -11,7 +11,6 @@ use log::warn;
 use tokio::time::Sleep;
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::TcpStream;
-use hyper::server::accept::Accept;
 use state::InitCell;
 
 pub use tokio::net::TcpListener;
@@ -61,7 +60,7 @@ pub trait Listener {
     fn local_addr(&self) -> Option<SocketAddr>;
 
     /// Try to accept an incoming Connection if ready. This should only return
-    /// an `Err` when a fatal problem occurs as Hyper kills the server on `Err`.
+    /// an `Err` when a fatal problem occurs: an `Err` stops the server.
     fn poll_accept(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>
@@ -90,10 +89,10 @@ pub trait Connection: AsyncRead + AsyncWrite {
 }
 
 pin_project_lite::pin_project! {
-    /// This is a generic version of hyper's AddrIncoming that is intended to be
+    /// This is a generic incoming connection stream that is intended to be
     /// usable with listeners other than a plain TCP stream, e.g. TLS and/or Unix
-    /// sockets. It does so by bridging the `Listener` trait to what hyper wants (an
-    /// Accept). This type is internal to Rocket.
+    /// sockets. It does so by bridging the `Listener` trait to a `Stream`. This
+    /// type is internal to Rocket.
     #[must_use = "streams do nothing unless polled"]
     pub struct Incoming<L> {
         sleep_on_errors: Option<Duration>,
@@ -122,15 +121,15 @@ impl<L: Listener> Incoming<L> {
     /// allowed, and so trying to accept a new connection will fail with
     /// `EMFILE`. In some cases, it's preferable to just wait for some time, if
     /// the application will likely close some files (or connections), and try
-    /// to accept the connection again. If this option is `true`, the error
-    /// will be logged at the `error` level, since it is still a big deal,
-    /// and then the listener will sleep for 1 second.
+    /// to accept the connection again. If this option is `Some(duration)`, the
+    /// error will be logged at the `warn` level, since it is still a big deal,
+    /// and then the listener will sleep for `duration`.
     ///
-    /// In other cases, hitting the max open files should be treat similarly
+    /// In other cases, hitting the max open files should be treated similarly
     /// to being out-of-memory, and simply error (and shutdown). Setting
     /// this option to `None` will allow that.
     ///
-    /// Default is 1 second.
+    /// Default is 250 milliseconds.
     pub fn sleep_on_errors(mut self, val: Option<Duration>) -> Self {
         self.sleep_on_errors = val;
         self
@@ -196,15 +195,14 @@ impl<L: Listener> Incoming<L> {
     }
 }
 
-impl<L: Listener> Accept for Incoming<L> {
-    type Conn = L::Connection;
-    type Error = io::Error;
+impl<L: Listener> futures::Stream for Incoming<L> {
+    type Item = io::Result<L::Connection>;
 
     #[inline]
-    fn poll_accept(
+    fn poll_next(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>
-    ) -> Poll<Option<io::Result<Self::Conn>>> {
+    ) -> Poll<Option<Self::Item>> {
         self.poll_accept_next(cx).map(Some)
     }
 }

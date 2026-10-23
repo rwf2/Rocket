@@ -671,6 +671,7 @@ mod with_tls_feature {
                 private_key: to_reader(&self.key)?,
                 ciphersuites: self.rustls_ciphers().collect(),
                 prefer_server_order: self.prefer_server_cipher_order,
+                http2: cfg!(feature = "http2"),
                 #[cfg(not(feature = "mtls"))]
                 mandatory_mtls: false,
                 #[cfg(not(feature = "mtls"))]

@@ -1,27 +1,44 @@
 use std::io;
 use std::sync::Arc;
 use std::time::Duration;
-use std::pin::Pin;
+use std::pin::{pin, Pin};
 
 use yansi::Paint;
-use tokio::sync::oneshot;
+use bytes::Bytes;
+use tokio::sync::{mpsc, oneshot};
 use tokio::time::sleep;
+use tokio_stream::wrappers::ReceiverStream;
 use futures::stream::StreamExt;
 use futures::future::{FutureExt, Future, BoxFuture};
+use http_body_util::{Either, Empty, StreamBody};
+use hyper_util::rt::TokioIo;
+
+#[cfg(feature = "http2")]
+use hyper_util::rt::{TokioExecutor, TokioTimer};
+#[cfg(feature = "http2")]
+use hyper_util::server::conn::auto::Builder;
+#[cfg(not(feature = "http2"))]
+use crate::http::hyper::server::conn::http1::Builder;
 
 use crate::{route, Rocket, Orbit, Request, Response, Data, Config};
 use crate::form::Form;
 use crate::outcome::Outcome;
 use crate::error::{Error, ErrorKind};
-use crate::ext::{AsyncReadExt, CancellableListener, CancellableIo};
+use crate::ext::{AsyncReadExt, CancellableListener};
 use crate::request::ConnectionMeta;
 use crate::data::IoHandler;
 
 use crate::http::{hyper, uncased, Method, Status, Header};
+use crate::http::hyper::body::Frame;
 use crate::http::private::{TcpListener, Listener, Connection, Incoming};
 
 // A token returned to force the execution of one method before another.
 pub(crate) struct RequestToken;
+
+type HttpBody = Either<
+    Empty<Bytes>,
+    StreamBody<ReceiverStream<io::Result<Frame<Bytes>>>>,
+>;
 
 async fn handle<Fut, T, F>(name: Option<&str>, run: F) -> Option<T>
     where F: FnOnce() -> Fut, Fut: Future<Output = T>,
@@ -67,7 +84,7 @@ async fn hyper_service_fn(
     rocket: Arc<Rocket<Orbit>>,
     conn: ConnectionMeta,
     mut hyp_req: hyper::Request<hyper::Body>,
-) -> Result<hyper::Response<hyper::Body>, io::Error> {
+) -> Result<hyper::Response<HttpBody>, io::Error> {
     // This future must return a hyper::Response, but the response body might
     // borrow from the request. Instead, write the body in another future that
     // sends the response metadata (and a body channel) prior.
@@ -123,7 +140,7 @@ impl Rocket<Orbit> {
     async fn send_response(
         &self,
         response: Response<'_>,
-        tx: oneshot::Sender<hyper::Response<hyper::Body>>,
+        tx: oneshot::Sender<hyper::Response<HttpBody>>,
         version: hyper::Version,
     ) {
         let remote_hungup = |e: &io::Error| match e.kind() {
@@ -145,7 +162,7 @@ impl Rocket<Orbit> {
     async fn _send_response(
         &self,
         mut response: Response<'_>,
-        tx: oneshot::Sender<hyper::Response<hyper::Body>>,
+        tx: oneshot::Sender<hyper::Response<HttpBody>>,
         version: hyper::Version,
     ) -> io::Result<()> {
         if response.headers().contains("Transfer-Encoding") {
@@ -179,19 +196,20 @@ impl Rocket<Orbit> {
         // Send empty HTTP/2 responses with just the headers. An empty DATA
         // frame makes h2 reject a 304 with a nonzero Content-Length.
         if version == hyper::Version::HTTP_2 && response.body().is_empty() {
-            return send_headers(hyper::Body::empty());
+            return send_headers(Either::Left(Empty::new()));
         }
 
         // For HTTP/1, use a channel even without a body. Hyper otherwise
         // removes Content-Length from 304 responses.
-        let (mut sender, hyp_body) = hyper::Body::channel();
-        send_headers(hyp_body)?;
+        let (sender, receiver) = mpsc::channel(1);
+        let hyp_body = StreamBody::new(ReceiverStream::new(receiver));
+        send_headers(Either::Right(hyp_body))?;
 
         let body = response.body_mut();
         let max_chunk_size = body.max_chunk_size();
         let mut stream = body.into_bytes_stream(max_chunk_size);
         while let Some(next) = stream.next().await {
-            sender.send_data(next?).await
+            sender.send(Ok(Frame::data(next?))).await
                 .map_err(|e| io::Error::new(io::ErrorKind::BrokenPipe, e))?;
         }
 
@@ -204,7 +222,7 @@ impl Rocket<Orbit> {
         proto: uncased::Uncased<'r>,
         io_handler: Pin<Box<dyn IoHandler + 'r>>,
         pending_upgrade: hyper::upgrade::OnUpgrade,
-        tx: oneshot::Sender<hyper::Response<hyper::Body>>,
+        tx: oneshot::Sender<hyper::Response<HttpBody>>,
         version: hyper::Version,
     ) {
         info_!("Upgrading connection to {}.", Paint::white(&proto).bold());
@@ -509,40 +527,9 @@ impl Rocket<Orbit> {
             });
         }
 
-        // Save the keep-alive value for later use; we're about to move `self`.
-        let keep_alive = self.config.keep_alive;
-
-        // Create the Hyper `Service`.
         let rocket = Arc::new(self);
-        let service_fn = |conn: &CancellableIo<_, L::Connection>| {
-            let rocket = rocket.clone();
-            let connection = ConnectionMeta {
-                remote: conn.peer_address(),
-                client_certificates: conn.peer_certificates(),
-            };
-
-            async move {
-                Ok::<_, std::convert::Infallible>(hyper::service::service_fn(move |req| {
-                    hyper_service_fn(rocket.clone(), connection.clone(), req)
-                }))
-            }
-        };
-
-        // NOTE: `hyper` uses `tokio::spawn()` as the default executor.
         let listener = CancellableListener::new(shutdown.clone(), listener, grace, mercy);
-        let builder = hyper::server::Server::builder(Incoming::new(listener).nodelay(true));
-
-        #[cfg(feature = "http2")]
-        let builder = builder.http2_keep_alive_interval(match keep_alive {
-            0 => None,
-            n => Some(Duration::from_secs(n as u64))
-        });
-
-        let server = builder
-            .http1_keepalive(keep_alive != 0)
-            .http1_preserve_header_case(true)
-            .serve(hyper::service::make_service_fn(service_fn))
-            .with_graceful_shutdown(shutdown.clone());
+        let server = rocket.clone().serve(listener);
 
         // This deserves some explanation.
         //
@@ -566,8 +553,8 @@ impl Rocket<Orbit> {
         // means that all instances of the shared `Arc<Rocket>` are dropped and
         // we can return the owned instance of `Rocket`.
         //
-        // Unfortunately, the Hyper `server` future resolves as soon as it has
-        // finishes processing requests without respect for ongoing responses.
+        // The accept loop, however, resolves as soon as shutdown is requested,
+        // without waiting for the connection tasks or their ongoing responses.
         // That is, `server` resolves even when there are running tasks that are
         // generating a response. So, `server` resolving implies little to
         // nothing about the state of connections. As a result, we depend on the
@@ -632,5 +619,81 @@ impl Rocket<Orbit> {
                 }
             }
         }
+    }
+
+    async fn serve<L>(self: Arc<Self>, listener: L) -> io::Result<()>
+        where L: Listener + Send,
+              L::Connection: Send + Unpin + 'static
+    {
+        #[cfg(feature = "http2")]
+        let mut builder = Builder::new(TokioExecutor::new());
+        #[cfg(not(feature = "http2"))]
+        let mut builder = Builder::new();
+
+        #[cfg(feature = "http2")]
+        let mut http1 = builder.http1();
+        #[cfg(not(feature = "http2"))]
+        let http1 = &mut builder;
+
+        let keep_alive = self.config.keep_alive;
+        http1.keep_alive(keep_alive != 0)
+            .preserve_header_case(true)
+            .header_read_timeout(None);
+
+        #[cfg(feature = "http2")]
+        builder.http2()
+            .max_concurrent_streams(None)
+            .max_header_list_size(16 << 20)
+            .timer(TokioTimer::new())
+            .keep_alive_timeout(Duration::from_secs(20))
+            .keep_alive_interval(match keep_alive {
+                0 => None,
+                n => Some(Duration::from_secs(n as u64)),
+            });
+
+        let server = Arc::new(builder);
+        let incoming = Incoming::new(listener).nodelay(true).take_until(self.shutdown());
+        let mut incoming = pin!(incoming);
+
+        while let Some(conn) = incoming.next().await.transpose()? {
+            let (rocket, server) = (self.clone(), server.clone());
+            let shutdown = rocket.shutdown();
+            tokio::spawn(async move {
+                let connection = ConnectionMeta {
+                    remote: conn.peer_address(),
+                    client_certificates: conn.peer_certificates(),
+                };
+                let service = hyper::service::service_fn(move |req| {
+                    hyper_service_fn(rocket.clone(), connection.clone(), req)
+                });
+
+                let io = TokioIo::new(conn);
+                #[cfg(feature = "http2")]
+                let mut server = pin!(server.serve_connection_with_upgrades(io, service));
+                #[cfg(not(feature = "http2"))]
+                let mut server = pin!(server.serve_connection(io, service).with_upgrades());
+
+                let result = tokio::select! {
+                    biased;
+                    _ = shutdown => {
+                        server.as_mut().graceful_shutdown();
+                        server.await
+                    },
+                    result = &mut server => result,
+                };
+
+                if let Err(e) = result {
+                    let e: Box<dyn std::error::Error + Send + Sync> = e.into();
+                    warn!("Connection failed: {}", e);
+                    let mut source = e.source();
+                    while let Some(e) = source {
+                        warn_!("Error: {}", e);
+                        source = e.source();
+                    }
+                }
+            });
+        }
+
+        Ok(())
     }
 }

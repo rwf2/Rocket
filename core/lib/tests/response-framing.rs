@@ -5,8 +5,11 @@ use std::pin::Pin;
 use std::task::{Context, Poll};
 use std::time::Duration;
 
+use http_body_util::{BodyExt, Empty};
+use hyper::body::{Bytes, Incoming};
+use hyper_util::rt::{TokioExecutor, TokioIo};
+
 use rocket::fairing::AdHoc;
-use rocket::futures::future::poll_fn;
 use rocket::http::Status;
 use rocket::response::{Response, Responder};
 use rocket::tokio::io::{AsyncRead, AsyncSeek, ReadBuf};
@@ -78,17 +81,28 @@ async fn local_representation_length() {
     }
 }
 
-async fn request(
-    client: &mut hyper::client::conn::SendRequest<hyper::Body>,
-    method: &str,
-    path: &str,
-) -> hyper::Response<hyper::Body> {
-    let request = hyper::Request::builder()
-        .method(method).uri(format!("http://localhost{path}"))
-        .body(hyper::Body::empty()).unwrap();
+enum Client {
+    Http1(hyper::client::conn::http1::SendRequest<Empty<Bytes>>),
+    Http2(hyper::client::conn::http2::SendRequest<Empty<Bytes>>),
+}
 
-    poll_fn(|cx| client.poll_ready(cx)).await.unwrap();
-    client.send_request(request).await.unwrap()
+impl Client {
+    async fn request(&mut self, method: &str, path: &str) -> hyper::Response<Incoming> {
+        let request = hyper::Request::builder()
+            .method(method).uri(format!("http://localhost{path}"))
+            .body(Empty::new()).unwrap();
+
+        match self {
+            Client::Http1(client) => {
+                client.ready().await.unwrap();
+                client.send_request(request).await.unwrap()
+            },
+            Client::Http2(client) => {
+                client.ready().await.unwrap();
+                client.send_request(request).await.unwrap()
+            },
+        }
+    }
 }
 
 async fn check_framing(http2: bool) {
@@ -103,9 +117,15 @@ async fn check_framing(http2: bool) {
     let server = rocket::tokio::spawn(rocket.launch());
     let (port, shutdown) = rx.await.unwrap();
     let tcp = TcpStream::connect(("127.0.0.1", port)).await.unwrap();
-    let (mut client, connection) = hyper::client::conn::Builder::new()
-        .http2_only(http2).handshake(tcp).await.unwrap();
-    let connection = rocket::tokio::spawn(connection);
+    let io = TokioIo::new(tcp);
+    let (mut client, connection) = if http2 {
+        let (client, connection) = hyper::client::conn::http2::handshake(TokioExecutor::new(), io)
+            .await.unwrap();
+        (Client::Http2(client), rocket::tokio::spawn(connection))
+    } else {
+        let (client, connection) = hyper::client::conn::http1::handshake(io).await.unwrap();
+        (Client::Http1(client), rocket::tokio::spawn(connection))
+    };
 
     // HEAD and 304 omit the body but preserve its length when it is known.
     for (method, status) in [("HEAD", 200), ("GET", 304)] {
@@ -122,28 +142,28 @@ async fn check_framing(http2: bool) {
             ("stream?length=123&chunked=true", None),
         ] {
             let path = format!("/{status}/{body}");
-            let response = request(&mut client, method, &path).await;
+            let response = client.request(method, &path).await;
             assert_eq!(response.status(), status, "{method} {path}");
             let actual = response.headers().get("Content-Length")
                 .map(|value| value.to_str().unwrap());
             assert_eq!(actual, length, "{method} {path}");
-            assert!(hyper::body::to_bytes(response).await.unwrap().is_empty());
+            assert!(response.collect().await.unwrap().to_bytes().is_empty());
 
-            let response = request(&mut client, "GET", "/200/sized").await;
-            assert_eq!(hyper::body::to_bytes(response).await.unwrap(), "hello");
+            let response = client.request("GET", "/200/sized").await;
+            assert_eq!(response.collect().await.unwrap().to_bytes(), "hello");
         }
     }
 
     // A 204 has neither a body nor framing headers, including for HEAD.
     for method in ["GET", "HEAD"] {
-        let response = request(&mut client, method, "/204/sized?length=123&chunked=true").await;
+        let response = client.request(method, "/204/sized?length=123&chunked=true").await;
         assert_eq!(response.status(), 204);
         assert!(!response.headers().contains_key("Content-Length"));
         assert!(!response.headers().contains_key("Transfer-Encoding"));
-        assert!(hyper::body::to_bytes(response).await.unwrap().is_empty());
+        assert!(response.collect().await.unwrap().to_bytes().is_empty());
 
-        let response = request(&mut client, "GET", "/200/sized").await;
-        assert_eq!(hyper::body::to_bytes(response).await.unwrap(), "hello");
+        let response = client.request("GET", "/200/sized").await;
+        assert_eq!(response.collect().await.unwrap().to_bytes(), "hello");
     }
 
     // A known body size replaces an explicit length instead of adding another.
@@ -153,16 +173,16 @@ async fn check_framing(http2: bool) {
         ("sized", "5", "hello"),
     ] {
         let path = format!("/200/{body}?length=123");
-        let response = request(&mut client, "GET", &path).await;
+        let response = client.request("GET", &path).await;
         assert_eq!(response.headers().get("Content-Length").unwrap(), length);
         assert_eq!(response.headers().get_all("Content-Length").iter().count(), 1);
-        assert_eq!(hyper::body::to_bytes(response).await.unwrap(), bytes);
+        assert_eq!(response.collect().await.unwrap().to_bytes(), bytes);
     }
 
     // Transfer-Encoding and Content-Length must not be sent together.
-    let response = request(&mut client, "GET", "/200/stream?length=123&chunked=true").await;
+    let response = client.request("GET", "/200/stream?length=123&chunked=true").await;
     assert!(!response.headers().contains_key("Content-Length"));
-    assert_eq!(hyper::body::to_bytes(response).await.unwrap(), "hello");
+    assert_eq!(response.collect().await.unwrap().to_bytes(), "hello");
 
     drop(client);
     shutdown.notify();

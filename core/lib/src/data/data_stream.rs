@@ -9,7 +9,7 @@ use futures::stream::Stream;
 use futures::ready;
 use yansi::Paint;
 
-use crate::http::hyper;
+use crate::http::hyper::{self, body::Body};
 use crate::ext::{PollExt, Chain};
 use crate::data::{Capped, N};
 
@@ -277,8 +277,12 @@ impl Stream for StreamKind<'_> {
         cx: &mut Context<'_>,
     ) -> Poll<Option<Self::Item>> {
         match self.get_mut() {
-            StreamKind::Body(body) => Pin::new(body).poll_next(cx)
-                .map_err_ext(|e| io::Error::new(io::ErrorKind::Other, e)),
+            StreamKind::Body(body) => {
+                Pin::new(body)
+                    .poll_frame(cx)
+                    .map_ok(|frame| frame.into_data().unwrap_or_default())
+                    .map_err_ext(io::Error::other)
+            },
             StreamKind::Multipart(mp) => Pin::new(mp).poll_next(cx)
                 .map_err_ext(|e| io::Error::new(io::ErrorKind::Other, e)),
             StreamKind::Empty => Poll::Ready(None),
@@ -287,7 +291,7 @@ impl Stream for StreamKind<'_> {
 
     fn size_hint(&self) -> (usize, Option<usize>) {
         match self {
-            StreamKind::Body(body) => body.size_hint(),
+            StreamKind::Body(_) => (0, None),
             StreamKind::Multipart(mp) => mp.size_hint(),
             StreamKind::Empty => (0, Some(0)),
         }

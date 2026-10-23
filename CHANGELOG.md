@@ -21,13 +21,8 @@ This release contains the following crate updates:
   * Documentation now warns that clients can spoof `X-Real-IP` unless all
     requests go through a trusted proxy that overwrites it.
 
-  * **(known issue)** The default `http2` feature is affected by
-    [RUSTSEC-2026-0258]: empty HTTP/2 frames can cause excessive memory use.
-    No fixed `h2` `0.3` release is available.
-
-    Disable `http2`, or use a patched proxy that terminates HTTP/2 and forwards
-    HTTP/1 requests to Rocket. When using a proxy, prevent clients from
-    reaching Rocket directly. Request body limits do not prevent this issue.
+  * `hyper` was updated to `1.12`, and `h2` now requires at least `0.4.20`,
+    fixing excessive memory use from empty HTTP/2 frames ([RUSTSEC-2026-0258]).
 
 ### Fixes and Improvements
 

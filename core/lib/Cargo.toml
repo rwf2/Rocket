@@ -23,7 +23,7 @@ all-features = true
 default = ["http2"]
 tls = ["rocket_http/tls"]
 mtls = ["rocket_http/mtls", "tls"]
-http2 = ["rocket_http/http2"]
+http2 = ["rocket_http/http2", "hyper-util/http2"]
 secrets = ["rocket_http/private-cookies"]
 json = ["serde_json", "tokio/io-util"]
 msgpack = ["rmp-serde", "tokio/io-util"]
@@ -58,6 +58,12 @@ async-stream = "0.3.2"
 multer = { version = "3.0.0", features = ["tokio-io"] }
 tokio-stream = { version = "0.1.6", features = ["signal", "time"] }
 state = "0.6"
+http-body-util = "0.1.5"
+
+[dependencies.hyper-util]
+version = "0.1.21"
+default-features = false
+features = ["server", "http1", "tokio"]
 
 [dependencies.rocket_codegen]
 version = "0.5.1"
@@ -84,6 +90,6 @@ version = "1.0"
 version_check = "0.9.1"
 
 [dev-dependencies]
-hyper = { version = "0.14.9", default-features = false, features = ["client", "http2"] }
+hyper = { version = "1.12.0", default-features = false, features = ["client", "http1", "http2"] }
 figment = { version = "0.10", features = ["test"] }
 pretty_assertions = "1"
