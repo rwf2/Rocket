@@ -25,12 +25,12 @@ fn likely_spawns(f: &syn::ItemFn) -> Option<&syn::ExprCall> {
             if let syn::Expr::Path(ref e) = *i.func {
                 let mut segments = e.path.segments.clone();
                 if let Some(last) = segments.pop() {
-                    if last.value().ident != "spawn" {
+                    if last.ident != "spawn" {
                         return visit::visit_expr_call(self, i);
                     }
 
                     if let Some(prefix) = segments.pop() {
-                        if prefix.value().ident == "tokio" {
+                        if prefix.ident == "tokio" {
                             self.0 = Some(i);
                             return;
                         }

@@ -18,9 +18,10 @@ proc-macro = true
 [dependencies]
 indexmap = "2"
 quote = "1.0"
-syn = { version = "2.0", features = ["full", "visit", "visit-mut", "extra-traits"] }
+syn = { version = "3.0.9", features = ["full", "visit", "visit-mut", "extra-traits"] }
 proc-macro2 = "1.0.60"
-devise = "0.4"
+devise = "0.5.0"
+proc-macro2-diagnostics = { version = "0.11.0", features = ["nightly"] }
 rocket_http = { version = "0.5.1", path = "../http/" }
 unicode-xid = "0.2"
 version_check = "0.9"

@@ -219,7 +219,7 @@ impl TypeExt for syn::Type {
                     ImplTrait(_) | Infer(_) | Macro(_) => {
                         self.0 = false;
                     }
-                    BareFn(_) | Never(_) => {
+                    FnPtr(_) | Never(_) => {
                         self.0 = true;
                     },
                     _ => syn::visit::visit_type(self, ty),
