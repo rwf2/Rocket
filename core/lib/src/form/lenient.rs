@@ -78,8 +78,8 @@ impl<'v, T: FromForm<'v>> FromForm<'v> for Lenient<T> {
     type Context = T::Context;
 
     #[inline(always)]
-    fn init(opts: Options) -> Self::Context {
-        T::init(Options { strict: false, ..opts })
+    fn init(_: Options) -> Self::Context {
+        T::init(Options { strict: false })
     }
 
     #[inline(always)]

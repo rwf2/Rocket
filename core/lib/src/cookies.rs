@@ -170,13 +170,13 @@ impl<'a> Clone for CookieJar<'a> {
 #[derive(Clone)]
 enum Op {
     Add(Cookie<'static>, bool),
-    Remove(Cookie<'static>, bool),
+    Remove(Cookie<'static>),
 }
 
 impl Op {
     fn cookie(&self) -> &Cookie<'static> {
         match self {
-            Op::Add(c, _) | Op::Remove(c, _) => c
+            Op::Add(c, _) | Op::Remove(c) => c
         }
     }
 }
@@ -264,7 +264,7 @@ impl<'a> CookieJar<'a> {
         for op in ops.iter().rev().filter(|op| op.cookie().name() == name) {
             match op {
                 Op::Add(c, _) => return Some(c.clone()),
-                Op::Remove(_, _) => return None,
+                Op::Remove(_) => return None,
             }
         }
 
@@ -390,7 +390,7 @@ impl<'a> CookieJar<'a> {
     pub fn remove<C: Into<Cookie<'static>>>(&self, cookie: C) {
         let mut cookie = cookie.into();
         Self::set_removal_defaults(&mut cookie);
-        self.ops.lock().push(Op::Remove(cookie, false));
+        self.ops.lock().push(Op::Remove(cookie));
     }
 
     /// Removes the private `cookie` from the collection.
@@ -433,7 +433,7 @@ impl<'a> CookieJar<'a> {
     pub fn remove_private<C: Into<Cookie<'static>>>(&self, cookie: C) {
         let mut cookie = cookie.into();
         Self::set_removal_defaults(&mut cookie);
-        self.ops.lock().push(Op::Remove(cookie, true));
+        self.ops.lock().push(Op::Remove(cookie));
     }
 
     /// Returns an iterator over all of the _original_ cookies present in this
@@ -478,7 +478,7 @@ impl<'a> CookieJar<'a> {
                 Op::Add(c, true) => {
                     jar.private_mut(&self.config.secret_key.key).add(c);
                 }
-                Op::Remove(mut c, _) => {
+                Op::Remove(mut c) => {
                     if self.jar.get(c.name()).is_some() {
                         c.make_removal();
                         jar.add(c);

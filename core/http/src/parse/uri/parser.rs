@@ -180,7 +180,7 @@ fn maybe_port<'a>(input: &mut RawInput<'a>, bytes: &[u8]) -> Result<'a, Option<u
         port_num += (b - b'0') as u32 * i;
     }
 
-    if port_num > u16::max_value() as u32 {
+    if port_num > u16::MAX as u32 {
         parse_error!("port out of range: {}", port_num)?;
     }
 

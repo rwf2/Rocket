@@ -7,7 +7,7 @@ use indexmap::IndexMap;
 use rocket_http::{ext::IntoCollection, private::SmallVec};
 use time::Duration;
 
-use crate::http::{Header, uri::Absolute, uncased::{UncasedStr, Uncased}};
+use crate::http::{Header, uri::Absolute, uncased::Uncased};
 
 /// Trait implemented by security and privacy policy headers.
 ///
@@ -66,15 +66,10 @@ pub trait Policy: Default + Send + Sync + 'static {
 
 /// Hack to make `Policy` Object-Safe.
 pub(crate) trait SubPolicy: Send + Sync {
-    fn name(&self) -> &'static UncasedStr;
     fn header(&self) -> Header<'static>;
 }
 
 impl<P: Policy> SubPolicy for P {
-    fn name(&self) -> &'static UncasedStr {
-        P::NAME.into()
-    }
-
     fn header(&self) -> Header<'static> {
         Policy::header(self)
     }
