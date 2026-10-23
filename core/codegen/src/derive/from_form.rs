@@ -132,9 +132,6 @@ pub fn derive_from_form(input: proc_macro::TokenStream) -> TokenStream {
                 Ok(quote_spanned! { mixed(input.span()) =>
                     /// Rocket generated FormForm context.
                     #[doc(hidden)]
-                    #[allow(unknown_lints)]
-                    #[allow(renamed_and_removed_lints)]
-                    #[allow(private_in_public)]
                     #[allow(private_bounds)]
                     #vis struct #ctxt_ty #impl_gen #where_clause {
                         __opts: #_form::Options,
