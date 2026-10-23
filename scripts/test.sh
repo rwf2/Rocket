@@ -173,7 +173,8 @@ function test_default() {
 
 function test_ui() {
   echo ":: Testing compile-time UI output..."
-  indir "${PROJECT_ROOT}" $CARGO test --test ui-fail --all --all-features -- --ignored $@
+  indir "${PROJECT_ROOT}" env -u RUSTC_BOOTSTRAP \
+    $CARGO test --test ui-fail --all --all-features -- --ignored $@
 }
 
 function run_benchmarks() {
