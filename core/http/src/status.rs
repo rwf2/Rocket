@@ -112,7 +112,7 @@ impl StatusClass {
 /// }
 /// # }
 /// ```
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Status {
     /// The HTTP status code associated with this status.
     pub code: u16,
@@ -354,32 +354,6 @@ impl fmt::Display for Status {
     }
 }
 
-impl std::hash::Hash for Status {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.code.hash(state)
-    }
-}
-
-impl PartialEq for Status {
-    fn eq(&self, other: &Self) -> bool {
-        self.code.eq(&other.code)
-    }
-}
-
-impl Eq for Status { }
-
-impl PartialOrd for Status {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.code.partial_cmp(&other.code)
-    }
-}
-
-impl Ord for Status {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.code.cmp(&other.code)
-    }
-}
-
 #[cfg(feature = "serde")]
 mod serde {
     use std::fmt;
@@ -424,5 +398,19 @@ mod serde {
         fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
             deserializer.deserialize_u16(DeVisitor)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Status;
+
+    #[test]
+    fn constants_in_patterns() {
+        assert!(matches!(Status::new(200), Status::Ok));
+        assert!(matches!(Status::new(401), Status::Unauthorized));
+        assert_eq!(Status::new(599), Status { code: 599 });
+        assert!(Status::new(599) > Status::InternalServerError);
+        assert!(Status::Ok < Status::Created);
     }
 }
