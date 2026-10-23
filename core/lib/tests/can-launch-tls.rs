@@ -21,3 +21,28 @@ async fn can_launch_tls() {
     client.rocket().shutdown().notify();
     client.rocket().shutdown().await;
 }
+
+#[rocket::async_test]
+async fn invalid_tls_config_fails_at_bind() {
+    use rocket::error::ErrorKind;
+
+    let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/../../examples/tls/private/");
+    let certs = std::fs::read(format!("{dir}rsa_sha256_cert.pem")).unwrap();
+    let key = std::fs::read(format!("{dir}ed25519_key.pem")).unwrap();
+    let tls = TlsConfig::from_bytes(&certs, &key);
+    let config = Config { tls: Some(tls), port: 0, ..Config::debug_default() };
+    let error = rocket::custom(config).launch().await.unwrap_err();
+    assert!(matches!(error.kind(), ErrorKind::Bind(_)));
+
+    #[cfg(feature = "mtls")]
+    for mandatory in [false, true] {
+        use rocket::config::MutualTls;
+
+        let key = std::fs::read(format!("{dir}rsa_sha256_key.pem")).unwrap();
+        let tls = TlsConfig::from_bytes(&certs, &key)
+            .with_mutual(MutualTls::from_bytes(&[]).mandatory(mandatory));
+        let config = Config { tls: Some(tls), port: 0, ..Config::debug_default() };
+        let error = rocket::custom(config).launch().await.unwrap_err();
+        assert!(matches!(error.kind(), ErrorKind::Bind(_)));
+    }
+}

@@ -31,6 +31,10 @@ use indexmap::IndexSet;
 /// authenticates clients via mutual TLS. It works in concert with the
 /// [`mtls`](crate::mtls) module. See [`MutualTls`] for configuration details.
 ///
+/// The certificate chain and private key must match. Malformed certificate or
+/// key data, unsupported keys, and mismatched keys cause launch to fail with a
+/// bind error.
+///
 /// In `Rocket.toml`, configuration might look like:
 ///
 /// ```toml
@@ -126,6 +130,10 @@ pub struct TlsConfig {
 ///     When `false`, the client is not required to present a certificate. In
 ///     either case, if a certificate _is_ presented, it must be valid or the
 ///     connection is terminated.
+///
+/// At least one valid CA certificate is required, even when `mandatory` is
+/// `false`. An empty or invalid CA certificate store causes launch to fail with
+/// a bind error.
 ///
 /// In a `Rocket.toml`, configuration might look like:
 ///
@@ -631,7 +639,7 @@ mod with_tls_feature {
 
     use crate::http::tls::Config;
     use crate::http::tls::rustls::SupportedCipherSuite as RustlsCipher;
-    use crate::http::tls::rustls::cipher_suite;
+    use crate::http::tls::rustls::crypto::ring::cipher_suite;
 
     use yansi::Paint;
 

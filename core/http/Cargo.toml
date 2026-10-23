@@ -17,7 +17,8 @@ rust-version = "1.64"
 
 [features]
 default = []
-tls = ["rustls", "tokio-rustls", "rustls-pemfile"]
+tls = ["rustls", "tokio-rustls", "rustls-pki-types", "rustls-webpki"]
+rustls-pemfile = []
 mtls = ["tls", "x509-parser"]
 http2 = ["hyper/http2"]
 private-cookies = ["cookie/private", "cookie/key-expansion"]
@@ -30,9 +31,10 @@ percent-encoding = "2"
 http = "0.2"
 time = { version = "0.3", features = ["formatting", "macros"] }
 indexmap = "2"
-rustls = { version = "0.21", optional = true }
-tokio-rustls = { version = "0.24", optional = true }
-rustls-pemfile = { version = "1.0.2", optional = true }
+rustls = { version = "0.23.46", optional = true, default-features = false, features = ["ring", "std", "tls12"] }
+tokio-rustls = { version = "0.26.6", optional = true, default-features = false, features = ["ring", "tls12"] }
+rustls-pki-types = { version = "1.15.1", optional = true, features = ["std"] }
+rustls-webpki = { version = "0.103.16", optional = true, default-features = false }
 tokio = { version = "1.6.1", features = ["net", "sync", "time"] }
 log = "0.4"
 ref-cast = "1.0"

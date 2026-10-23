@@ -10,7 +10,7 @@ use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_rustls::{Accept, TlsAcceptor, server::TlsStream as BareTlsStream};
 
 use crate::tls::util::{load_certs, load_private_key, load_ca_certs};
-use crate::listener::{Connection, Listener, Certificates};
+use crate::listener::{Connection, Listener, Certificates, CertificateData};
 
 /// A TLS listener over TCP.
 pub struct TlsListener {
@@ -75,8 +75,8 @@ impl TlsListener {
     pub async fn bind<R>(addr: SocketAddr, mut c: Config<R>) -> io::Result<TlsListener>
         where R: io::BufRead
     {
-        use rustls::server::{AllowAnyAuthenticatedClient, AllowAnyAnonymousOrAuthenticatedClient};
-        use rustls::server::{NoClientAuth, ServerSessionMemoryCache, ServerConfig};
+        use rustls::crypto::ring;
+        use rustls::server::{WebPkiClientVerifier, ServerSessionMemoryCache, ServerConfig};
 
         let cert_chain = load_certs(&mut c.cert_chain)
             .map_err(|e| io::Error::new(e.kind(), format!("bad TLS cert chain: {}", e)))?;
@@ -84,18 +84,31 @@ impl TlsListener {
         let key = load_private_key(&mut c.private_key)
             .map_err(|e| io::Error::new(e.kind(), format!("bad TLS private key: {}", e)))?;
 
+        let provider = Arc::new(rustls::crypto::CryptoProvider {
+            cipher_suites: c.ciphersuites,
+            ..ring::default_provider()
+        });
+
         let client_auth = match c.ca_certs {
-            Some(ref mut ca_certs) => match load_ca_certs(ca_certs) {
-                Ok(ca) if c.mandatory_mtls => AllowAnyAuthenticatedClient::new(ca).boxed(),
-                Ok(ca) => AllowAnyAnonymousOrAuthenticatedClient::new(ca).boxed(),
-                Err(e) => return Err(io::Error::new(e.kind(), format!("bad CA cert(s): {}", e))),
+            Some(ref mut ca_certs) => {
+                let ca = load_ca_certs(ca_certs)
+                    .map_err(|e| io::Error::new(e.kind(), format!("bad CA cert(s): {}", e)))?;
+
+                let verifier =
+                    WebPkiClientVerifier::builder_with_provider(ca.into(), provider.clone());
+                let verifier = match c.mandatory_mtls {
+                    true => verifier,
+                    false => verifier.allow_unauthenticated(),
+                };
+
+                verifier.build().map_err(|e| {
+                    io::Error::new(io::ErrorKind::Other, format!("bad CA cert(s): {}", e))
+                })?
             },
-            None => NoClientAuth::boxed(),
+            None => WebPkiClientVerifier::no_client_auth(),
         };
 
-        let mut tls_config = ServerConfig::builder()
-            .with_cipher_suites(&c.ciphersuites)
-            .with_safe_default_kx_groups()
+        let mut tls_config = ServerConfig::builder_with_provider(provider)
             .with_safe_default_protocol_versions()
             .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("bad TLS config: {}", e)))?
             .with_client_cert_verifier(client_auth)
@@ -110,7 +123,7 @@ impl TlsListener {
         }
 
         tls_config.session_storage = ServerSessionMemoryCache::new(1024);
-        tls_config.ticketer = rustls::Ticketer::new()
+        tls_config.ticketer = ring::Ticketer::new()
             .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("bad TLS ticketer: {}", e)))?;
 
         let listener = TcpListener::bind(addr).await?;
@@ -180,7 +193,8 @@ impl TlsStream {
                     match futures::ready!(Pin::new(accept).poll(cx)) {
                         Ok(stream) => {
                             if let Some(cert_chain) = stream.get_ref().1.peer_certificates() {
-                                self.certs.set(cert_chain.to_vec());
+                                let certs = cert_chain.iter().map(|c| CertificateData(c.to_vec()));
+                                self.certs.set(certs.collect());
                             }
 
                             self.state = TlsState::Streaming(stream);

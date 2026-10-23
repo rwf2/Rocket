@@ -17,15 +17,14 @@ use state::InitCell;
 pub use tokio::net::TcpListener;
 
 /// A thin wrapper over raw, DER-encoded X.509 client certificate data.
-// NOTE: `rustls::Certificate` is exactly isomorphic to `CertificateData`.
-#[doc(inline)]
-#[cfg(feature = "tls")]
-pub use rustls::Certificate as CertificateData;
-
-/// A thin wrapper over raw, DER-encoded X.509 client certificate data.
-#[cfg(not(feature = "tls"))]
-#[derive(Clone, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct CertificateData(pub Vec<u8>);
+
+impl AsRef<[u8]> for CertificateData {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
 
 /// A collection of raw certificate data.
 #[derive(Clone, Default)]
