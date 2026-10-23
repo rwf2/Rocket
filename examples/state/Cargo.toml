@@ -7,4 +7,4 @@ publish = false
 
 [dependencies]
 rocket = { path = "../../core/lib" }
-flume = "0.10"
+flume = "0.12.0"
