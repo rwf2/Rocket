@@ -4,7 +4,7 @@ use either::Either;
 use crate::request::{Request, local_cache_once};
 use crate::data::{Data, Limits, Outcome};
 use crate::form::{SharedStack, prelude::*};
-use crate::http::{RawStr, Status};
+use crate::http::{ContentType, RawStr, Status};
 
 type Result<'r, T> = std::result::Result<T, Error<'r>>;
 
@@ -167,9 +167,13 @@ impl<'r, 'i> MultipartParser<'r, 'i> {
             }
         };
 
-        // A field with a content-type is data; one without is "value".
+        // A field with a content-type or file name is data; one without is
+        // "value" if it's UTF-8 and data otherwise.
         trace_!("multipart field: {:?}", field);
-        let content_type = field.content_type().and_then(|m| m.as_ref().parse().ok());
+        let content_type = field.content_type()
+            .and_then(|m| m.as_ref().parse().ok())
+            .or_else(|| field.file_name().map(|_| ContentType::Binary));
+
         let field = if let Some(content_type) = content_type {
             let (name, file_name) = match (field.name(), field.file_name()) {
                 (None, None) => ("", None),
@@ -194,13 +198,28 @@ impl<'r, 'i> MultipartParser<'r, 'i> {
                 None => (String::new(), 0)
             };
 
-            match field.text().await {
-                Ok(text) => buf.push_str(&text),
+            let bytes = match field.bytes().await {
+                Ok(bytes) => bytes,
                 Err(e) => return Some(Err(e.into())),
             };
 
-            let name_val = self.buffer.push_split(buf, len);
-            Either::Left(ValueField::from(name_val))
+            match std::str::from_utf8(&bytes) {
+                Ok(text) => {
+                    buf.push_str(text);
+                    let name_val = self.buffer.push_split(buf, len);
+                    Either::Left(ValueField::from(name_val))
+                }
+                Err(_) => {
+                    let name = self.buffer.push(buf);
+                    Either::Right(DataField {
+                        content_type: ContentType::Binary,
+                        request: self.request,
+                        name: NameView::new(name),
+                        file_name: None,
+                        data: Data::local(bytes.into()),
+                    })
+                }
+            }
         };
 
         Some(Ok(field))

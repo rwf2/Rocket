@@ -57,6 +57,13 @@ use either::Either;
 /// guard, the extension is identified by the Content-Type of the request, if
 /// any. If there is no Content-Type, the limit `file` is used.
 ///
+/// Multipart data fields without a Content-Type use [`ContentType::Binary`],
+/// so `file/bin` applies when configured, and `file` otherwise. A field's file
+/// name does not select its limit.
+///
+/// Value fields are buffered in memory. Data fields, including multipart fields
+/// with a file name, are stored in `temp_dir`, which must exist and be writable.
+///
 /// # Cappable
 ///
 /// A data stream can be partially read into a `TempFile` even if the incoming
@@ -460,11 +467,13 @@ impl<'v> TempFile<'v> {
         }
     }
 
-    /// Returns the Content-Type of the file as specified in the form field.
+    /// Returns the Content-Type of the file, if known.
     ///
     /// A multipart data form field can optionally specify the content-type of a
     /// file. A browser will typically sniff the file's extension to set the
     /// content-type. This method returns that value, if it was specified.
+    /// For multipart data fields without a Content-Type, this is
+    /// [`ContentType::Binary`]. For value fields, this is `None`.
     ///
     /// ```rust
     /// # #[macro_use] extern crate rocket;

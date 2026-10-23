@@ -6,8 +6,9 @@ use crate::fs::FileName;
 /// A form field with a string value.
 ///
 /// Rocket preprocesses all form fields into either [`ValueField`]s or
-/// [`DataField`]s. All fields from url-encoded forms, and fields without
-/// Content-Types from multipart forms, are preprocessed as a `ValueField`.
+/// [`DataField`]s. All url-encoded form fields are value fields. Multipart
+/// fields with neither a Content-Type nor a file name are value fields if
+/// their contents are valid UTF-8. All other multipart fields are data fields.
 #[derive(Debug, Clone)]
 pub struct ValueField<'r> {
     /// The (decoded) name of the form field.
@@ -19,16 +20,19 @@ pub struct ValueField<'r> {
 /// A multipart form field with an underlying data stream.
 ///
 /// Rocket preprocesses all form fields into either [`ValueField`]s or
-/// [`DataField`]s. Multipart form fields with a `Content-Type` are preprocessed
-/// as a `DataField`. The underlying data is _not_ read into memory, but
-/// instead, streamable from the contained [`Data`] structure.
+/// [`DataField`]s. Multipart fields with a Content-Type or file name, or whose
+/// contents are not valid UTF-8, are preprocessed as a `DataField`.
+///
+/// Fields with a Content-Type or file name are streamed. Other fields are read
+/// into memory to determine whether their contents are valid UTF-8. In either
+/// case, the data can be read from the contained [`Data`] structure.
 pub struct DataField<'r, 'i> {
     /// The (decoded) name of the form field.
     pub name: NameView<'r>,
     /// The form fields's file name.
     pub file_name: Option<&'r FileName>,
-    /// The form field's Content-Type, as submitted, which may or may not
-    /// reflect on `data`.
+    /// The form field's Content-Type, or [`ContentType::Binary`] if none was
+    /// specified. This may not reflect the contents of `data`.
     pub content_type: ContentType,
     /// The request in which the form field was submitted.
     pub request: &'r Request<'i>,
