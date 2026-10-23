@@ -3,6 +3,7 @@
 mod request;
 mod from_param;
 mod from_request;
+mod atomic_method;
 
 #[cfg(test)]
 mod tests;
@@ -15,6 +16,7 @@ pub use self::from_param::{FromParam, FromSegments};
 pub use crate::response::flash::FlashMessage;
 
 pub(crate) use self::request::ConnectionMeta;
+pub(crate) use self::atomic_method::AtomicMethod;
 
 crate::export! {
     /// Store and immediately retrieve a vector-like value `$v` (`String` or

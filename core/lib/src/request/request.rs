@@ -1,15 +1,17 @@
 use std::fmt;
 use std::ops::RangeFrom;
-use std::{future::Future, borrow::Cow, sync::Arc};
+use std::sync::{Arc, atomic::Ordering};
+use std::borrow::Cow;
+use std::future::Future;
 use std::net::{IpAddr, SocketAddr};
 
 use yansi::Paint;
 use state::{TypeMap, InitCell};
 use futures::future::BoxFuture;
-use atomic::{Atomic, Ordering};
+use ref_swap::OptionRefSwap;
 
 use crate::{Rocket, Route, Orbit};
-use crate::request::{FromParam, FromSegments, FromRequest, Outcome};
+use crate::request::{FromParam, FromSegments, FromRequest, Outcome, AtomicMethod};
 use crate::form::{self, ValueField, FromForm};
 use crate::data::Limits;
 
@@ -26,7 +28,7 @@ use crate::http::uri::{fmt::Path, Origin, Segments, Host, Authority};
 /// contains all of the information for a given web request except for the body
 /// data. This includes the HTTP method, URI, cookies, headers, and more.
 pub struct Request<'r> {
-    method: Atomic<Method>,
+    method: AtomicMethod,
     uri: Origin<'r>,
     headers: HeaderMap<'r>,
     pub(crate) connection: ConnectionMeta,
@@ -44,7 +46,7 @@ pub(crate) struct ConnectionMeta {
 /// Information derived from the request.
 pub(crate) struct RequestState<'r> {
     pub rocket: &'r Rocket<Orbit>,
-    pub route: Atomic<Option<&'r Route>>,
+    pub route: OptionRefSwap<'r, Route>,
     pub cookies: CookieJar<'r>,
     pub accept: InitCell<Option<Accept>>,
     pub content_type: InitCell<Option<ContentType>>,
@@ -55,7 +57,7 @@ pub(crate) struct RequestState<'r> {
 impl Request<'_> {
     pub(crate) fn clone(&self) -> Self {
         Request {
-            method: Atomic::new(self.method()),
+            method: AtomicMethod::new(self.method()),
             uri: self.uri.clone(),
             headers: self.headers.clone(),
             connection: self.connection.clone(),
@@ -68,7 +70,7 @@ impl RequestState<'_> {
     fn clone(&self) -> Self {
         RequestState {
             rocket: self.rocket,
-            route: Atomic::new(self.route.load(Ordering::Acquire)),
+            route: OptionRefSwap::new(self.route.load(Ordering::Acquire)),
             cookies: self.cookies.clone(),
             accept: self.accept.clone(),
             content_type: self.content_type.clone(),
@@ -88,7 +90,7 @@ impl<'r> Request<'r> {
     ) -> Request<'r> {
         Request {
             uri,
-            method: Atomic::new(method),
+            method: AtomicMethod::new(method),
             headers: HeaderMap::new(),
             connection: ConnectionMeta {
                 remote: None,
@@ -96,7 +98,7 @@ impl<'r> Request<'r> {
             },
             state: RequestState {
                 rocket,
-                route: Atomic::new(None),
+                route: OptionRefSwap::new(None),
                 cookies: CookieJar::new(rocket.config()),
                 accept: InitCell::new(),
                 content_type: InitCell::new(),
@@ -121,7 +123,7 @@ impl<'r> Request<'r> {
     /// ```
     #[inline(always)]
     pub fn method(&self) -> Method {
-        self.method.load(Ordering::Acquire)
+        self.method.load()
     }
 
     /// Set the method of `self` to `method`.
@@ -984,7 +986,7 @@ impl<'r> Request<'r> {
     /// during routing to override methods for re-routing.
     #[inline(always)]
     pub(crate) fn _set_method(&self, method: Method) {
-        self.method.store(method, Ordering::Release)
+        self.method.store(method)
     }
 
     pub(crate) fn cookies_mut(&mut self) -> &mut CookieJar<'r> {
@@ -1105,7 +1107,7 @@ impl fmt::Display for Kind<'_> {
 impl fmt::Debug for Request<'_> {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt.debug_struct("Request")
-            .field("method", &self.method)
+            .field("method", &self.method())
             .field("uri", &self.uri)
             .field("headers", &self.headers())
             .field("remote", &self.remote())

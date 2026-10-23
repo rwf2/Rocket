@@ -44,7 +44,7 @@ time = { version = "0.3.47", features = ["macros", "parsing"] }
 memchr = "2" # TODO: Use pear instead.
 binascii = "0.1"
 ref-cast = "1.0"
-atomic = "0.5"
+ref-swap = "0.1.2"
 parking_lot = "0.12"
 ubyte = {version = "0.10.2", features = ["serde"] }
 serde = { version = "1.0", features = ["derive"] }

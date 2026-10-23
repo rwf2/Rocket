@@ -24,6 +24,9 @@ This release contains the following crate updates:
   * `hyper` was updated to `1.12`, and `h2` now requires at least `0.4.20`,
     fixing excessive memory use from empty HTTP/2 frames ([RUSTSEC-2026-0258]).
 
+  * `atomic` was replaced with `ref-swap`, fixing undefined behavior when
+    reading a request's matched route.
+
 ### Fixes and Improvements
 
   * **(fix [#2934] via [8ddfe06c])** Multipart fields without a `Content-Type`
