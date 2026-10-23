@@ -35,7 +35,7 @@ rustls = { version = "0.23.46", optional = true, default-features = false, featu
 tokio-rustls = { version = "0.26.6", optional = true, default-features = false, features = ["ring", "tls12"] }
 rustls-pki-types = { version = "1.15.1", optional = true, features = ["std"] }
 rustls-webpki = { version = "0.103.16", optional = true, default-features = false }
-tokio = { version = "1.6.1", features = ["net", "sync", "time"] }
+tokio = { version = "1.54.1", features = ["net", "sync", "time"] }
 log = "0.4"
 ref-cast = "1.0"
 uncased = "0.9.6"
