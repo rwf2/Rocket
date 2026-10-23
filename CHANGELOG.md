@@ -1,3 +1,115 @@
+# Version 0.5.2 (Oct 23, 2026)
+
+This release contains the following crate updates:
+
+  - `rocket` `0.5.2`
+
+## [`rocket`](https://api.rocket.rs/v0.5/rocket/) `0.5.2`
+
+### Security Updates
+
+  * `rustls` was updated to `0.23.46`, `tokio-rustls` to `0.26.6`, and
+    `rustls-webpki` to `0.103.16`, fixing [RUSTSEC-2026-0382]. Distrusted
+    intermediate certificates are now rejected.
+
+  * `time` was updated to `0.3.47`, fixing a stack overflow when parsing
+    RFC 2822 dates with deeply nested comments ([RUSTSEC-2026-0009]).
+
+  * `tokio` was updated to `1.54.1`, fixing a soundness issue in `Interval`
+    ([RUSTSEC-2026-0384]).
+
+  * Documentation now warns that clients can spoof `X-Real-IP` unless all
+    requests go through a trusted proxy that overwrites it.
+
+  * **(known issue)** The default `http2` feature is affected by
+    [RUSTSEC-2026-0258]: empty HTTP/2 frames can cause excessive memory use.
+    No fixed `h2` `0.3` release is available.
+
+    Disable `http2`, or use a patched proxy that terminates HTTP/2 and forwards
+    HTTP/1 requests to Rocket. When using a proxy, prevent clients from
+    reaching Rocket directly. Request body limits do not prevent this issue.
+
+### Fixes and Improvements
+
+  * **(fix [#2934] via [8ddfe06c])** Multipart fields without a `Content-Type`
+    now preserve their original bytes. Binary uploads are no longer corrupted
+    by text decoding.
+
+    Fields with a file name, including an empty name, are now parsed as data.
+    Fields without a file name or `Content-Type` are parsed as values if their
+    contents are valid UTF-8, and as binary data otherwise.
+
+    These data fields are subject to the receiving guard's limits: `file` or
+    `file/bin`, `string`, or `bytes`. [`TempFile`] writes them to `temp_dir`,
+    which must exist and be writable.
+
+    UTF-8 byte-order marks are now preserved. Numeric fields with a leading
+    byte-order mark no longer parse.
+
+  * **(fix [#2821] via [4f8b038a])** `204` and `304` responses no longer send
+    a body. `204` responses no longer send `Content-Length` or
+    `Transfer-Encoding` headers.
+
+    `HEAD` and `304` responses preserve known body sizes in `Content-Length`.
+    Unknown sizes are no longer set to zero, and `Content-Length` is never
+    sent with `Transfer-Encoding`.
+
+  * **(fix [#2844] via [de4bbf60])** `Status` constants can now be used in
+    `match` patterns.
+
+  * Routes declared inside functions or macros no longer cause
+    `non_local_definitions` warnings.
+
+  * Mismatched TLS certificates and private keys now cause launch to fail.
+    Mutual TLS also requires a nonempty CA certificate store, even when
+    client authentication is optional.
+
+### Internal Updates
+
+  * The internal names generated for `uri!` macros are now deterministic.
+
+  * `rustls-pemfile` was replaced with `rustls-pki-types` `1.15.1`.
+
+    The PEM decoder now accepts whitespace in base64 data and skips unknown
+    section types. Decoded sections are limited to 256 MiB.
+
+  * `syn`, `devise`, and `proc-macro2-diagnostics` were updated to `3`, `0.5`,
+    and `0.11`, respectively.
+
+  * `pear` was updated to `0.3`.
+
+  * Removed the unused `rand` dependency from `rocket`.
+
+  * Fixed compiler warnings in core and generated code.
+
+## General Changes
+
+  * The `rust-version` for `rocket`, `rocket_http`, and `rocket_codegen` was
+    updated to `1.89`.
+
+    This is the minimum Rust version required by the updated dependencies.
+
+  * The examples and guide now use `rand` `0.10`, and the `state` example uses
+    `flume` `0.12`.
+
+  * Fixed `COPY` destinations in the deployment guide's Dockerfile.
+
+  * **(fix [#2880] via [2163da51])** `FromParam` documentation now correctly
+    lists `422` as the status used when forwarding after a parse error.
+
+[RUSTSEC-2026-0009]: https://rustsec.org/advisories/RUSTSEC-2026-0009.html
+[RUSTSEC-2026-0258]: https://rustsec.org/advisories/RUSTSEC-2026-0258.html
+[RUSTSEC-2026-0382]: https://rustsec.org/advisories/RUSTSEC-2026-0382.html
+[RUSTSEC-2026-0384]: https://rustsec.org/advisories/RUSTSEC-2026-0384.html
+[#2934]: https://github.com/rwf2/Rocket/issues/2934
+[#2821]: https://github.com/rwf2/Rocket/issues/2821
+[#2844]: https://github.com/rwf2/Rocket/issues/2844
+[#2880]: https://github.com/rwf2/Rocket/issues/2880
+[8ddfe06c]: https://github.com/rwf2/Rocket/commit/8ddfe06c
+[4f8b038a]: https://github.com/rwf2/Rocket/commit/4f8b038a
+[de4bbf60]: https://github.com/rwf2/Rocket/commit/de4bbf60
+[2163da51]: https://github.com/rwf2/Rocket/commit/2163da51
+
 # Version 0.5.1 (May 22, 2024)
 
 This release contains the following crate updates:

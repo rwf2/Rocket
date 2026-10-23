@@ -62,7 +62,8 @@ use either::Either;
 /// name does not select its limit.
 ///
 /// Value fields are buffered in memory. Data fields, including multipart fields
-/// with a file name, are stored in `temp_dir`, which must exist and be writable.
+/// with a file name, are stored in `temp_dir`, which must exist and
+/// be writable.
 ///
 /// # Cappable
 ///
