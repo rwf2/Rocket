@@ -1,4 +1,7 @@
 fn main() {
+    println!("cargo:rustc-check-cfg=cfg(nightly)");
+    println!("cargo:rustc-check-cfg=cfg(broken_fmt)");
+
     if let Some((version, channel, _)) = version_check::triple() {
         if channel.supports_features() {
             println!("cargo:rustc-cfg=nightly");
