@@ -79,7 +79,7 @@ impl<'a> Uri<'a> {
     /// // Invalid URIs fail to parse.
     /// Uri::parse::<Origin>("foo bar").expect_err("invalid URI");
     /// ```
-    pub fn parse<T>(string: &'a str) -> Result<Uri<'a>, Error<'_>>
+    pub fn parse<T>(string: &'a str) -> Result<Uri<'a>, Error<'a>>
         where T: Into<Uri<'a>> + TryFrom<&'a str, Error = Error<'a>>
     {
         T::try_from(string).map(|v| v.into())
@@ -127,7 +127,7 @@ impl<'a> Uri<'a> {
     /// let uri: Origin = uri!("/a/b/c?query");
     /// let uri: Reference = uri!("/a/b/c?query#fragment");
     /// ```
-    pub fn parse_any(string: &'a str) -> Result<Uri<'a>, Error<'_>> {
+    pub fn parse_any(string: &'a str) -> Result<Uri<'a>, Error<'a>> {
         crate::parse::uri::from_str(string)
     }
 
