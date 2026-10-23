@@ -585,7 +585,7 @@ is to depend on a `contrib` library from git while also depending on a
 `crates.io` version of Rocket or vice-versa:
 
 ```toml
-rocket = "0.5.1"
+rocket = "0.5.2"
 rocket_db_pools = { git = "https://github.com/rwf2/Rocket.git" }
 ```
 

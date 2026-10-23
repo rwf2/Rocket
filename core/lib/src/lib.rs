@@ -29,7 +29,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! rocket = "0.5.1"
+//! rocket = "0.5.2"
 //! ```
 //!
 //! <small>Note that development versions, tagged with `-dev`, are not published
@@ -73,14 +73,14 @@
 //!
 //! ```toml
 //! [dependencies]
-//! rocket = { version = "0.5.1", features = ["secrets", "tls", "json"] }
+//! rocket = { version = "0.5.2", features = ["secrets", "tls", "json"] }
 //! ```
 //!
 //! Conversely, HTTP/2 can be disabled:
 //!
 //! ```toml
 //! [dependencies]
-//! rocket = { version = "0.5.1", default-features = false }
+//! rocket = { version = "0.5.2", default-features = false }
 //! ```
 //!
 //! [JSON (de)serialization]: crate::serde::json

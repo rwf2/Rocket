@@ -1,6 +1,6 @@
 [package]
 name = "rocket"
-version = "0.5.1"
+version = "0.5.2"
 authors = ["Sergio Benitez <sb@sergio.bz>"]
 description = """
 Web framework with a focus on usability, security, extensibility, and speed.
@@ -66,11 +66,11 @@ default-features = false
 features = ["server", "http1", "tokio"]
 
 [dependencies.rocket_codegen]
-version = "0.5.1"
+version = "=0.5.2"
 path = "../codegen"
 
 [dependencies.rocket_http]
-version = "0.5.1"
+version = "=0.5.2"
 path = "../http"
 features = ["serde"]
 

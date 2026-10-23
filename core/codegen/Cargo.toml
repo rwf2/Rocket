@@ -1,6 +1,6 @@
 [package]
 name = "rocket_codegen"
-version = "0.5.1"
+version = "0.5.2"
 authors = ["Sergio Benitez <sb@sergio.bz>"]
 description = "Procedural macros for the Rocket web framework."
 documentation = "https://api.rocket.rs/v0.5/rocket_codegen/"
@@ -22,7 +22,7 @@ syn = { version = "3.0.9", features = ["full", "visit", "visit-mut", "extra-trai
 proc-macro2 = "1.0.60"
 devise = "0.5.0"
 proc-macro2-diagnostics = { version = "0.11.0", features = ["nightly"] }
-rocket_http = { version = "0.5.1", path = "../http/" }
+rocket_http = { version = "=0.5.2", path = "../http/" }
 unicode-xid = "0.2"
 version_check = "0.9"
 glob = "0.3"
