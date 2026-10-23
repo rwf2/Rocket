@@ -85,18 +85,21 @@ impl IdentExt for syn::Ident {
         self.prepend(crate::ROCKET_IDENT_PREFIX)
     }
 
+    /// Create a unique version of the ident `self` based on the hash of `self`,
+    /// its span, the current call site, and any additional information provided
+    /// by the closure `f`.
+    ///
+    /// Span::source_file() / line / col are not stable, but the byte span and
+    /// some kind of scope identifier do appear in the `Debug` representation
+    /// for `Span`. And they seem to be consistent across compilations: "#57
+    /// bytes(106..117)" at the time of writing. So we use that.
     fn uniqueify_with<F: FnMut(&mut dyn Hasher)>(&self, mut f: F) -> syn::Ident {
-        use std::sync::atomic::{AtomicUsize, Ordering};
         use std::collections::hash_map::DefaultHasher;
-
-        // Keep a global counter (+ thread ID later) to generate unique ids.
-        static COUNTER: AtomicUsize = AtomicUsize::new(0);
 
         let mut hasher = DefaultHasher::new();
         self.hash(&mut hasher);
-        std::process::id().hash(&mut hasher);
-        std::thread::current().id().hash(&mut hasher);
-        COUNTER.fetch_add(1, Ordering::AcqRel).hash(&mut hasher);
+        format!("{:?}", self.span()).hash(&mut hasher);
+        format!("{:?}", Span::call_site()).hash(&mut hasher);
         f(&mut hasher);
 
         self.append(&format!("_{}", hasher.finish()))

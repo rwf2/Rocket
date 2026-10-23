@@ -207,9 +207,11 @@ fn internal_uri_macro_decl(route: &Route) -> TokenStream {
     // Generate a unique macro name based on the route's metadata.
     let macro_name = route.handler.sig.ident.prepend(crate::URI_MACRO_PREFIX);
     let inner_macro_name = macro_name.uniqueify_with(|mut hasher| {
-        route.handler.sig.ident.hash(&mut hasher);
+        route.attr.method.0.hash(&mut hasher);
         route.attr.uri.path().hash(&mut hasher);
-        route.attr.uri.query().hash(&mut hasher)
+        route.attr.uri.query().hash(&mut hasher);
+        route.attr.data.as_ref().map(|d| d.value.hash(&mut hasher));
+        route.attr.format.as_ref().map(|f| f.0.hash(&mut hasher));
     });
 
     let route_uri = route.attr.uri.to_string();
