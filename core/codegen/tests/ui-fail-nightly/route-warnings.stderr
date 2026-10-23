@@ -1,26 +1,20 @@
-warning: 'application/x-custom' is not a known format or media type
+warning: 'application/x-custom' is not a known media type
  --> tests/ui-fail-nightly/route-warnings.rs:7:21
   |
 7 | #[get("/", format = "application/x-custom")]
   |                     ^^^^^^^^^^^^^^^^^^^^^^
-  |
-  = note: apply `#[suppress(unknown_format)]` before the item to suppress this lint
 
-warning: 'x-custom/plain' is not a known format or media type
+warning: 'x-custom/plain' is not a known media type
   --> tests/ui-fail-nightly/route-warnings.rs:10:21
    |
 10 | #[get("/", format = "x-custom/plain")]
    |                     ^^^^^^^^^^^^^^^^
-   |
-   = note: apply `#[suppress(unknown_format)]` before the item to suppress this lint
 
-warning: 'x-custom/x-custom' is not a known format or media type
+warning: 'x-custom/x-custom' is not a known media type
   --> tests/ui-fail-nightly/route-warnings.rs:13:21
    |
 13 | #[get("/", format = "x-custom/x-custom")]
    |                     ^^^^^^^^^^^^^^^^^^^
-   |
-   = note: apply `#[suppress(unknown_format)]` before the item to suppress this lint
 
 warning: `data` used with non-payload-supporting method
   --> tests/ui-fail-nightly/route-warnings.rs:22:12
@@ -28,8 +22,12 @@ warning: `data` used with non-payload-supporting method
 22 | #[get("/", data = "<_foo>")]
    |            ^^^^^^^^^^^^^^^
    |
-   = note: 'GET' does not typically support payloads
-   = note: apply `#[suppress(dubious_payload)]` before the item to suppress this lint
+note: 'GET' does not typically support payloads
+  --> tests/ui-fail-nightly/route-warnings.rs:22:3
+   |
+22 | #[get("/", data = "<_foo>")]
+   |   ^^^
+   = note: this warning originates in the attribute macro `get` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 warning: `data` used with non-payload-supporting method
   --> tests/ui-fail-nightly/route-warnings.rs:25:13
@@ -37,11 +35,46 @@ warning: `data` used with non-payload-supporting method
 25 | #[head("/", data = "<_foo>")]
    |             ^^^^^^^^^^^^^^^
    |
-   = note: 'HEAD' does not typically support payloads
-   = note: apply `#[suppress(dubious_payload)]` before the item to suppress this lint
+note: 'HEAD' does not typically support payloads
+  --> tests/ui-fail-nightly/route-warnings.rs:25:3
+   |
+25 | #[head("/", data = "<_foo>")]
+   |   ^^^^
+   = note: this warning originates in the attribute macro `head` (in Nightly builds, run with -Z macro-backtrace for more info)
 
 error: checking for warnings!
   --> tests/ui-fail-nightly/route-warnings.rs:33:5
    |
 33 |     compile_error!("checking for warnings!")
    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: 'x-custom/x-custom' is not a known media type
+  --> tests/ui-fail-nightly/route-warnings.rs:17:21
+   |
+17 | #[get("/", format = "x-custom/x-custom")]
+   |                     ^^^^^^^^^^^^^^^^^^^
+
+warning: `data` used with non-payload-supporting method
+  --> tests/ui-fail-nightly/route-warnings.rs:29:13
+   |
+29 | #[head("/", data = "<_foo>")]
+   |             ^^^^^^^^^^^^^^^
+   |
+note: 'HEAD' does not typically support payloads
+  --> tests/ui-fail-nightly/route-warnings.rs:29:3
+   |
+29 | #[head("/", data = "<_foo>")]
+   |   ^^^^
+   = note: this warning originates in the attribute macro `head` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: cannot find attribute `suppress` in this scope
+  --> tests/ui-fail-nightly/route-warnings.rs:16:3
+   |
+16 | #[suppress(unknown_format)]
+   |   ^^^^^^^^
+
+error: cannot find attribute `suppress` in this scope
+  --> tests/ui-fail-nightly/route-warnings.rs:28:3
+   |
+28 | #[suppress(dubious_payload)]
+   |   ^^^^^^^^

@@ -33,7 +33,7 @@ error: at least one field is required
 note: error occurred while deriving `FromForm`
   --> tests/ui-fail-nightly/from_form.rs:9:10
    |
-9  | #[derive(FromForm)]
+ 9 | #[derive(FromForm)]
    |          ^^^^^^^^
    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
@@ -449,6 +449,9 @@ error[E0308]: mismatched types
 error[E0425]: cannot find function `unknown` in this scope
    --> tests/ui-fail-nightly/from_form.rs:153:24
     |
+151 | #[derive(FromForm)]
+    |          -------- in this derive macro
+152 | struct Validate1 {
 153 |     #[field(validate = unknown())]
     |                        ^^^^^^^ not found in this scope
 
@@ -488,7 +491,7 @@ error[E0308]: mismatched types
    --> tests/ui-fail-nightly/from_form.rs:171:23
     |
 171 |     #[field(default = 123)]
-    |                       ^^^- help: try using a conversion method: `.to_string()`
+    |                       ^^^
     |                       |
     |                       expected `String`, found integer
     |                       arguments to this enum variant are incorrect
@@ -507,14 +510,17 @@ note: tuple variant defined here
     |     Some(#[stable(feature = "rust1", since = "1.0.0")] T),
     |     ^^^^
     = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
+help: try using a conversion method
+    |
+171 |     #[field(default = 123.to_string())]
+    |                          ++++++++++++
 
 error[E0308]: mismatched types
    --> tests/ui-fail-nightly/from_form.rs:203:33
     |
 203 |     #[field(default_with = Some("hi"))]
-    |                            ---- ^^^^- help: try using a conversion method: `.to_string()`
-    |                            |    |
-    |                            |    expected `String`, found `&str`
+    |                            ---- ^^^^ expected `String`, found `&str`
+    |                            |
     |                            arguments to this enum variant are incorrect
     |
 help: the type constructed contains `&'static str` due to the type of the argument passed
@@ -529,6 +535,10 @@ note: tuple variant defined here
     |
     |     Some(#[stable(feature = "rust1", since = "1.0.0")] T),
     |     ^^^^
+help: try using a conversion method
+    |
+203 |     #[field(default_with = Some("hi".to_string()))]
+    |                                     ++++++++++++
 
 error[E0277]: the trait bound `bool: From<&str>` is not satisfied
    --> tests/ui-fail-nightly/from_form.rs:209:23
@@ -537,16 +547,20 @@ error[E0277]: the trait bound `bool: From<&str>` is not satisfied
     |          -------- in this derive macro expansion
 208 | struct Default6 {
 209 |     #[field(default = "no conversion")]
-    |                       ^^^^^^^^^^^^^^^ the trait `From<&str>` is not implemented for `bool`, which is required by `&str: Into<_>`
+    |                       ^^^^^^^^^^^^^^^
+    |                       |
+    |                       the trait `From<&str>` is not implemented for `bool`
+    |                       this tail expression is of type `&str`
     |
-    = help: the following other types implement trait `From<T>`:
-              <bool as From<format_description::parse::format_item::HourBase>>
-              <bool as From<format_description::parse::format_item::MonthCaseSensitive>>
-              <bool as From<format_description::parse::format_item::PeriodCase>>
-              <bool as From<format_description::parse::format_item::PeriodCaseSensitive>>
-              <bool as From<format_description::parse::format_item::SignBehavior>>
-              <bool as From<format_description::parse::format_item::WeekdayCaseSensitive>>
-              <bool as From<format_description::parse::format_item::WeekdayOneIndexed>>
-              <bool as From<format_description::parse::format_item::YearBase>>
+    = help: `bool` implements trait `From<T>`:
+              From<format_description::parse::format_item::HourBase>
+              From<format_description::parse::format_item::MonthCaseSensitive>
+              From<format_description::parse::format_item::OptionalFormat>
+              From<format_description::parse::format_item::PeriodCase>
+              From<format_description::parse::format_item::PeriodCaseSensitive>
+              From<format_description::parse::format_item::SignBehavior>
+              From<format_description::parse::format_item::WeekdayCaseSensitive>
+              From<format_description::parse::format_item::WeekdayOneIndexed>
+              From<format_description::parse::format_item::YearBase>
     = note: required for `&str` to implement `Into<bool>`
     = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)

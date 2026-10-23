@@ -33,7 +33,7 @@ error: empty enums are not supported
 note: error occurred while deriving `UriDisplay`
   --> tests/ui-fail-nightly/uri_display.rs:9:10
    |
-9  | #[derive(UriDisplayQuery)]
+ 9 | #[derive(UriDisplayQuery)]
    |          ^^^^^^^^^^^^^^^
    = note: this error originates in the derive macro `UriDisplayQuery` (in Nightly builds, run with -Z macro-backtrace for more info)
 

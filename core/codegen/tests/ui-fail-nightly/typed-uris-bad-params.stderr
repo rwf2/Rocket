@@ -18,7 +18,7 @@ error: expected unnamed arguments due to ignored parameters
 69 |     uri!(ignored(num = 10));
    |                  ^^^^^^^^
    |
-   = note: uri for route `ignored` ignores 1 path parameters: "/<_>"
+   = note: uri for route `ignored` ignores path parameters: "/<_>"
 
 error: route expects 1 parameter but 2 were supplied
   --> tests/ui-fail-nightly/typed-uris-bad-params.rs:67:18
@@ -281,8 +281,14 @@ error: route expects 1 parameter but 0 were supplied
    |
    = note: route `has_one` has uri "/<id>"
 
-error[E0271]: type mismatch resolving `<String as FromParam<'_>>::Error == &str`
+error[E0277]: the trait bound `Result<std::string::String, &str>: FromParam<'_>` is not satisfied
   --> tests/ui-fail-nightly/typed-uris-bad-params.rs:17:37
    |
 17 | fn optionals(id: Option<i32>, name: Result<String, &str>) {  }
-   |                                     ^^^^^^^^^^^^^^^^^^^^ expected `Empty`, found `&str`
+   |                                     ^^^^^^^^^^^^^^^^^^^^ the trait `FromParam<'_>` is not implemented for `Result<std::string::String, &str>`
+   |
+help: the trait `FromParam<'_>` is conditionally implemented for `Result<T, <T as FromParam<'_>>::Error>`
+  --> $WORKSPACE/core/lib/src/request/from_param.rs
+   |
+   | impl<'a, T: FromParam<'a>> FromParam<'a> for Result<T, T::Error> {
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ unsatisfied requirement introduced here: `<_ as FromParam<'_>>::Error == _`

@@ -3,3 +3,15 @@ error: checking for warnings!
    |
 33 |     compile_error!("checking for warnings!")
    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: cannot find attribute `suppress` in this scope
+  --> tests/ui-fail-stable/route-warnings.rs:16:3
+   |
+16 | #[suppress(unknown_format)]
+   |   ^^^^^^^^
+
+error: cannot find attribute `suppress` in this scope
+  --> tests/ui-fail-stable/route-warnings.rs:28:3
+   |
+28 | #[suppress(dubious_payload)]
+   |   ^^^^^^^^

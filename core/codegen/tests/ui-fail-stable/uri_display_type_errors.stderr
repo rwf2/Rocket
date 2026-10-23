@@ -2,17 +2,22 @@ error[E0277]: the trait bound `BadType: UriDisplay<rocket::http::uri::fmt::Query
  --> tests/ui-fail-stable/uri_display_type_errors.rs:6:13
   |
 6 | struct Bar1(BadType);
-  |             ^^^^^^^ the trait `UriDisplay<rocket::http::uri::fmt::Query>` is not implemented for `BadType`, which is required by `&BadType: UriDisplay<rocket::http::uri::fmt::Query>`
+  |             ^^^^^^^ unsatisfied trait bound
   |
+help: the trait `UriDisplay<rocket::http::uri::fmt::Query>` is not implemented for `BadType`
+ --> tests/ui-fail-stable/uri_display_type_errors.rs:3:1
+  |
+3 | struct BadType;
+  | ^^^^^^^^^^^^^^
   = help: the following other types implement trait `UriDisplay<P>`:
-            <bool as UriDisplay<P>>
-            <isize as UriDisplay<P>>
-            <i8 as UriDisplay<P>>
-            <i16 as UriDisplay<P>>
-            <i32 as UriDisplay<P>>
-            <i64 as UriDisplay<P>>
-            <i128 as UriDisplay<P>>
-            <usize as UriDisplay<P>>
+            BTreeMap<K, V>
+            Bar1
+            Bar2
+            Bar3
+            Bar4
+            Bar5
+            Bar6
+            HashMap<K, V>
           and $N others
   = note: required for `&BadType` to implement `UriDisplay<rocket::http::uri::fmt::Query>`
 note: required by a bound in `rocket::http::uri::fmt::Formatter::<'i, P>::write_value`
@@ -25,17 +30,22 @@ error[E0277]: the trait bound `BadType: UriDisplay<rocket::http::uri::fmt::Query
   --> tests/ui-fail-stable/uri_display_type_errors.rs:10:5
    |
 10 |     field: BadType,
-   |     ^^^^^^^^^^^^^^ the trait `UriDisplay<rocket::http::uri::fmt::Query>` is not implemented for `BadType`, which is required by `&BadType: UriDisplay<rocket::http::uri::fmt::Query>`
+   |     ^^^^^ unsatisfied trait bound
    |
+help: the trait `UriDisplay<rocket::http::uri::fmt::Query>` is not implemented for `BadType`
+  --> tests/ui-fail-stable/uri_display_type_errors.rs:3:1
+   |
+ 3 | struct BadType;
+   | ^^^^^^^^^^^^^^
    = help: the following other types implement trait `UriDisplay<P>`:
-             <bool as UriDisplay<P>>
-             <isize as UriDisplay<P>>
-             <i8 as UriDisplay<P>>
-             <i16 as UriDisplay<P>>
-             <i32 as UriDisplay<P>>
-             <i64 as UriDisplay<P>>
-             <i128 as UriDisplay<P>>
-             <usize as UriDisplay<P>>
+             BTreeMap<K, V>
+             Bar1
+             Bar2
+             Bar3
+             Bar4
+             Bar5
+             Bar6
+             HashMap<K, V>
            and $N others
    = note: required for `&BadType` to implement `UriDisplay<rocket::http::uri::fmt::Query>`
 note: required by a bound in `rocket::http::uri::fmt::Formatter::<'_, rocket::http::uri::fmt::Query>::write_named_value`
@@ -48,17 +58,22 @@ error[E0277]: the trait bound `BadType: UriDisplay<rocket::http::uri::fmt::Query
   --> tests/ui-fail-stable/uri_display_type_errors.rs:16:5
    |
 16 |     bad: BadType,
-   |     ^^^^^^^^^^^^ the trait `UriDisplay<rocket::http::uri::fmt::Query>` is not implemented for `BadType`, which is required by `&BadType: UriDisplay<rocket::http::uri::fmt::Query>`
+   |     ^^^ unsatisfied trait bound
    |
+help: the trait `UriDisplay<rocket::http::uri::fmt::Query>` is not implemented for `BadType`
+  --> tests/ui-fail-stable/uri_display_type_errors.rs:3:1
+   |
+ 3 | struct BadType;
+   | ^^^^^^^^^^^^^^
    = help: the following other types implement trait `UriDisplay<P>`:
-             <bool as UriDisplay<P>>
-             <isize as UriDisplay<P>>
-             <i8 as UriDisplay<P>>
-             <i16 as UriDisplay<P>>
-             <i32 as UriDisplay<P>>
-             <i64 as UriDisplay<P>>
-             <i128 as UriDisplay<P>>
-             <usize as UriDisplay<P>>
+             BTreeMap<K, V>
+             Bar1
+             Bar2
+             Bar3
+             Bar4
+             Bar5
+             Bar6
+             HashMap<K, V>
            and $N others
    = note: required for `&BadType` to implement `UriDisplay<rocket::http::uri::fmt::Query>`
 note: required by a bound in `rocket::http::uri::fmt::Formatter::<'_, rocket::http::uri::fmt::Query>::write_named_value`
@@ -71,17 +86,22 @@ error[E0277]: the trait bound `BadType: UriDisplay<rocket::http::uri::fmt::Query
   --> tests/ui-fail-stable/uri_display_type_errors.rs:21:11
    |
 21 |     Inner(BadType),
-   |           ^^^^^^^ the trait `UriDisplay<rocket::http::uri::fmt::Query>` is not implemented for `BadType`, which is required by `&&BadType: UriDisplay<rocket::http::uri::fmt::Query>`
+   |           ^^^^^^^ unsatisfied trait bound
    |
+help: the trait `UriDisplay<rocket::http::uri::fmt::Query>` is not implemented for `BadType`
+  --> tests/ui-fail-stable/uri_display_type_errors.rs:3:1
+   |
+ 3 | struct BadType;
+   | ^^^^^^^^^^^^^^
    = help: the following other types implement trait `UriDisplay<P>`:
-             <bool as UriDisplay<P>>
-             <isize as UriDisplay<P>>
-             <i8 as UriDisplay<P>>
-             <i16 as UriDisplay<P>>
-             <i32 as UriDisplay<P>>
-             <i64 as UriDisplay<P>>
-             <i128 as UriDisplay<P>>
-             <usize as UriDisplay<P>>
+             BTreeMap<K, V>
+             Bar1
+             Bar2
+             Bar3
+             Bar4
+             Bar5
+             Bar6
+             HashMap<K, V>
            and $N others
    = note: required for `&BadType` to implement `UriDisplay<rocket::http::uri::fmt::Query>`
    = note: 1 redundant requirement hidden
@@ -96,17 +116,22 @@ error[E0277]: the trait bound `BadType: UriDisplay<rocket::http::uri::fmt::Query
   --> tests/ui-fail-stable/uri_display_type_errors.rs:27:9
    |
 27 |         field: BadType,
-   |         ^^^^^^^^^^^^^^ the trait `UriDisplay<rocket::http::uri::fmt::Query>` is not implemented for `BadType`, which is required by `&&BadType: UriDisplay<rocket::http::uri::fmt::Query>`
+   |         ^^^^^ unsatisfied trait bound
    |
+help: the trait `UriDisplay<rocket::http::uri::fmt::Query>` is not implemented for `BadType`
+  --> tests/ui-fail-stable/uri_display_type_errors.rs:3:1
+   |
+ 3 | struct BadType;
+   | ^^^^^^^^^^^^^^
    = help: the following other types implement trait `UriDisplay<P>`:
-             <bool as UriDisplay<P>>
-             <isize as UriDisplay<P>>
-             <i8 as UriDisplay<P>>
-             <i16 as UriDisplay<P>>
-             <i32 as UriDisplay<P>>
-             <i64 as UriDisplay<P>>
-             <i128 as UriDisplay<P>>
-             <usize as UriDisplay<P>>
+             BTreeMap<K, V>
+             Bar1
+             Bar2
+             Bar3
+             Bar4
+             Bar5
+             Bar6
+             HashMap<K, V>
            and $N others
    = note: required for `&BadType` to implement `UriDisplay<rocket::http::uri::fmt::Query>`
    = note: 1 redundant requirement hidden
@@ -121,17 +146,22 @@ error[E0277]: the trait bound `BadType: UriDisplay<rocket::http::uri::fmt::Query
   --> tests/ui-fail-stable/uri_display_type_errors.rs:35:9
    |
 35 |         other: BadType,
-   |         ^^^^^^^^^^^^^^ the trait `UriDisplay<rocket::http::uri::fmt::Query>` is not implemented for `BadType`, which is required by `&&BadType: UriDisplay<rocket::http::uri::fmt::Query>`
+   |         ^^^^^ unsatisfied trait bound
    |
+help: the trait `UriDisplay<rocket::http::uri::fmt::Query>` is not implemented for `BadType`
+  --> tests/ui-fail-stable/uri_display_type_errors.rs:3:1
+   |
+ 3 | struct BadType;
+   | ^^^^^^^^^^^^^^
    = help: the following other types implement trait `UriDisplay<P>`:
-             <bool as UriDisplay<P>>
-             <isize as UriDisplay<P>>
-             <i8 as UriDisplay<P>>
-             <i16 as UriDisplay<P>>
-             <i32 as UriDisplay<P>>
-             <i64 as UriDisplay<P>>
-             <i128 as UriDisplay<P>>
-             <usize as UriDisplay<P>>
+             BTreeMap<K, V>
+             Bar1
+             Bar2
+             Bar3
+             Bar4
+             Bar5
+             Bar6
+             HashMap<K, V>
            and $N others
    = note: required for `&BadType` to implement `UriDisplay<rocket::http::uri::fmt::Query>`
    = note: 1 redundant requirement hidden
@@ -146,21 +176,30 @@ error[E0277]: the trait bound `BadType: UriDisplay<rocket::http::uri::fmt::Path>
   --> tests/ui-fail-stable/uri_display_type_errors.rs:40:12
    |
 40 | struct Baz(BadType);
-   |            ^^^^^^^ the trait `UriDisplay<rocket::http::uri::fmt::Path>` is not implemented for `BadType`, which is required by `&BadType: UriDisplay<rocket::http::uri::fmt::Path>`
+   |            ^^^^^^^ unsatisfied trait bound
    |
-   = help: the following other types implement trait `UriDisplay<P>`:
-             <bool as UriDisplay<P>>
-             <isize as UriDisplay<P>>
-             <i8 as UriDisplay<P>>
-             <i16 as UriDisplay<P>>
-             <i32 as UriDisplay<P>>
-             <i64 as UriDisplay<P>>
-             <i128 as UriDisplay<P>>
-             <usize as UriDisplay<P>>
-           and $N others
+help: the trait `UriDisplay<rocket::http::uri::fmt::Path>` is not implemented for `BadType`
+  --> tests/ui-fail-stable/uri_display_type_errors.rs:3:1
+   |
+ 3 | struct BadType;
+   | ^^^^^^^^^^^^^^
+help: the following other types implement trait `UriDisplay<P>`
+  --> tests/ui-fail-stable/uri_display_type_errors.rs:39:10
+   |
+39 | #[derive(UriDisplayPath)]
+   |          ^^^^^^^^^^^^^^ `Baz`
+   |
+  ::: $WORKSPACE/core/http/src/uri/fmt/uri_display.rs
+   |
+   | impl UriDisplay<Path> for path::Path {
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `std::path::Path`
+...
+   | impl UriDisplay<Path> for path::PathBuf {
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `PathBuf`
    = note: required for `&BadType` to implement `UriDisplay<rocket::http::uri::fmt::Path>`
 note: required by a bound in `rocket::http::uri::fmt::Formatter::<'i, P>::write_value`
   --> $WORKSPACE/core/http/src/uri/fmt/formatter.rs
    |
    |     pub fn write_value<T: UriDisplay<P>>(&mut self, value: T) -> fmt::Result {
    |                           ^^^^^^^^^^^^^ required by this bound in `Formatter::<'i, P>::write_value`
+   = note: this error originates in the derive macro `UriDisplayPath` (in Nightly builds, run with -Z macro-backtrace for more info)

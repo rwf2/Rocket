@@ -50,26 +50,26 @@ error: unexpected keyed parameter: expected literal or identifier
   --> tests/ui-fail-stable/route-attribute-general-syntax.rs:27:7
    |
 27 | #[get(data = "<foo>", "/")]
-   |       ^^^^^^^^^^^^^^
+   |       ^^^^
 
 error: unexpected attribute parameter: `unknown`
   --> tests/ui-fail-stable/route-attribute-general-syntax.rs:30:12
    |
 30 | #[get("/", unknown = "foo")]
-   |            ^^^^^^^^^^^^^^^
+   |            ^^^^^^^
 
 error: expected key/value `key = value`
   --> tests/ui-fail-stable/route-attribute-general-syntax.rs:33:12
    |
 33 | #[get("/", ...)]
-   |            ^^^
+   |            ^
 
 error: handler arguments must be named
        = help: to name an ignored handler argument, use `_name`
   --> tests/ui-fail-stable/route-attribute-general-syntax.rs:39:7
    |
 39 | fn c1(_: usize) {}
-   |       ^^^^^^^^
+   |       ^
 
 error: invalid value: expected string literal
   --> tests/ui-fail-stable/route-attribute-general-syntax.rs:43:7
@@ -167,34 +167,36 @@ error: invalid or unknown media type
 90 | #[get("/", format = "text//foo")]
    |                     ^^^^^^^^^^^
 
-error: expected key/value `key = value`
-  --> tests/ui-fail-stable/route-attribute-general-syntax.rs:95:18
+error: invalid HTTP method for route handlers
+       = help: method must be one of: `GET`, `PUT`, `POST`, `DELETE`, `HEAD`, `PATCH`, `OPTIONS`
+  --> tests/ui-fail-stable/route-attribute-general-syntax.rs:95:9
    |
 95 | #[route(CONNECT, "/")]
-   |                  ^^^
+   |         ^^^^^^^
 
-error: invalid or unknown HTTP method
-       = help: known methods: GET, HEAD, POST, PUT, DELETE, CONNECT, OPTIONS, TRACE, PATCH, ACL, BASELINE-CONTROL, BIND, CHECKIN, CHECKOUT, COPY, LABEL, LINK, LOCK, MERGE, MKACTIVITY, MKCALENDAR, MKCOL, MKREDIRECTREF, MKWORKSPACE, MOVE, ORDERPATCH, PROPFIND, PROPPATCH, REBIND, REPORT, SEARCH, UNBIND, UNCHECKOUT, UNLINK, UNLOCK, UPDATE, UPDATEREDIRECTREF, VERSION-CONTROL
+error: invalid HTTP method
+       = help: method must be one of: `GET`, `PUT`, `POST`, `DELETE`, `HEAD`, `PATCH`, `OPTIONS`
   --> tests/ui-fail-stable/route-attribute-general-syntax.rs:98:9
    |
 98 | #[route(FIX, "/")]
    |         ^^^
 
-error: invalid or unknown HTTP method
-       = help: known methods: GET, HEAD, POST, PUT, DELETE, CONNECT, OPTIONS, TRACE, PATCH, ACL, BASELINE-CONTROL, BIND, CHECKIN, CHECKOUT, COPY, LABEL, LINK, LOCK, MERGE, MKACTIVITY, MKCALENDAR, MKCOL, MKREDIRECTREF, MKWORKSPACE, MOVE, ORDERPATCH, PROPFIND, PROPPATCH, REBIND, REPORT, SEARCH, UNBIND, UNCHECKOUT, UNLINK, UNLOCK, UPDATE, UPDATEREDIRECTREF, VERSION-CONTROL
+error: expected identifier, found string literal
+       = help: method must be one of: `GET`, `PUT`, `POST`, `DELETE`, `HEAD`, `PATCH`, `OPTIONS`
    --> tests/ui-fail-stable/route-attribute-general-syntax.rs:101:9
     |
 101 | #[route("hi", "/")]
     |         ^^^^
 
-error: expected key/value `key = value`
-   --> tests/ui-fail-stable/route-attribute-general-syntax.rs:104:16
+error: expected identifier, found string literal
+       = help: method must be one of: `GET`, `PUT`, `POST`, `DELETE`, `HEAD`, `PATCH`, `OPTIONS`
+   --> tests/ui-fail-stable/route-attribute-general-syntax.rs:104:9
     |
 104 | #[route("GET", "/")]
-    |                ^^^
+    |         ^^^^^
 
-error: expected method ident or string, found integer literal
-       = help: known methods: GET, HEAD, POST, PUT, DELETE, CONNECT, OPTIONS, TRACE, PATCH, ACL, BASELINE-CONTROL, BIND, CHECKIN, CHECKOUT, COPY, LABEL, LINK, LOCK, MERGE, MKACTIVITY, MKCALENDAR, MKCOL, MKREDIRECTREF, MKWORKSPACE, MOVE, ORDERPATCH, PROPFIND, PROPPATCH, REBIND, REPORT, SEARCH, UNBIND, UNCHECKOUT, UNLINK, UNLOCK, UPDATE, UPDATEREDIRECTREF, VERSION-CONTROL
+error: expected identifier, found integer literal
+       = help: method must be one of: `GET`, `PUT`, `POST`, `DELETE`, `HEAD`, `PATCH`, `OPTIONS`
    --> tests/ui-fail-stable/route-attribute-general-syntax.rs:107:9
     |
 107 | #[route(120, "/")]

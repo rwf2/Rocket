@@ -8,13 +8,13 @@ error: named and unnamed parameters cannot be mixed
   --> tests/ui-fail-stable/typed-uris-invalid-syntax.rs:11:17
    |
 11 |     uri!(simple(id = 100, "Hello"));
-   |                 ^^^^^^^^^^^^^^^^^
+   |                 ^^
 
 error: named and unnamed parameters cannot be mixed
   --> tests/ui-fail-stable/typed-uris-invalid-syntax.rs:12:17
    |
 12 |     uri!(simple("Hello", id = 100));
-   |                 ^^^^^^^^^^^^^^^^^
+   |                 ^^^^^^^
 
 error: unexpected token
   --> tests/ui-fail-stable/typed-uris-invalid-syntax.rs:14:16
@@ -23,16 +23,16 @@ error: unexpected token
    |                ^
 
 error: invalid URI: unexpected EOF: expected token ':' at index 5
-  --> tests/ui-fail-stable/typed-uris-invalid-syntax.rs:16:16
+  --> tests/ui-fail-stable/typed-uris-invalid-syntax.rs:16:10
    |
 16 |     uri!("mount", simple);
-   |                ^
+   |          ^^^^^^^
 
 error: invalid URI: unexpected EOF: expected token ':' at index 5
-  --> tests/ui-fail-stable/typed-uris-invalid-syntax.rs:17:16
+  --> tests/ui-fail-stable/typed-uris-invalid-syntax.rs:17:10
    |
 17 |     uri!("mount", simple, "http://");
-   |                ^
+   |          ^^^^^^^
 
 error: URI suffix must contain only query and/or fragment
   --> tests/ui-fail-stable/typed-uris-invalid-syntax.rs:18:28
@@ -47,10 +47,10 @@ error: expected 1, 2, or 3 arguments, found 4
    |                                    ^^^^^^
 
 error: invalid URI: unexpected EOF: expected token ':' at index 5
-  --> tests/ui-fail-stable/typed-uris-invalid-syntax.rs:20:16
+  --> tests/ui-fail-stable/typed-uris-invalid-syntax.rs:20:10
    |
 20 |     uri!("mount", simple(10, "hi"), "http://");
-   |                ^
+   |          ^^^^^^^
 
 error: URI suffix must contain only query and/or fragment
   --> tests/ui-fail-stable/typed-uris-invalid-syntax.rs:21:38
@@ -77,10 +77,10 @@ error: expected 1, 2, or 3 arguments, found 4
    |                                              ^^^^^^
 
 error: invalid URI: unexpected token '<' at index 7
-  --> tests/ui-fail-stable/typed-uris-invalid-syntax.rs:25:18
+  --> tests/ui-fail-stable/typed-uris-invalid-syntax.rs:25:10
    |
 25 |     uri!("/mount/<id>", simple);
-   |                  ^
+   |          ^^^^^^^^^^^^^
 
 error: expected at least 1 argument, found none
   --> tests/ui-fail-stable/typed-uris-invalid-syntax.rs:26:5
@@ -103,10 +103,10 @@ error: unexpected end of input, expected an expression
    |                      ^
 
 error: invalid URI: unexpected EOF: expected some token at index 0
-  --> tests/ui-fail-stable/typed-uris-invalid-syntax.rs:29:11
+  --> tests/ui-fail-stable/typed-uris-invalid-syntax.rs:29:10
    |
 29 |     uri!("*", simple(10), "hi");
-   |           ^
+   |          ^^^
 
 error: URI suffix must contain only query and/or fragment
   --> tests/ui-fail-stable/typed-uris-invalid-syntax.rs:30:40

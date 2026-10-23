@@ -1,9 +1,14 @@
-error[E0277]: the trait bound `Unknown: FromFormField<'_>` is not satisfied
+error[E0277]: the trait bound `Unknown: FromFormField<'r>` is not satisfied
  --> tests/ui-fail-nightly/from_form_type_errors.rs:7:12
   |
 7 |     field: Unknown,
-  |            ^^^^^^^ the trait `FromFormField<'_>` is not implemented for `Unknown`, which is required by `Unknown: FromForm<'r>`
+  |            ^^^^^^^ unsatisfied trait bound
   |
+help: the trait `FromFormField<'r>` is not implemented for `Unknown`
+ --> tests/ui-fail-nightly/from_form_type_errors.rs:3:1
+  |
+3 | struct Unknown;
+  | ^^^^^^^^^^^^^^
   = help: the following other types implement trait `FromFormField<'v>`:
             &'v [u8]
             &'v str
@@ -16,41 +21,50 @@ error[E0277]: the trait bound `Unknown: FromFormField<'_>` is not satisfied
           and $N others
   = note: required for `Unknown` to implement `FromForm<'r>`
 
-error[E0277]: the trait bound `Unknown: FromFormField<'_>` is not satisfied
+error: the type `std::option::Option<<Unknown as FromForm<'r>>::Context>` is not well-formed
+ --> tests/ui-fail-nightly/from_form_type_errors.rs:7:12
+  |
+7 |     field: Unknown,
+  |            ^^^^^^^
+
+error[E0277]: `_::FromFormGeneratedContext<'r>` cannot be sent between threads safely
  --> tests/ui-fail-nightly/from_form_type_errors.rs:5:10
   |
+5 |   #[derive(FromForm)]
+  |            ^-------
+  |            |
+  |  __________in this derive macro expansion
+  | |
+6 | | struct BadType3 {
+  | |_______________^ `_::FromFormGeneratedContext<'r>` cannot be sent between threads safely
+  |
+help: the trait `std::marker::Send` is not implemented for `_::FromFormGeneratedContext<'r>`
+ --> tests/ui-fail-nightly/from_form_type_errors.rs:6:1
+  |
 5 | #[derive(FromForm)]
-  |          ^^^^^^^^ the trait `FromFormField<'_>` is not implemented for `Unknown`, which is required by `_::FromFormGeneratedContext<'r>: std::marker::Send`
-  |
-  = help: the following other types implement trait `FromFormField<'v>`:
-            &'v [u8]
-            &'v str
-            Capped<&'v [u8]>
-            Capped<&'v str>
-            Capped<Cow<'v, str>>
-            Capped<TempFile<'v>>
-            Capped<std::string::String>
-            Cow<'v, str>
-          and $N others
-  = note: required for `Unknown` to implement `FromForm<'r>`
-note: required because it appears within the type `_::FromFormGeneratedContext<'r>`
- --> tests/ui-fail-nightly/from_form_type_errors.rs:6:8
-  |
+  |          -------- in this derive macro expansion
 6 | struct BadType3 {
-  |        ^^^^^^^^
+  | ^^^^^^^^^^^^^^^
 note: required by a bound in `rocket::form::FromForm::Context`
  --> $WORKSPACE/core/lib/src/form/from_form.rs
   |
+  | pub trait FromForm<'r>: Send + Sized {
+  |     /// The form guard's parsing context.
   |     type Context: Send;
   |                   ^^^^ required by this bound in `FromForm::Context`
   = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
-error[E0277]: the trait bound `Foo<usize>: FromFormField<'_>` is not satisfied
+error[E0277]: the trait bound `Foo<usize>: FromFormField<'r>` is not satisfied
   --> tests/ui-fail-nightly/from_form_type_errors.rs:14:12
    |
 14 |     field: Foo<usize>,
-   |            ^^^^^^^^^^ the trait `FromFormField<'_>` is not implemented for `Foo<usize>`, which is required by `Foo<usize>: FromForm<'r>`
+   |            ^^^^^^^^^^ unsatisfied trait bound
    |
+help: the trait `FromFormField<'r>` is not implemented for `Foo<usize>`
+  --> tests/ui-fail-nightly/from_form_type_errors.rs:10:1
+   |
+10 | struct Foo<T>(T);
+   | ^^^^^^^^^^^^^
    = help: the following other types implement trait `FromFormField<'v>`:
              &'v [u8]
              &'v str
@@ -63,41 +77,50 @@ error[E0277]: the trait bound `Foo<usize>: FromFormField<'_>` is not satisfied
            and $N others
    = note: required for `Foo<usize>` to implement `FromForm<'r>`
 
-error[E0277]: the trait bound `Foo<usize>: FromFormField<'_>` is not satisfied
+error: the type `std::option::Option<<Foo<usize> as FromForm<'r>>::Context>` is not well-formed
+  --> tests/ui-fail-nightly/from_form_type_errors.rs:14:12
+   |
+14 |     field: Foo<usize>,
+   |            ^^^^^^^^^^
+
+error[E0277]: `_::FromFormGeneratedContext<'r>` cannot be sent between threads safely
   --> tests/ui-fail-nightly/from_form_type_errors.rs:12:10
    |
+12 |   #[derive(FromForm)]
+   |            ^-------
+   |            |
+   |  __________in this derive macro expansion
+   | |
+13 | | struct Other {
+   | |____________^ `_::FromFormGeneratedContext<'r>` cannot be sent between threads safely
+   |
+help: the trait `std::marker::Send` is not implemented for `_::FromFormGeneratedContext<'r>`
+  --> tests/ui-fail-nightly/from_form_type_errors.rs:13:1
+   |
 12 | #[derive(FromForm)]
-   |          ^^^^^^^^ the trait `FromFormField<'_>` is not implemented for `Foo<usize>`, which is required by `_::FromFormGeneratedContext<'r>: std::marker::Send`
-   |
-   = help: the following other types implement trait `FromFormField<'v>`:
-             &'v [u8]
-             &'v str
-             Capped<&'v [u8]>
-             Capped<&'v str>
-             Capped<Cow<'v, str>>
-             Capped<TempFile<'v>>
-             Capped<std::string::String>
-             Cow<'v, str>
-           and $N others
-   = note: required for `Foo<usize>` to implement `FromForm<'r>`
-note: required because it appears within the type `_::FromFormGeneratedContext<'r>`
-  --> tests/ui-fail-nightly/from_form_type_errors.rs:13:8
-   |
+   |          -------- in this derive macro expansion
 13 | struct Other {
-   |        ^^^^^
+   | ^^^^^^^^^^^^
 note: required by a bound in `rocket::form::FromForm::Context`
   --> $WORKSPACE/core/lib/src/form/from_form.rs
    |
+   | pub trait FromForm<'r>: Send + Sized {
+   |     /// The form guard's parsing context.
    |     type Context: Send;
    |                   ^^^^ required by this bound in `FromForm::Context`
    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
-error[E0277]: the trait bound `Unknown: FromFormField<'_>` is not satisfied
+error[E0277]: the trait bound `Unknown: FromFormField<'r>` is not satisfied
  --> tests/ui-fail-nightly/from_form_type_errors.rs:5:10
   |
 5 | #[derive(FromForm)]
-  |          ^^^^^^^^ the trait `FromFormField<'_>` is not implemented for `Unknown`, which is required by `Unknown: FromForm<'r>`
+  |          ^^^^^^^^ unsatisfied trait bound
   |
+help: the trait `FromFormField<'r>` is not implemented for `Unknown`
+ --> tests/ui-fail-nightly/from_form_type_errors.rs:3:1
+  |
+3 | struct Unknown;
+  | ^^^^^^^^^^^^^^
   = help: the following other types implement trait `FromFormField<'v>`:
             &'v [u8]
             &'v str
@@ -111,12 +134,17 @@ error[E0277]: the trait bound `Unknown: FromFormField<'_>` is not satisfied
   = note: required for `Unknown` to implement `FromForm<'r>`
   = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
-error[E0277]: the trait bound `Unknown: FromFormField<'_>` is not satisfied
- --> tests/ui-fail-nightly/from_form_type_errors.rs:7:5
+error[E0277]: the trait bound `Unknown: FromForm<'r>` is not satisfied
+ --> tests/ui-fail-nightly/from_form_type_errors.rs:7:12
   |
 7 |     field: Unknown,
-  |     ^^^^^^^^^^^^^^ the trait `FromFormField<'_>` is not implemented for `Unknown`, which is required by `Unknown: FromForm<'r>`
+  |            ^^^^^^^ unsatisfied trait bound
   |
+help: the trait `FromFormField<'r>` is not implemented for `Unknown`
+ --> tests/ui-fail-nightly/from_form_type_errors.rs:3:1
+  |
+3 | struct Unknown;
+  | ^^^^^^^^^^^^^^
   = help: the following other types implement trait `FromFormField<'v>`:
             &'v [u8]
             &'v str
@@ -132,9 +160,17 @@ error[E0277]: the trait bound `Unknown: FromFormField<'_>` is not satisfied
 error[E0277]: the trait bound `Unknown: FromFormField<'r>` is not satisfied
  --> tests/ui-fail-nightly/from_form_type_errors.rs:7:12
   |
+5 | #[derive(FromForm)]
+  |          -------- in this derive macro expansion
+6 | struct BadType3 {
 7 |     field: Unknown,
-  |            ^^^^^^^ the trait `FromFormField<'r>` is not implemented for `Unknown`
+  |            ^^^^^^^ unsatisfied trait bound
   |
+help: the trait `FromFormField<'r>` is not implemented for `Unknown`
+ --> tests/ui-fail-nightly/from_form_type_errors.rs:3:1
+  |
+3 | struct Unknown;
+  | ^^^^^^^^^^^^^^
   = help: the following other types implement trait `FromFormField<'v>`:
             &'v [u8]
             &'v str
@@ -145,18 +181,41 @@ error[E0277]: the trait bound `Unknown: FromFormField<'r>` is not satisfied
             Capped<std::string::String>
             Cow<'v, str>
           and $N others
-note: required by a bound in `FromFieldContext`
- --> $WORKSPACE/core/lib/src/form/from_form_field.rs
-  |
-  | pub struct FromFieldContext<'v, T: FromFormField<'v>> {
-  |                                    ^^^^^^^^^^^^^^^^^ required by this bound in `FromFieldContext`
+  = note: required for `Unknown` to implement `FromForm<'r>`
+  = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
-error[E0277]: the trait bound `Foo<usize>: FromFormField<'_>` is not satisfied
+error[E0277]: expected `FnOnce(_)` signature, found `fn(<Unknown as FromForm<'r>>::Context) -> Result<Unknown, Errors<'r>> {<Unknown as FromForm<'r>>::finalize}`
+ --> tests/ui-fail-nightly/from_form_type_errors.rs:7:12
+  |
+5 | #[derive(FromForm)]
+  |          -------- in this derive macro expansion
+6 | struct BadType3 {
+7 |     field: Unknown,
+  |            ^^^^^^^ expected `FnOnce(_)` signature, found `fn(<Unknown as FromForm<'r>>::Context) -> Result<Unknown, Errors<'r>> {<Unknown as FromForm<'r>>::finalize}`
+  |
+  = help: the trait `FnOnce(_)` is not implemented for fn item `fn(<Unknown as FromForm<'r>>::Context) -> Result<Unknown, Errors<'r>> {<Unknown as FromForm<'r>>::finalize}`
+note: required by a bound in `std::option::Option::<T>::map_or_else`
+ --> $RUST/core/src/option.rs
+  |
+  | impl<T> Option<T> {
+...
+  |     pub const fn map_or_else<U, D, F>(self, default: D, f: F) -> U
+...
+  |         F: [const] FnOnce(T) -> U + [const] Destruct,
+  |            ^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `Option::<T>::map_or_else`
+  = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0277]: the trait bound `Foo<usize>: FromFormField<'r>` is not satisfied
   --> tests/ui-fail-nightly/from_form_type_errors.rs:12:10
    |
 12 | #[derive(FromForm)]
-   |          ^^^^^^^^ the trait `FromFormField<'_>` is not implemented for `Foo<usize>`, which is required by `Foo<usize>: FromForm<'r>`
+   |          ^^^^^^^^ unsatisfied trait bound
    |
+help: the trait `FromFormField<'r>` is not implemented for `Foo<usize>`
+  --> tests/ui-fail-nightly/from_form_type_errors.rs:10:1
+   |
+10 | struct Foo<T>(T);
+   | ^^^^^^^^^^^^^
    = help: the following other types implement trait `FromFormField<'v>`:
              &'v [u8]
              &'v str
@@ -170,12 +229,17 @@ error[E0277]: the trait bound `Foo<usize>: FromFormField<'_>` is not satisfied
    = note: required for `Foo<usize>` to implement `FromForm<'r>`
    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
-error[E0277]: the trait bound `Foo<usize>: FromFormField<'_>` is not satisfied
-  --> tests/ui-fail-nightly/from_form_type_errors.rs:14:5
+error[E0277]: the trait bound `Foo<usize>: FromForm<'r>` is not satisfied
+  --> tests/ui-fail-nightly/from_form_type_errors.rs:14:12
    |
 14 |     field: Foo<usize>,
-   |     ^^^^^^^^^^^^^^^^^ the trait `FromFormField<'_>` is not implemented for `Foo<usize>`, which is required by `Foo<usize>: FromForm<'r>`
+   |            ^^^^^^^^^^ unsatisfied trait bound
    |
+help: the trait `FromFormField<'r>` is not implemented for `Foo<usize>`
+  --> tests/ui-fail-nightly/from_form_type_errors.rs:10:1
+   |
+10 | struct Foo<T>(T);
+   | ^^^^^^^^^^^^^
    = help: the following other types implement trait `FromFormField<'v>`:
              &'v [u8]
              &'v str
@@ -191,9 +255,17 @@ error[E0277]: the trait bound `Foo<usize>: FromFormField<'_>` is not satisfied
 error[E0277]: the trait bound `Foo<usize>: FromFormField<'r>` is not satisfied
   --> tests/ui-fail-nightly/from_form_type_errors.rs:14:12
    |
+12 | #[derive(FromForm)]
+   |          -------- in this derive macro expansion
+13 | struct Other {
 14 |     field: Foo<usize>,
-   |            ^^^^^^^^^^ the trait `FromFormField<'r>` is not implemented for `Foo<usize>`
+   |            ^^^^^^^^^^ unsatisfied trait bound
    |
+help: the trait `FromFormField<'r>` is not implemented for `Foo<usize>`
+  --> tests/ui-fail-nightly/from_form_type_errors.rs:10:1
+   |
+10 | struct Foo<T>(T);
+   | ^^^^^^^^^^^^^
    = help: the following other types implement trait `FromFormField<'v>`:
              &'v [u8]
              &'v str
@@ -204,8 +276,26 @@ error[E0277]: the trait bound `Foo<usize>: FromFormField<'r>` is not satisfied
              Capped<std::string::String>
              Cow<'v, str>
            and $N others
-note: required by a bound in `FromFieldContext`
-  --> $WORKSPACE/core/lib/src/form/from_form_field.rs
+   = note: required for `Foo<usize>` to implement `FromForm<'r>`
+   = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error[E0277]: expected `FnOnce(_)` signature, found `fn(<Foo<usize> as FromForm<'r>>::Context) -> Result<Foo<usize>, Errors<'r>> {<Foo<usize> as FromForm<'r>>::finalize}`
+  --> tests/ui-fail-nightly/from_form_type_errors.rs:14:12
    |
-   | pub struct FromFieldContext<'v, T: FromFormField<'v>> {
-   |                                    ^^^^^^^^^^^^^^^^^ required by this bound in `FromFieldContext`
+12 | #[derive(FromForm)]
+   |          -------- in this derive macro expansion
+13 | struct Other {
+14 |     field: Foo<usize>,
+   |            ^^^^^^^^^^ expected `FnOnce(_)` signature, found `fn(<Foo<usize> as FromForm<'r>>::Context) -> Result<Foo<usize>, Errors<'r>> {<Foo<usize> as FromForm<'r>>::finalize}`
+   |
+   = help: the trait `FnOnce(_)` is not implemented for fn item `fn(<Foo<usize> as FromForm<'r>>::Context) -> Result<Foo<usize>, Errors<'r>> {<Foo<usize> as FromForm<'r>>::finalize}`
+note: required by a bound in `std::option::Option::<T>::map_or_else`
+  --> $RUST/core/src/option.rs
+   |
+   | impl<T> Option<T> {
+...
+   |     pub const fn map_or_else<U, D, F>(self, default: D, f: F) -> U
+...
+   |         F: [const] FnOnce(T) -> U + [const] Destruct,
+   |            ^^^^^^^^^^^^^^^^^^^^^^ required by this bound in `Option::<T>::map_or_else`
+   = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)

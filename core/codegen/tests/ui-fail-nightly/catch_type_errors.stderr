@@ -7,14 +7,14 @@ error[E0277]: the trait bound `usize: Responder<'_, '_>` is not satisfied
   |                              ^^^^^ the trait `Responder<'_, '_>` is not implemented for `usize`
   |
   = help: the following other types implement trait `Responder<'r, 'o>`:
-            <&'o [u8] as Responder<'r, 'o>>
-            <&'o str as Responder<'r, 'o>>
-            <() as Responder<'r, 'static>>
-            <(ContentType, R) as Responder<'r, 'o>>
-            <(Status, R) as Responder<'r, 'o>>
-            <Accepted<R> as Responder<'r, 'o>>
-            <Arc<[u8]> as Responder<'r, 'static>>
-            <Arc<str> as Responder<'r, 'static>>
+            `&'o [u8]` implements `Responder<'r, 'o>`
+            `&'o str` implements `Responder<'r, 'o>`
+            `()` implements `Responder<'r, 'static>`
+            `(ContentType, R)` implements `Responder<'r, 'o>`
+            `(Status, R)` implements `Responder<'r, 'o>`
+            `Accepted<R>` implements `Responder<'r, 'o>`
+            `Arc<[u8]>` implements `Responder<'r, 'static>`
+            `Arc<str>` implements `Responder<'r, 'static>`
           and $N others
 
 error[E0277]: the trait bound `bool: Responder<'_, '_>` is not satisfied
@@ -26,14 +26,14 @@ error[E0277]: the trait bound `bool: Responder<'_, '_>` is not satisfied
    |                              ^^^^ the trait `Responder<'_, '_>` is not implemented for `bool`
    |
    = help: the following other types implement trait `Responder<'r, 'o>`:
-             <&'o [u8] as Responder<'r, 'o>>
-             <&'o str as Responder<'r, 'o>>
-             <() as Responder<'r, 'static>>
-             <(ContentType, R) as Responder<'r, 'o>>
-             <(Status, R) as Responder<'r, 'o>>
-             <Accepted<R> as Responder<'r, 'o>>
-             <Arc<[u8]> as Responder<'r, 'static>>
-             <Arc<str> as Responder<'r, 'static>>
+             `&'o [u8]` implements `Responder<'r, 'o>`
+             `&'o str` implements `Responder<'r, 'o>`
+             `()` implements `Responder<'r, 'static>`
+             `(ContentType, R)` implements `Responder<'r, 'o>`
+             `(Status, R)` implements `Responder<'r, 'o>`
+             `Accepted<R>` implements `Responder<'r, 'o>`
+             `Arc<[u8]>` implements `Responder<'r, 'static>`
+             `Arc<str>` implements `Responder<'r, 'static>`
            and $N others
 
 error[E0308]: mismatched types
@@ -59,14 +59,14 @@ error[E0277]: the trait bound `usize: Responder<'_, '_>` is not satisfied
    |                          ^^^^^ the trait `Responder<'_, '_>` is not implemented for `usize`
    |
    = help: the following other types implement trait `Responder<'r, 'o>`:
-             <&'o [u8] as Responder<'r, 'o>>
-             <&'o str as Responder<'r, 'o>>
-             <() as Responder<'r, 'static>>
-             <(ContentType, R) as Responder<'r, 'o>>
-             <(Status, R) as Responder<'r, 'o>>
-             <Accepted<R> as Responder<'r, 'o>>
-             <Arc<[u8]> as Responder<'r, 'static>>
-             <Arc<str> as Responder<'r, 'static>>
+             `&'o [u8]` implements `Responder<'r, 'o>`
+             `&'o str` implements `Responder<'r, 'o>`
+             `()` implements `Responder<'r, 'static>`
+             `(ContentType, R)` implements `Responder<'r, 'o>`
+             `(Status, R)` implements `Responder<'r, 'o>`
+             `Accepted<R>` implements `Responder<'r, 'o>`
+             `Arc<[u8]>` implements `Responder<'r, 'static>`
+             `Arc<str>` implements `Responder<'r, 'static>`
            and $N others
 
 error[E0277]: the trait bound `usize: Responder<'_, '_>` is not satisfied
@@ -78,12 +78,12 @@ error[E0277]: the trait bound `usize: Responder<'_, '_>` is not satisfied
    |            ^^^^^ the trait `Responder<'_, '_>` is not implemented for `usize`
    |
    = help: the following other types implement trait `Responder<'r, 'o>`:
-             <&'o [u8] as Responder<'r, 'o>>
-             <&'o str as Responder<'r, 'o>>
-             <() as Responder<'r, 'static>>
-             <(ContentType, R) as Responder<'r, 'o>>
-             <(Status, R) as Responder<'r, 'o>>
-             <Accepted<R> as Responder<'r, 'o>>
-             <Arc<[u8]> as Responder<'r, 'static>>
-             <Arc<str> as Responder<'r, 'static>>
+             `&'o [u8]` implements `Responder<'r, 'o>`
+             `&'o str` implements `Responder<'r, 'o>`
+             `()` implements `Responder<'r, 'static>`
+             `(ContentType, R)` implements `Responder<'r, 'o>`
+             `(Status, R)` implements `Responder<'r, 'o>`
+             `Accepted<R>` implements `Responder<'r, 'o>`
+             `Arc<[u8]>` implements `Responder<'r, 'static>`
+             `Arc<str>` implements `Responder<'r, 'static>`
            and $N others

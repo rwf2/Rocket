@@ -2,46 +2,70 @@ error[E0277]: the trait bound `Q: FromParam<'_>` is not satisfied
  --> tests/ui-fail-stable/route-type-errors.rs:6:13
   |
 6 | fn f0(_foo: Q) {}
-  |             ^ the trait `FromParam<'_>` is not implemented for `Q`
+  |             ^ unsatisfied trait bound
   |
+help: the trait `FromParam<'_>` is not implemented for `Q`
+ --> tests/ui-fail-stable/route-type-errors.rs:3:1
+  |
+3 | struct Q;
+  | ^^^^^^^^
   = help: the following other types implement trait `FromParam<'a>`:
-            bool
-            isize
-            i8
-            i16
-            i32
-            i64
-            i128
-            usize
+            &'a str
+            IpAddr
+            Ipv4Addr
+            Ipv6Addr
+            NonZero<i128>
+            NonZero<i16>
+            NonZero<i32>
+            NonZero<i64>
           and $N others
 
 error[E0277]: the trait bound `Q: FromSegments<'_>` is not satisfied
  --> tests/ui-fail-stable/route-type-errors.rs:9:13
   |
 9 | fn f1(_foo: Q) {}
-  |             ^ the trait `FromSegments<'_>` is not implemented for `Q`
+  |             ^ unsatisfied trait bound
   |
-  = help: the following other types implement trait `FromSegments<'r>`:
-            <Segments<'r, rocket::http::uri::fmt::Path> as FromSegments<'r>>
-            <PathBuf as FromSegments<'_>>
-            <std::option::Option<T> as FromSegments<'r>>
-            <Result<T, <T as FromSegments<'r>>::Error> as FromSegments<'r>>
+help: the trait `FromSegments<'_>` is not implemented for `Q`
+ --> tests/ui-fail-stable/route-type-errors.rs:3:1
+  |
+3 | struct Q;
+  | ^^^^^^^^
+help: the following other types implement trait `FromSegments<'r>`
+ --> $WORKSPACE/core/lib/src/request/from_param.rs
+  |
+  | impl<'r> FromSegments<'r> for Segments<'r, Path> {
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `Segments<'r, rocket::http::uri::fmt::Path>` implements `FromSegments<'r>`
+...
+  | impl FromSegments<'_> for PathBuf {
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `PathBuf` implements `FromSegments<'_>`
+...
+  | impl<'r, T: FromSegments<'r>> FromSegments<'r> for Result<T, T::Error> {
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `Result<T, <T as FromSegments<'r>>::Error>` implements `FromSegments<'r>`
+...
+  | impl<'r, T: FromSegments<'r>> FromSegments<'r> for Option<T> {
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `std::option::Option<T>` implements `FromSegments<'r>`
 
 error[E0277]: the trait bound `Q: FromFormField<'_>` is not satisfied
   --> tests/ui-fail-stable/route-type-errors.rs:12:13
    |
 12 | fn f2(_foo: Q) {}
-   |             ^ the trait `FromFormField<'_>` is not implemented for `Q`, which is required by `Q: FromForm<'_>`
+   |             ^ unsatisfied trait bound
    |
+help: the trait `FromFormField<'_>` is not implemented for `Q`
+  --> tests/ui-fail-stable/route-type-errors.rs:3:1
+   |
+ 3 | struct Q;
+   | ^^^^^^^^
    = help: the following other types implement trait `FromFormField<'v>`:
-             bool
-             char
-             isize
-             i8
-             i16
-             i32
-             i64
-             i128
+             &'v [u8]
+             &'v str
+             Capped<&'v [u8]>
+             Capped<&'v str>
+             Capped<Cow<'v, str>>
+             Capped<TempFile<'v>>
+             Capped<std::string::String>
+             Cow<'v, str>
            and $N others
    = note: required for `Q` to implement `FromForm<'_>`
 
@@ -49,17 +73,22 @@ error[E0277]: the trait bound `Q: FromFormField<'_>` is not satisfied
   --> tests/ui-fail-stable/route-type-errors.rs:15:13
    |
 15 | fn f3(_foo: Q) {}
-   |             ^ the trait `FromFormField<'_>` is not implemented for `Q`, which is required by `Q: FromForm<'_>`
+   |             ^ unsatisfied trait bound
    |
+help: the trait `FromFormField<'_>` is not implemented for `Q`
+  --> tests/ui-fail-stable/route-type-errors.rs:3:1
+   |
+ 3 | struct Q;
+   | ^^^^^^^^
    = help: the following other types implement trait `FromFormField<'v>`:
-             bool
-             char
-             isize
-             i8
-             i16
-             i32
-             i64
-             i128
+             &'v [u8]
+             &'v str
+             Capped<&'v [u8]>
+             Capped<&'v str>
+             Capped<Cow<'v, str>>
+             Capped<TempFile<'v>>
+             Capped<std::string::String>
+             Cow<'v, str>
            and $N others
    = note: required for `Q` to implement `FromForm<'_>`
 
@@ -67,100 +96,130 @@ error[E0277]: the trait bound `Q: FromData<'_>` is not satisfied
   --> tests/ui-fail-stable/route-type-errors.rs:18:13
    |
 18 | fn f4(_foo: Q) {}
-   |             ^ the trait `FromData<'_>` is not implemented for `Q`
+   |             ^ unsatisfied trait bound
    |
+help: the trait `FromData<'_>` is not implemented for `Q`
+  --> tests/ui-fail-stable/route-type-errors.rs:3:1
+   |
+ 3 | struct Q;
+   | ^^^^^^^^
    = help: the following other types implement trait `FromData<'r>`:
-             rocket::Data<'r>
-             Cow<'_, str>
-             Capped<Cow<'_, str>>
-             Capped<Vec<u8>>
-             Capped<std::string::String>
-             Capped<TempFile<'_>>
-             Capped<&'r str>
+             &'r RawStr
+             &'r [u8]
+             &'r str
              Capped<&'r RawStr>
+             Capped<&'r [u8]>
+             Capped<&'r str>
+             Capped<Cow<'_, str>>
+             Capped<TempFile<'_>>
            and $N others
 
 error[E0277]: the trait bound `Q: FromRequest<'_>` is not satisfied
   --> tests/ui-fail-stable/route-type-errors.rs:21:11
    |
 21 | fn f5(_a: Q, _foo: Q) {}
-   |           ^ the trait `FromRequest<'_>` is not implemented for `Q`
+   |           ^ unsatisfied trait bound
    |
+help: the trait `FromRequest<'_>` is not implemented for `Q`
+  --> tests/ui-fail-stable/route-type-errors.rs:3:1
+   |
+ 3 | struct Q;
+   | ^^^^^^^^
    = help: the following other types implement trait `FromRequest<'r>`:
-             ProxyProto<'r>
-             Method
-             Outcome<T, (Status, <T as FromRequest<'r>>::Error), Status>
-             Flash<&'r CookieJar<'r>>
-             rocket::Shutdown
-             IpAddr
-             std::net::SocketAddr
-             std::option::Option<T>
+             &'r ContentType
+             &'r CookieJar<'r>
+             &'r Host<'r>
+             &'r Limits
+             &'r Route
+             &'r State<T>
+             &'r rocket::Config
+             &'r rocket::http::Accept
            and $N others
 
 error[E0277]: the trait bound `Q: FromParam<'_>` is not satisfied
   --> tests/ui-fail-stable/route-type-errors.rs:21:20
    |
 21 | fn f5(_a: Q, _foo: Q) {}
-   |                    ^ the trait `FromParam<'_>` is not implemented for `Q`
+   |                    ^ unsatisfied trait bound
    |
+help: the trait `FromParam<'_>` is not implemented for `Q`
+  --> tests/ui-fail-stable/route-type-errors.rs:3:1
+   |
+ 3 | struct Q;
+   | ^^^^^^^^
    = help: the following other types implement trait `FromParam<'a>`:
-             bool
-             isize
-             i8
-             i16
-             i32
-             i64
-             i128
-             usize
+             &'a str
+             IpAddr
+             Ipv4Addr
+             Ipv6Addr
+             NonZero<i128>
+             NonZero<i16>
+             NonZero<i32>
+             NonZero<i64>
            and $N others
 
 error[E0277]: the trait bound `Q: FromRequest<'_>` is not satisfied
   --> tests/ui-fail-stable/route-type-errors.rs:24:11
    |
 24 | fn f6(_a: Q, _foo: Q, _good: usize, _bar: Q) {}
-   |           ^ the trait `FromRequest<'_>` is not implemented for `Q`
+   |           ^ unsatisfied trait bound
    |
+help: the trait `FromRequest<'_>` is not implemented for `Q`
+  --> tests/ui-fail-stable/route-type-errors.rs:3:1
+   |
+ 3 | struct Q;
+   | ^^^^^^^^
    = help: the following other types implement trait `FromRequest<'r>`:
-             ProxyProto<'r>
-             Method
-             Outcome<T, (Status, <T as FromRequest<'r>>::Error), Status>
-             Flash<&'r CookieJar<'r>>
-             rocket::Shutdown
-             IpAddr
-             std::net::SocketAddr
-             std::option::Option<T>
+             &'r ContentType
+             &'r CookieJar<'r>
+             &'r Host<'r>
+             &'r Limits
+             &'r Route
+             &'r State<T>
+             &'r rocket::Config
+             &'r rocket::http::Accept
            and $N others
 
 error[E0277]: the trait bound `Q: FromParam<'_>` is not satisfied
   --> tests/ui-fail-stable/route-type-errors.rs:24:20
    |
 24 | fn f6(_a: Q, _foo: Q, _good: usize, _bar: Q) {}
-   |                    ^ the trait `FromParam<'_>` is not implemented for `Q`
+   |                    ^ unsatisfied trait bound
    |
+help: the trait `FromParam<'_>` is not implemented for `Q`
+  --> tests/ui-fail-stable/route-type-errors.rs:3:1
+   |
+ 3 | struct Q;
+   | ^^^^^^^^
    = help: the following other types implement trait `FromParam<'a>`:
-             bool
-             isize
-             i8
-             i16
-             i32
-             i64
-             i128
-             usize
+             &'a str
+             IpAddr
+             Ipv4Addr
+             Ipv6Addr
+             NonZero<i128>
+             NonZero<i16>
+             NonZero<i32>
+             NonZero<i64>
            and $N others
 
 error[E0277]: the trait bound `Q: FromParam<'_>` is not satisfied
   --> tests/ui-fail-stable/route-type-errors.rs:24:43
    |
 24 | fn f6(_a: Q, _foo: Q, _good: usize, _bar: Q) {}
-   |                                           ^ the trait `FromParam<'_>` is not implemented for `Q`
+   |                                           ^ unsatisfied trait bound
    |
+help: the trait `FromParam<'_>` is not implemented for `Q`
+  --> tests/ui-fail-stable/route-type-errors.rs:3:1
+   |
+ 3 | struct Q;
+   | ^^^^^^^^
    = help: the following other types implement trait `FromParam<'a>`:
-             bool
-             isize
-             i8
-             i16
-             i32
-             i64
-             i128
-             usize
+             &'a str
+             IpAddr
+             Ipv4Addr
+             Ipv6Addr
+             NonZero<i128>
+             NonZero<i16>
+             NonZero<i32>
+             NonZero<i64>
            and $N others

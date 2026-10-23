@@ -9,21 +9,21 @@ error: route expects 1 parameter but 2 were supplied
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:71:18
    |
 71 |     uri!(ignored(10, "10"));
-   |                  ^^^^^^^^
+   |                  ^^
 
 error: expected unnamed arguments due to ignored parameters
-       = note: uri for route `ignored` ignores 1 path parameters: "/<_>"
+       = note: uri for route `ignored` ignores path parameters: "/<_>"
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:69:18
    |
 69 |     uri!(ignored(num = 10));
-   |                  ^^^^^^^^
+   |                  ^^^
 
 error: route expects 1 parameter but 2 were supplied
        = note: route `ignored` has uri "/<_>"
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:67:18
    |
 67 |     uri!(ignored(10, 20));
-   |                  ^^^^^^
+   |                  ^^
 
 error: path parameters cannot be ignored
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:63:18
@@ -49,7 +49,7 @@ error: invalid parameters for `has_two` route uri
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:57:18
    |
 57 |     uri!(has_two(id = 100, cookies = "hi"));
-   |                  ^^^^^^^^^^^^^^^^^^^^^^^^
+   |                  ^^
 
 error: [help] unknown parameter: `cookies`
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:57:28
@@ -63,7 +63,7 @@ error: invalid parameters for `has_two` route uri
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:55:18
    |
 55 |     uri!(has_two(cookies = "hi", id = 100, id = 10, id = 10));
-   |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |                  ^^^^^^^
 
 error: [help] unknown parameter: `cookies`
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:55:18
@@ -83,7 +83,7 @@ error: invalid parameters for `has_two` route uri
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:53:18
    |
 53 |     uri!(has_two(name = "hi"));
-   |                  ^^^^^^^^^^^
+   |                  ^^^^
 
 error: invalid parameters for `has_two` route uri
        = note: uri parameters are: id: i32, name: String
@@ -91,7 +91,7 @@ error: invalid parameters for `has_two` route uri
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:51:18
    |
 51 |     uri!(has_two(id = 100, id = 100, ));
-   |                  ^^^^^^^^^^^^^^^^^^^
+   |                  ^^
 
 error: [help] duplicate parameter: `id`
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:51:28
@@ -104,7 +104,7 @@ error: invalid parameters for `has_one_guarded` route uri
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:49:26
    |
 49 |     uri!(has_one_guarded(id = 100, cookies = "hi"));
-   |                          ^^^^^^^^^^^^^^^^^^^^^^^^
+   |                          ^^
 
 error: [help] unknown parameter: `cookies`
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:49:36
@@ -117,7 +117,7 @@ error: invalid parameters for `has_one_guarded` route uri
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:47:26
    |
 47 |     uri!(has_one_guarded(cookies = "hi", id = 100));
-   |                          ^^^^^^^^^^^^^^^^^^^^^^^^
+   |                          ^^^^^^^
 
 error: [help] unknown parameter: `cookies`
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:47:26
@@ -131,7 +131,7 @@ error: invalid parameters for `has_one` route uri
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:45:18
    |
 45 |     uri!(has_one(name = "hi"));
-   |                  ^^^^^^^^^^^
+   |                  ^^^^
 
 error: [help] unknown parameter: `name`
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:45:18
@@ -144,7 +144,7 @@ error: invalid parameters for `has_one` route uri
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:43:18
    |
 43 |     uri!(has_one(id = 100, id = 100, ));
-   |                  ^^^^^^^^^^^^^^^^^^^
+   |                  ^^
 
 error: [help] duplicate parameter: `id`
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:43:28
@@ -157,7 +157,7 @@ error: invalid parameters for `has_one` route uri
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:41:18
    |
 41 |     uri!(has_one(id = 100, id = 100));
-   |                  ^^^^^^^^^^^^^^^^^^
+   |                  ^^
 
 error: [help] duplicate parameter: `id`
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:41:28
@@ -170,7 +170,7 @@ error: invalid parameters for `has_one` route uri
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:39:18
    |
 39 |     uri!(has_one(name = 100, age = 50, id = 100, id = 50));
-   |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |                  ^^^^
 
 error: [help] unknown parameters: `name`, `age`
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:39:18
@@ -189,7 +189,7 @@ error: invalid parameters for `has_one` route uri
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:37:18
    |
 37 |     uri!(has_one(name = 100, age = 50, id = 100));
-   |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |                  ^^^^
 
 error: [help] unknown parameters: `name`, `age`
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:37:18
@@ -202,7 +202,7 @@ error: invalid parameters for `has_one` route uri
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:35:18
    |
 35 |     uri!(has_one(name = 100, id = 100));
-   |                  ^^^^^^^^^^^^^^^^^^^^
+   |                  ^^^^
 
 error: [help] unknown parameter: `name`
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:35:18
@@ -215,7 +215,7 @@ error: invalid parameters for `has_one` route uri
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:33:18
    |
 33 |     uri!(has_one(id = 100, name = "hi"));
-   |                  ^^^^^^^^^^^^^^^^^^^^^
+   |                  ^^
 
 error: [help] unknown parameter: `name`
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:33:28
@@ -235,28 +235,28 @@ error: route expects 2 parameters but 3 were supplied
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:30:18
    |
 30 |     uri!(has_two(10, "hi", "there"));
-   |                  ^^^^^^^^^^^^^^^^^
+   |                  ^^
 
 error: route expects 1 parameter but 2 were supplied
        = note: route `has_one_guarded` has uri "/<id>"
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:28:26
    |
 28 |     uri!(has_one_guarded("hi", 100));
-   |                          ^^^^^^^^^
+   |                          ^^^^
 
 error: route expects 1 parameter but 2 were supplied
        = note: route `has_one` has uri "/<id>"
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:27:18
    |
 27 |     uri!(has_one("Hello", 23, ));
-   |                  ^^^^^^^^^^^^
+   |                  ^^^^^^^
 
 error: route expects 1 parameter but 2 were supplied
        = note: route `has_one` has uri "/<id>"
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:26:18
    |
 26 |     uri!(has_one(1, 23));
-   |                  ^^^^^
+   |                  ^
 
 error: route expects 1 parameter but 0 were supplied
        = note: route `has_one` has uri "/<id>"
@@ -276,4 +276,10 @@ error[E0271]: type mismatch resolving `<String as FromParam<'_>>::Error == &str`
   --> tests/ui-fail-stable/typed-uris-bad-params.rs:17:37
    |
 17 | fn optionals(id: Option<i32>, name: Result<String, &str>) {  }
-   |                                     ^^^^^^^^^^^^^^^^^^^^ expected `Empty`, found `&str`
+   |                                     ^^^^^^ expected `&str`, found `Infallible`
+
+error[E0271]: type mismatch resolving `<String as FromParam<'_>>::Error == &str`
+  --> tests/ui-fail-stable/typed-uris-bad-params.rs:17:37
+   |
+17 | fn optionals(id: Option<i32>, name: Result<String, &str>) {  }
+   |                                     ^^^^^^^^^^^^^^^^^^^^ expected `&str`, found `Infallible`
