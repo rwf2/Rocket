@@ -66,6 +66,9 @@ jobs:
             brew link --force --overwrite mysql-client
             brew link --force --overwrite libpq
             echo "/usr/local/opt/mysql-client/bin" >> "$GITHUB_PATH"
+            native_deps=$(brew list --formula --versions | shasum -a 256)
+            echo "NATIVE_DEPS_CACHE_KEY=$native_deps" >> "$GITHUB_ENV"
+        shell: bash
 
       # vcpkg --triplet x64-windows install libmysql libpq sqlite3 openssl
       # + vcpkg/installed/vcpkg (in particular, the status file)
@@ -100,12 +103,14 @@ jobs:
         with:
           workspaces: examples
           key: ${{ matrix.test.name }}-${{ steps.toolchain.outputs.cachekey }}
+          env-vars: NATIVE_DEPS_CACHE_KEY
 
       - name: Cache Root Workspace
         if: matrix.test.name != 'Examples'
         uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.test.name }}-${{ steps.toolchain.outputs.cachekey }}
+          env-vars: NATIVE_DEPS_CACHE_KEY
 
       # Don't run out of disk space on Windows. C: has much much space than D:.
       - name: Switch Disk (Windows)
