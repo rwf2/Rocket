@@ -84,8 +84,8 @@ pub enum UriMacro {
 
 #[derive(Debug)]
 pub enum Validation<'a> {
-    // Parameters that were ignored in a named argument setting.
-    NamedIgnored(Vec<&'a Dynamic>),
+    // Named arguments were used with ignored route parameters.
+    NamedIgnored,
     // Number expected, what we actually got.
     Unnamed(usize, usize),
     // (Missing, Extra, Duplicate)
@@ -379,9 +379,8 @@ impl InternalUriParams {
                 }
             },
             Args::Named(args) => {
-                let ignored = all_params.clone().filter(|p| p.is_wild());
-                if ignored.clone().count() > 0 {
-                    return Validation::NamedIgnored(ignored.collect());
+                if all_params.clone().any(|p| p.is_wild()) {
+                    return Validation::NamedIgnored;
                 }
 
                 let mut params = all_params.map(|p| (&p.name, None))

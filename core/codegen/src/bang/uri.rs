@@ -61,7 +61,7 @@ fn extract_exprs(internal: &InternalUriParams) -> Result<(
             let types = internal.fn_args.iter().map(|a| (&a.ident, &a.ty));
             Ok((path_exprs, query_exprs, types))
         }
-        Validation::NamedIgnored(_) => {
+        Validation::NamedIgnored => {
             let mut route_name = quote!(#route_name).to_string();
             route_name.retain(|c| !c.is_whitespace());
 
