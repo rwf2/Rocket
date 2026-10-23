@@ -29,7 +29,7 @@ uuid = ["uuid_"]
 smallvec = { version = "1.11", features = ["const_generics", "const_new"] }
 percent-encoding = "2"
 http = "0.2"
-time = { version = "0.3", features = ["formatting", "macros"] }
+time = { version = "0.3.47", features = ["formatting", "macros"] }
 indexmap = "2"
 rustls = { version = "0.23.46", optional = true, default-features = false, features = ["ring", "std", "tls12"] }
 tokio-rustls = { version = "0.26.6", optional = true, default-features = false, features = ["ring", "tls12"] }

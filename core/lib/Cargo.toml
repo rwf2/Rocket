@@ -40,7 +40,7 @@ futures = { version = "0.3.0", default-features = false, features = ["std"] }
 yansi = { version = "1.0.1", features = ["detect-tty"] }
 log = { version = "0.4", features = ["std"] }
 num_cpus = "1.0"
-time = { version = "0.3", features = ["macros", "parsing"] }
+time = { version = "0.3.47", features = ["macros", "parsing"] }
 memchr = "2" # TODO: Use pear instead.
 binascii = "0.1"
 ref-cast = "1.0"
