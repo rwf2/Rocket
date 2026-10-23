@@ -80,3 +80,35 @@ mod fairing_before_head_strip {
         assert!(response.into_string().unwrap_or_default().is_empty());
     }
 }
+
+#[test]
+fn fairing_before_status_body_strip() {
+    use std::io::Cursor;
+    use rocket::fairing::AdHoc;
+    use rocket::http::Status;
+    use rocket::local::blocking::Client;
+
+    for status in [Status::NoContent, Status::NotModified] {
+        let app = rocket::build().mount("/", routes![auto])
+            .attach(AdHoc::on_response("Set Status", move |_, response| Box::pin(async move {
+                let bytes = response.body_mut().to_bytes().await.unwrap();
+                assert_eq!(bytes, RESPONSE_STRING.as_bytes());
+                response.set_status(status);
+                response.set_sized_body(bytes.len(), Cursor::new(bytes));
+                response.set_raw_header("Content-Length", "123");
+            })));
+
+        let client = Client::debug(app).unwrap();
+        let response = client.get("/").dispatch();
+        let length = response.headers().get_one("Content-Length");
+        if status == Status::NoContent {
+            assert_eq!(length, None);
+            assert_eq!(response.body().preset_size(), None);
+        } else {
+            assert_eq!(length, Some("123"));
+            assert_eq!(response.body().preset_size(), Some(RESPONSE_STRING.len()));
+        }
+
+        assert!(response.into_bytes().unwrap_or_default().is_empty());
+    }
+}

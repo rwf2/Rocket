@@ -883,7 +883,7 @@ impl<'r> Response<'r> {
     }
 
     // Makes the `AsyncRead`er in the body empty but leaves the size of the body
-    // if it exists. Meant to be used during HEAD handling.
+    // if it exists. Meant to be used during HEAD and 304 handling.
     #[inline(always)]
     pub(crate) fn strip_body(&mut self) {
         self.body.strip();

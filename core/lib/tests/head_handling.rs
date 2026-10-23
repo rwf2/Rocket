@@ -18,6 +18,11 @@ fn other() -> RawJson<&'static str> {
     RawJson("{ 'hi': 'hello' }")
 }
 
+#[get("/stream")]
+fn stream() -> rocket::response::stream::ByteStream![&'static str] {
+    rocket::response::stream::ByteStream! { yield "hello"; }
+}
+
 mod head_handling_tests {
     use super::*;
 
@@ -26,7 +31,7 @@ mod head_handling_tests {
     use rocket::http::{Status, ContentType};
 
     fn routes() -> Vec<Route> {
-        routes![index, empty, other]
+        routes![index, empty, other, stream]
     }
 
     #[test]
@@ -38,11 +43,21 @@ mod head_handling_tests {
         assert_eq!(content_type, vec![ContentType::Plain.to_string()]);
         assert_eq!(response.status(), Status::Ok);
         assert_eq!(response.body().preset_size(), Some(13));
+        assert!(!response.headers().contains("Content-Length"));
         assert!(response.into_bytes().unwrap().is_empty());
 
         let response = client.head("/empty").dispatch();
         assert_eq!(response.status(), Status::NoContent);
         assert!(response.into_bytes().is_none());
+    }
+
+    #[test]
+    fn unknown_head_length() {
+        let client = Client::debug_with(routes()).unwrap();
+        let response = client.head("/stream").dispatch();
+        assert_eq!(response.body().preset_size(), None);
+        assert!(!response.headers().contains("Content-Length"));
+        assert!(response.into_bytes().unwrap_or_default().is_empty());
     }
 
     #[test]

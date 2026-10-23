@@ -107,6 +107,10 @@ impl<'r> Body<'r> {
     /// The present value is `4096`.
     pub const DEFAULT_MAX_CHUNK: usize = 4096;
 
+    pub(crate) fn unsized_none() -> Self {
+        Body { size: None, ..Body::default() }
+    }
+
     pub(crate) fn with_sized<T>(body: T, preset_size: Option<usize>) -> Self
         where T: AsyncReadSeek + Send + 'r
     {
@@ -131,15 +135,19 @@ impl<'r> Body<'r> {
         self.max_chunk = max_chunk;
     }
 
+    // Returns `true` if the body is unset or has been stripped.
+    pub(crate) fn is_empty(&self) -> bool {
+        matches!(self.inner, Inner::None | Inner::Phantom(_))
+    }
+
     pub(crate) fn strip(&mut self) {
         let body = std::mem::take(self);
         *self = match body.inner {
             Inner::Seekable(b) | Inner::Phantom(b) => Body {
-                size: body.size,
                 inner: Inner::Phantom(b),
-                max_chunk: body.max_chunk,
+                ..body
             },
-            Inner::Unsized(_) | Inner::None => Body::default()
+            Inner::Unsized(_) | Inner::None => Body::unsized_none(),
         };
     }
 

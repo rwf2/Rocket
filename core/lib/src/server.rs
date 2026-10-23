@@ -72,6 +72,7 @@ async fn hyper_service_fn(
     // borrow from the request. Instead, write the body in another future that
     // sends the response metadata (and a body channel) prior.
     let (tx, rx) = oneshot::channel();
+    let version = hyp_req.version();
 
     #[cfg(not(broken_fmt))]
     debug!("received request: {:#?}", hyp_req);
@@ -90,14 +91,15 @@ async fn hyper_service_fn(
                 let mut response = rocket.dispatch(token, &req, data).await;
                 let upgrade = response.take_upgrade(req.headers().get("upgrade"));
                 if let Ok(Some((proto, handler))) = upgrade {
-                    rocket.handle_upgrade(response, proto, handler, pending_upgrade, tx).await;
+                    rocket.handle_upgrade(response, proto, handler, pending_upgrade, tx, version)
+                        .await;
                 } else {
                     if upgrade.is_err() {
                         warn_!("Request wants upgrade but no I/O handler matched.");
                         info_!("Request is not being upgraded.");
                     }
 
-                    rocket.send_response(response, tx).await;
+                    rocket.send_response(response, tx, version).await;
                 }
             },
             Err(e) => {
@@ -106,7 +108,7 @@ async fn hyper_service_fn(
                 warn_!("Dispatching salvaged request to catcher: {}.", e.request);
 
                 let response = rocket.handle_error(Status::BadRequest, &e.request).await;
-                rocket.send_response(response, tx).await;
+                rocket.send_response(response, tx, version).await;
             }
         }
     });
@@ -122,6 +124,7 @@ impl Rocket<Orbit> {
         &self,
         response: Response<'_>,
         tx: oneshot::Sender<hyper::Response<hyper::Body>>,
+        version: hyper::Version,
     ) {
         let remote_hungup = |e: &io::Error| match e.kind() {
             | io::ErrorKind::BrokenPipe
@@ -130,7 +133,7 @@ impl Rocket<Orbit> {
             _ => false,
         };
 
-        match self._send_response(response, tx).await {
+        match self._send_response(response, tx, version).await {
             Ok(()) => info_!("{}", "Response succeeded.".green()),
             Err(e) if remote_hungup(&e) => warn_!("Remote left: {}.", e),
             Err(e) => warn_!("Failed to write response: {}.", e),
@@ -143,7 +146,14 @@ impl Rocket<Orbit> {
         &self,
         mut response: Response<'_>,
         tx: oneshot::Sender<hyper::Response<hyper::Body>>,
+        version: hyper::Version,
     ) -> io::Result<()> {
+        if response.headers().contains("Transfer-Encoding") {
+            response.remove_header("Content-Length");
+        } else if let Some(size) = response.body_mut().size().await {
+            response.set_raw_header("Content-Length", size.to_string());
+        }
+
         let mut hyp_res = hyper::Response::builder();
 
         hyp_res = hyp_res.status(response.status().code);
@@ -153,23 +163,31 @@ impl Rocket<Orbit> {
             hyp_res = hyp_res.header(name, value);
         }
 
-        let body = response.body_mut();
-        if let Some(n) = body.size().await {
-            hyp_res = hyp_res.header(hyper::header::CONTENT_LENGTH, n);
+        let send_headers = |body| {
+            let hyp_response = hyp_res.body(body)
+                .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+
+            #[cfg(not(broken_fmt))]
+            debug!("sending response: {:#?}", hyp_response);
+
+            tx.send(hyp_response).map_err(|_| {
+                let msg = "client disconnect before response started";
+                io::Error::new(io::ErrorKind::BrokenPipe, msg)
+            })
+        };
+
+        // Send empty HTTP/2 responses with just the headers. An empty DATA
+        // frame makes h2 reject a 304 with a nonzero Content-Length.
+        if version == hyper::Version::HTTP_2 && response.body().is_empty() {
+            return send_headers(hyper::Body::empty());
         }
 
+        // For HTTP/1, use a channel even without a body. Hyper otherwise
+        // removes Content-Length from 304 responses.
         let (mut sender, hyp_body) = hyper::Body::channel();
-        let hyp_response = hyp_res.body(hyp_body)
-            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+        send_headers(hyp_body)?;
 
-        #[cfg(not(broken_fmt))]
-        debug!("sending response: {:#?}", hyp_response);
-
-        tx.send(hyp_response).map_err(|_| {
-            let msg = "client disconnect before response started";
-            io::Error::new(io::ErrorKind::BrokenPipe, msg)
-        })?;
-
+        let body = response.body_mut();
         let max_chunk_size = body.max_chunk_size();
         let mut stream = body.into_bytes_stream(max_chunk_size);
         while let Some(next) = stream.next().await {
@@ -187,12 +205,13 @@ impl Rocket<Orbit> {
         io_handler: Pin<Box<dyn IoHandler + 'r>>,
         pending_upgrade: hyper::upgrade::OnUpgrade,
         tx: oneshot::Sender<hyper::Response<hyper::Body>>,
+        version: hyper::Version,
     ) {
         info_!("Upgrading connection to {}.", Paint::white(&proto).bold());
         response.set_status(Status::SwitchingProtocols);
         response.set_raw_header("Connection", "Upgrade");
         response.set_raw_header("Upgrade", proto.clone().into_cow());
-        self.send_response(response, tx).await;
+        self.send_response(response, tx, version).await;
 
         match pending_upgrade.await {
             Ok(io_stream) => {
@@ -272,8 +291,13 @@ impl Rocket<Orbit> {
         // Run the response fairings.
         self.fairings.handle_response(request, &mut response).await;
 
-        // Strip the body if this is a `HEAD` request.
-        if was_head_request {
+        if response.status() == Status::NoContent {
+            // A 204 response must not have a body or either framing header.
+            response.remove_header("Content-Length");
+            response.remove_header("Transfer-Encoding");
+            *response.body_mut() = crate::response::Body::unsized_none();
+        } else if was_head_request || response.status() == Status::NotModified {
+            // HEAD and 304 responses have no body, but can have a length.
             response.strip_body();
         }
 
