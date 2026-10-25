@@ -28,7 +28,7 @@ error: `database` attribute can only be used on structs
   --> tests/ui-fail-stable/database-syntax.rs:40:1
    |
 40 | enum Foo {  }
-   | ^^^^^^^^^^^^^
+   | ^^^^
 
 error: `database` attribute can only be applied to structs with exactly one unnamed field
        = help: example: `struct MyDatabase(diesel::SqliteConnection);`
@@ -41,16 +41,16 @@ error: `database` attribute can only be used on structs
   --> tests/ui-fail-stable/database-syntax.rs:46:1
    |
 46 | union Baz {  }
-   | ^^^^^^^^^^^^^^
+   | ^^^^^
 
 error: `database` attribute cannot be applied to structs with generics
   --> tests/ui-fail-stable/database-syntax.rs:49:9
    |
 49 | struct E<'r>(&'r str);
-   |         ^^^^
+   |         ^
 
 error: `database` attribute cannot be applied to structs with generics
   --> tests/ui-fail-stable/database-syntax.rs:52:9
    |
 52 | struct F<T>(T);
-   |         ^^^
+   |         ^
