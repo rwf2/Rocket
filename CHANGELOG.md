@@ -6,7 +6,7 @@ This release contains the following crate updates:
   - `rocket_db_pools` `0.3.0`
   - `rocket_dyn_templates` `0.3.0`
   - `rocket_sync_db_pools` `0.2.0`
-  - `rocket_ws` `0.1.2`
+  - `rocket_ws` `0.2.0`
 
 ## [`rocket`](https://api.rocket.rs/v0.5/rocket/) `0.5.3`
 
@@ -284,7 +284,91 @@ dependency to match or use the driver reexported by `rocket_sync_db_pools`.
   * `tokio` was updated to `1.54.1`, fixing a soundness issue in `Interval`
     ([RUSTSEC-2026-0384]).
 
-## [`rocket_ws`](https://api.rocket.rs/v0.5/rocket_ws/) `0.1.2`
+## [`rocket_ws`](https://api.rocket.rs/v0.5/rocket_ws/) `0.2.0`
+
+### Breaking Changes
+
+This release includes several breaking changes, most of which are the result of
+updating `tokio-tungstenite` to `0.30`. These changes are listed below along
+with a short note about how to handle the breaking change in existing
+applications.
+
+#### Silent Changes
+
+These changes are invisible to the compiler and will _not_ yield errors or
+warnings at compile-time. We **strongly** advise all application authors to
+review this list carefully.
+
+  * **Connections allocate a larger read buffer.**
+
+    Previously, each connection allocated a 4KiB read buffer. Connections now
+    allocate an 8KiB read buffer by default. A configuration passed to
+    `WebSocket::config()` replaces this default, and `Config::default()` uses a
+    128KiB read buffer, so applications that configure connections may use
+    considerably more memory. To keep a small buffer, set its size explicitly:
+
+    ```rust
+    let config = ws::Config::default()
+        .max_message_size(Some(3 << 20))
+        .read_buffer_size(8 * 1024);
+    ```
+
+    The read buffer size does not limit the size of incoming messages.
+
+  * **The `WebSocket` request guard validates `Sec-WebSocket-Key`.**
+
+    As required by RFC 6455, the key must be the Base64 encoding of 16 bytes.
+    Requests with an invalid key are now forwarded with `400 Bad Request`.
+    There is no workaround.
+
+#### General
+
+The following changes are likely to cause compile-time errors.
+
+  * **Message payloads are `Utf8Bytes` and `Bytes`.**
+
+    Text messages now use `Utf8Bytes`, while binary, Ping, and Pong messages use
+    `Bytes`. Both types are reexported by `rocket_ws`. Use `.into()` when
+    constructing messages from strings or vectors:
+
+    ```diff
+    - yield ws::Message::Ping(vec![b'h', b'i'])
+    + yield ws::Message::Ping(vec![b'h', b'i'].into())
+    ```
+
+    `Message::into_text()` and `Message::into_data()` return the new types as
+    well.
+
+  * **`CloseFrame` lost its lifetime parameter.**
+
+    Its `reason` is now `Utf8Bytes`. Remove calls to `CloseFrame::into_owned()`.
+
+  * **`Frame` payload methods were changed.**
+
+    - `Frame::payload()` returns `&[u8]`, and `payload_mut()` was removed.
+    - `Frame::into_data()` was replaced with `into_payload()`, returning
+      `Bytes`.
+    - `Frame::into_string()` was replaced with `into_text()`, returning
+      `Result<Utf8Bytes, Utf8Error>`.
+    - `Frame::from_payload()` takes `Bytes`. Convert vectors with `.into()`.
+
+  * **`Error::WriteBufferFull` and `Error::Http` box their contents.**
+
+    `Error::Utf8` now contains a `String`.
+
+  * **`Config` is now non-exhaustive.**
+
+    Use builder methods on `Config::default()` in place of struct literals:
+
+    ```diff
+    - let ws = ws.config(ws::Config {
+    -     max_message_size: Some(3 << 20),
+    -     ..Default::default()
+    - });
+    + let ws = ws.config(ws::Config::default().max_message_size(Some(3 << 20)));
+    ```
+
+    The deprecated `max_send_queue` field, which had no effect, was removed.
 
 ### General Improvements
 
