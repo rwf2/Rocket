@@ -8,7 +8,7 @@ readme = "../README.md"
 keywords = ["rocket", "framework", "database", "pools"]
 license = "MIT OR Apache-2.0"
 edition = "2021"
-rust-version = "1.89"
+rust-version = "1.94"
 
 [package.metadata.docs.rs]
 all-features = true
@@ -19,7 +19,7 @@ deadpool_postgres = ["deadpool-postgres", "deadpool"]
 deadpool_redis = ["deadpool-redis", "deadpool"]
 # sqlx features
 sqlx = ["dep:sqlx", "dep:rustls", "dep:rustls-webpki", "dep:webpki-roots"]
-sqlx_mysql = ["sqlx", "sqlx/mysql"]
+sqlx_mysql = ["sqlx", "sqlx/mysql-rsa"]
 sqlx_postgres = ["sqlx", "sqlx/postgres"]
 sqlx_sqlite = ["sqlx", "sqlx/sqlite"]
 sqlx_macros = ["sqlx", "sqlx/macros"]
@@ -85,7 +85,7 @@ default-features = false
 optional = true
 
 [dependencies.sqlx]
-version = "0.8.6"
+version = "0.9.0"
 default-features = false
 features = ["runtime-tokio", "tls-rustls-ring"]
 optional = true

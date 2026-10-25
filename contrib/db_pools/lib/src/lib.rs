@@ -113,7 +113,7 @@
 //! On shutdown, new connections are denied. Shutdown _does not_ wait for
 //! connections to be returned.
 //!
-//! ## `sqlx` (v0.8)
+//! ## `sqlx` (v0.9)
 //!
 //! | Database | Feature         | [`Pool`] Type        | [`Connection`] Deref                     |
 //! |----------|-----------------|----------------------|------------------------------------------|
@@ -121,15 +121,15 @@
 //! | MySQL    | `sqlx_mysql`    | [`sqlx::MySqlPool`]  | [`sqlx::pool::PoolConnection<MySql>`]    |
 //! | SQLite   | `sqlx_sqlite`   | [`sqlx::SqlitePool`] | [`sqlx::pool::PoolConnection<Sqlite>`]   |
 //!
-//! [`sqlx::PgPool`]: https://docs.rs/sqlx/0.8/sqlx/type.PgPool.html
-//! [`sqlx::MySqlPool`]: https://docs.rs/sqlx/0.8/sqlx/type.MySqlPool.html
-//! [`sqlx::SqlitePool`]: https://docs.rs/sqlx/0.8/sqlx/type.SqlitePool.html
+//! [`sqlx::PgPool`]: https://docs.rs/sqlx/0.9/sqlx/type.PgPool.html
+//! [`sqlx::MySqlPool`]: https://docs.rs/sqlx/0.9/sqlx/type.MySqlPool.html
+//! [`sqlx::SqlitePool`]: https://docs.rs/sqlx/0.9/sqlx/type.SqlitePool.html
 //! [`sqlx::pool::PoolConnection<Postgres>`]:
-//! https://docs.rs/sqlx/0.8/sqlx/pool/struct.PoolConnection.html
+//! https://docs.rs/sqlx/0.9/sqlx/pool/struct.PoolConnection.html
 //! [`sqlx::pool::PoolConnection<MySql>`]:
-//! https://docs.rs/sqlx/0.8/sqlx/pool/struct.PoolConnection.html
+//! https://docs.rs/sqlx/0.9/sqlx/pool/struct.PoolConnection.html
 //! [`sqlx::pool::PoolConnection<Sqlite>`]:
-//! https://docs.rs/sqlx/0.8/sqlx/pool/struct.PoolConnection.html
+//! https://docs.rs/sqlx/0.9/sqlx/pool/struct.PoolConnection.html
 //!
 //! On shutdown, new connections are denied. Shutdown waits for connections to
 //! be returned.
@@ -163,7 +163,7 @@
 //!
 //! ```toml
 //! [dependencies.sqlx]
-//! version = "0.8.6"
+//! version = "0.9.0"
 //! default-features = false
 //! features = ["macros", "migrate"]
 //!
@@ -211,9 +211,6 @@
 //! max_connections = 1024
 //! connect_timeout = 5
 //! idle_timeout = 120
-//!
-//! # This option is only supported by the `sqlx_sqlite` driver.
-//! extensions = ["memvfs", "rot13"]
 //! ```
 //!
 //! Or via environment variables:
@@ -239,7 +236,7 @@
 //!   - journal mode   : `WAL`
 //!   - create-missing :  `enabled`
 //!   - synchronous    : `full` (even when `WAL`)
-//!   - busy timeout   : `connection_timeout`
+//!   - busy timeout   : `connect_timeout`
 //!
 //! * `sqlx_postgres`
 //!
@@ -252,10 +249,75 @@
 //!   - sslmode                  : `PREFERRED`
 //!   - statement-cache-capacity : `100`
 //!
+//! ## Customization
+//!
+//! To customize a database driver before its pool is created, use
+//! [`Database::custom()`]. The pool must implement [`Configurable`], as SQLx
+//! pools and MongoDB clients do. This method takes a function that receives a
+//! reference to the database's [`Config`] and the driver's configuration
+//! options, with Rocket's configuration and defaults already applied. The
+//! returned options are used to create the pool.
+//!
+//! For SQLx, the options are a tuple of pool and connection options. The pool
+//! options allow further customization via methods such as `after_connect()`.
+//! For MongoDB, the options are a `ClientOptions` structure. See
+//! [`Configurable::Options`] for the configuration types used by each driver.
+//! As an example, the following sets MongoDB's application name:
+//!
+//! ```rust
+//! # #[cfg(feature = "mongodb")] mod _inner {
+//! use rocket_db_pools::{mongodb, Database};
+//!
+//! #[derive(Database)]
+//! #[database("mongo_db")]
+//! struct Db(mongodb::Client);
+//!
+//! fn main() {
+//!     rocket::build().attach(Db::custom(|_config, mut options| {
+//!         options.app_name = Some("my-app".into());
+//!         options
+//!     }));
+//! }
+//! # }
+//! ```
+//!
+//! If configuration can fail, use [`Database::try_custom()`] instead. Returning
+//! an error from the callback aborts launch.
+//!
+//! ### SQLite Extensions
+//!
+//! SQLite extensions can be loaded via SQLx's
+//! `SqliteConnectOptions::extension()` method in a [`Database::custom()`]
+//! callback. The method is `unsafe`: the extension library must be trusted
+//! whenever a connection is created, including connections created after
+//! initialization. For example, to load the `rot13` extension:
+//!
+//! ```rust
+//! # #[cfg(feature = "sqlx_sqlite")] mod _inner {
+//! use rocket_db_pools::{sqlx, Database};
+//!
+//! #[derive(Database)]
+//! #[database("sqlite_db")]
+//! struct Db(sqlx::SqlitePool);
+//!
+//! fn main() {
+//!     rocket::build().attach(Db::custom(|_config, (pool, connection)| {
+//!         // SAFETY: this library is trusted for the pool's lifetime.
+//!         let connection = unsafe { connection.extension("rot13") };
+//!         (pool, connection)
+//!     }));
+//! }
+//! # }
+//! ```
+//!
+//! To use extension names from application configuration, capture the
+//! configuration in the callback.
+//!
 //! # Extending
 //!
 //! Any database driver can implement support for this library by implementing
-//! the [`Pool`] trait.
+//! the [`Pool`] trait. To support customization via [`Database::custom()`],
+//! also implement [`Configurable`].
 
 #![doc(html_root_url = "https://api.rocket.rs/v0.5/rocket_db_pools")]
 #![doc(html_favicon_url = "https://rocket.rs/images/favicon.ico")]
@@ -282,7 +344,7 @@ mod config;
 
 pub use self::database::{Connection, Database, Initializer};
 pub use self::error::Error;
-pub use self::pool::Pool;
+pub use self::pool::{Pool, Configurable};
 pub use self::config::Config;
 
 pub use rocket_db_pools_codegen::*;

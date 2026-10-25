@@ -1,5 +1,7 @@
 # Databases Example
 
+This example requires Rust 1.94 or later.
+
 This example makes use of SQLite and MySQL. You'll need `sqlite3` and a MySQL
 client installed:
 
@@ -61,9 +63,13 @@ DATABASE_URL="db/diesel/db.sqlite" diesel migration --migration-dir db/diesel/mi
 
 sqlx migrations are found in `db/sqlx/migrations`. They are run automatically.
 
-Query metadata for offline checking was prepared with the following commands:
+Query metadata for offline checking uses SQLx 0.9.0 and bundled SQLite 3.51.3.
+To regenerate it from this directory with SQLx CLI, use a temporary database:
 
 ```sh
-cargo install sqlx-cli --no-default-features --features sqlite
-DATABASE_URL="sqlite:$(pwd)/db/sqlx/db.sqlite" cargo sqlx prepare
+cargo install sqlx-cli --version 0.9.0 --no-default-features --features sqlite
+export DATABASE_URL="sqlite:$(mktemp -d)/db.sqlite"
+cargo sqlx database create
+cargo sqlx migrate run --source db/sqlx/migrations
+cargo sqlx prepare
 ```

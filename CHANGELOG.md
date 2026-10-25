@@ -66,17 +66,56 @@ This release contains the following crate updates:
 
 ### Breaking Changes
 
-This release includes several breaking changes, all of which are the result of
+This release includes many breaking changes, most of which are the result of
 updated database drivers. These changes are listed below along with a short
 note about how to handle the breaking change in existing applications.
 Applications that depend on a driver directly must update the dependency to
 match or use the driver reexported by `rocket_db_pools`.
 
-  * **`sqlx` was updated to `0.8.6`.**
+#### Silent Changes
 
-    Custom `Encode` implementations return a `Result`. This update fixes
-    protocol length overflows ([RUSTSEC-2024-0363]) and PostgreSQL build
-    failures on newer compilers.
+These changes are invisible to the compiler and will _not_ yield errors or
+warnings at compile-time. We **strongly** advise all application authors to
+review this list carefully.
+
+  * **The `extensions` configuration option is ignored.**
+
+    Loading a SQLite extension requires an `unsafe` call in SQLx `0.9`. As
+    such, `Config::extensions` was removed, and a warning is emitted if
+    `extensions` is configured for `sqlx_sqlite`. To load extensions, call
+    SQLx's `SqliteConnectOptions::extension()` method from a
+    [`Database::custom()`] callback:
+
+    ```rust
+    rocket::build().attach(Db::custom(|_config, (pool, connection)| {
+        // SAFETY: this library is trusted for the pool's lifetime.
+        let connection = unsafe { connection.extension("rot13") };
+        (pool, connection)
+    }))
+    ```
+
+    The extension library _must_ be trusted whenever a connection is created.
+
+#### General
+
+The following changes are likely to cause compile-time errors.
+
+  * **`sqlx` was updated to `0.9`.**
+
+    Notable changes include:
+
+    - Custom `Encode` implementations return `Result<IsNull, BoxDynError>`.
+    - `HasArguments<'q>` projections were replaced with
+      `<DB as Database>::ArgumentBuffer`. Argument types no longer take a
+      lifetime parameter.
+    - Dynamic SQL requires `sqlx::AssertSqlSafe(sql)`. This does not sanitize
+      SQL.
+    - The `runtime-tokio-rustls` feature was replaced with `runtime-tokio` and
+      `tls-rustls-ring`.
+
+    Regenerate offline query metadata with `cargo sqlx prepare` using SQLx CLI
+    `0.9`. This update fixes protocol length overflows ([RUSTSEC-2024-0363])
+    and PostgreSQL build failures on newer compilers.
 
   * **`mongodb` was updated to `3`.**
 
@@ -121,6 +160,10 @@ match or use the driver reexported by `rocket_db_pools`.
 
 ### New Features
 
+  * Introduced [`Database::custom()`] and [`Database::try_custom()`] for
+    configuring SQLx pools and MongoDB clients during initialization. Other
+    pools can support customization by implementing [`Configurable`].
+
   * TLS connections are now supported by `deadpool_postgres` and
     `diesel_postgres` via the new `postgres_rustls_native_certs` feature. Set
     `sslmode=require` in the database URL to require TLS.
@@ -142,7 +185,15 @@ match or use the driver reexported by `rocket_db_pools`.
     [RUSTSEC-2026-0381]. Distrusted intermediate certificates are rejected, and
     the affected emSign root was removed from the bundled trust store.
 
-  * `sqlx_mysql` remains affected by [RUSTSEC-2023-0071].
+  * `sqlx_sqlite` permits `libsqlite3-sys` `0.37`, which bundles SQLite
+    `3.51.3` with fixes for [known vulnerabilities]. Run
+    `cargo update -p libsqlite3-sys` to update existing lockfiles.
+
+  * `sqlx_mysql` permits `rsa` `0.10.0`, which fixes [RUSTSEC-2023-0071]. Run
+    `cargo update -p rsa` to update existing lockfiles.
+
+  * `sqlx_sqlite` remains affected by [RUSTSEC-2026-0459]. SQLx `0.9.0` does
+    not permit `libsqlite3-sys` `0.39`, which bundles the fixed SQLite `3.54`.
 
 ## [`rocket_dyn_templates`](https://api.rocket.rs/v0.5/rocket_dyn_templates/) `0.3.0`
 
@@ -160,11 +211,29 @@ driver, listed below along with a short note about how to handle it in existing
 applications. Applications that depend on the driver directly must update the
 dependency to match or use the driver reexported by `rocket_sync_db_pools`.
 
-  * **`rusqlite` was updated to `0.32` and `r2d2_sqlite` to `0.25`.**
+  * **`rusqlite` was updated to `0.39` through `0.42` and `r2d2_sqlite` to
+    `0.34` through `0.37`.**
 
-    SQLx `0.8.6`, Rusqlite, and Diesel SQLite can now share one `libsqlite3-sys`
-    `0.30` dependency. Applications that also use `sqlx_sqlite` should also
+    Cargo selects the newest version compatible with the application's other
+    SQLite dependencies. Applications that also use `sqlx_sqlite` remain on
+    Rusqlite `0.39` until SQLx permits `libsqlite3-sys` `0.39`, and should also
     update `rocket_db_pools` to `0.3`.
+
+    As such, the version of `rusqlite` reexported by `rocket_sync_db_pools`
+    depends on dependency resolution. Applications that use `rusqlite` types
+    should depend on the desired version directly, for example
+    `rusqlite = "0.42"`.
+
+    Remove the `winsqlite3` feature and update direct `fallible-iterator`
+    dependencies to `0.3`. `WindowAggregate::value()` takes `Option<&mut A>`
+    in place of `Option<&A>`. With Rusqlite `0.42`, scalar function callbacks
+    take `&mut Context`, and `Error::InvalidParameterType` replaces
+    `InvalidFunctionParameterType` and `InvalidFilterParameterType`.
+
+    Rusqlite `0.41` fixes SQL injection through savepoint names, an invalid
+    deallocation in `ToSqlOutput::from_rc()`, and missing `Send` bounds on
+    aggregate and window functions. Its `bundled` feature builds SQLite `3.54`
+    ([RUSTSEC-2026-0459]).
 
 ### Dependency Changes
 
@@ -196,8 +265,9 @@ dependency to match or use the driver reexported by `rocket_sync_db_pools`.
     libraries. To receive the driver fixes listed above, update
     `rocket_db_pools` and `rocket_sync_db_pools` as well.
 
-  * The `rust-version` for the contrib libraries and both database codegen
-    crates was updated to `1.89`.
+  * The `rust-version` for `rocket_db_pools` was updated to `1.94`, as required
+    by SQLx `0.9`. The `rust-version` for the remaining contrib libraries and
+    both database codegen crates was updated to `1.89`.
 
   * `rocket_db_pools_codegen` was updated to `0.3.0` and
     `rocket_sync_db_pools_codegen` to `0.2.0`. Each database library requires
@@ -210,6 +280,10 @@ dependency to match or use the driver reexported by `rocket_sync_db_pools`.
 [#3018]: https://github.com/rwf2/Rocket/issues/3018
 [#3019]: https://github.com/rwf2/Rocket/pull/3019
 [`linger`]: https://api.rocket.rs/v0.5/rocket/struct.Config.html#structfield.linger
+[`Database::custom()`]: https://api.rocket.rs/v0.5/rocket_db_pools/trait.Database.html#method.custom
+[`Database::try_custom()`]: https://api.rocket.rs/v0.5/rocket_db_pools/trait.Database.html#method.try_custom
+[`Configurable`]: https://api.rocket.rs/v0.5/rocket_db_pools/trait.Configurable.html
+[known vulnerabilities]: https://www.sqlite.org/cves.html
 [RUSTSEC-2023-0018]: https://rustsec.org/advisories/RUSTSEC-2023-0018.html
 [RUSTSEC-2023-0071]: https://rustsec.org/advisories/RUSTSEC-2023-0071.html
 [RUSTSEC-2024-0363]: https://rustsec.org/advisories/RUSTSEC-2024-0363.html
@@ -222,6 +296,7 @@ dependency to match or use the driver reexported by `rocket_sync_db_pools`.
 [RUSTSEC-2026-0381]: https://rustsec.org/advisories/RUSTSEC-2026-0381.html
 [RUSTSEC-2026-0382]: https://rustsec.org/advisories/RUSTSEC-2026-0382.html
 [RUSTSEC-2026-0384]: https://rustsec.org/advisories/RUSTSEC-2026-0384.html
+[RUSTSEC-2026-0459]: https://rustsec.org/advisories/RUSTSEC-2026-0459.html
 [RUSTSEC-2026-0528]: https://rustsec.org/advisories/RUSTSEC-2026-0528.html
 
 # Version 0.5.2 (Oct 23, 2026)

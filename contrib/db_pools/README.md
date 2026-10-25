@@ -21,7 +21,7 @@ full usage details.
    features = ["sqlx_sqlite", "sqlx_macros"]
 
    [dependencies.sqlx]
-   version = "0.8"
+   version = "0.9"
    default-features = false
    ```
 

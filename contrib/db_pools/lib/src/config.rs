@@ -20,9 +20,6 @@ use rocket::serde::{Deserialize, Serialize};
 /// max_connections = 1024
 /// connect_timeout = 5
 /// idle_timeout = 120
-///
-/// # This option is only supported by the `sqlx_sqlite` driver.
-/// extensions = ["memvfs", "rot13"]
 /// ```
 ///
 /// Alternatively, a custom provider can be used. For example, a custom `Figment`
@@ -39,7 +36,6 @@ use rocket::serde::{Deserialize, Serialize};
 ///             max_connections: 1024,
 ///             connect_timeout: 3,
 ///             idle_timeout: None,
-///             extensions: None,
 ///         }));
 ///
 ///     rocket::custom(figment)
@@ -85,13 +81,6 @@ pub struct Config {
     ///
     /// _Default:_ `None`.
     pub idle_timeout: Option<u64>,
-    /// A list of database extensions to load at run-time.
-    ///
-    /// **Note:** Only the `sqlx_sqlite` driver supports this option (for SQLite
-    /// extensions) at this time. All other drivers ignore this option.
-    ///
-    /// _Default:_ `None`.
-    pub extensions: Option<Vec<String>>,
 }
 
 impl Default for Config {
@@ -102,7 +91,6 @@ impl Default for Config {
             max_connections: rocket::Config::default().workers * 4,
             connect_timeout: 5,
             idle_timeout: Default::default(),
-            extensions: Default::default(),
         }
     }
 }

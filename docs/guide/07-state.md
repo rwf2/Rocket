@@ -236,7 +236,7 @@ in three simple steps:
 
    ```toml
    [dependencies.rocket_db_pools]
-   version = "0.2.0"
+   version = "0.3.0"
    features = ["sqlx_sqlite"]
    ```
 
@@ -299,12 +299,12 @@ features enabled in `Cargo.toml`:
 
 ```toml
 [dependencies.sqlx]
-version = "0.7"
+version = "0.9"
 default-features = false
 features = ["macros", "migrate"]
 
 [dependencies.rocket_db_pools]
-version = "0.2.0"
+version = "0.3.0"
 features = ["sqlx_sqlite"]
 ```
 

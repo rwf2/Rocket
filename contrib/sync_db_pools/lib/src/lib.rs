@@ -311,14 +311,14 @@
 //! corresponding [`Poolable`] type.
 //!
 // Note: Keep this table in sync with site/guide/6-state.md
-//! | Kind     | Driver                | Version   | `Poolable` Type                | Feature                |
-//! |----------|-----------------------|-----------|--------------------------------|------------------------|
-//! | Sqlite   | [Diesel]              | `2`       | [`diesel::SqliteConnection`]   | `diesel_sqlite_pool`   |
-//! | Postgres | [Diesel]              | `2`       | [`diesel::PgConnection`]       | `diesel_postgres_pool` |
-//! | MySQL    | [Diesel]              | `2`       | [`diesel::MysqlConnection`]    | `diesel_mysql_pool`    |
-//! | Postgres | [Rust-Postgres]       | `0.19`    | [`postgres::Client`]           | `postgres_pool`        |
-//! | Sqlite   | [`Rusqlite`]          | `0.32`    | [`rusqlite::Connection`]       | `sqlite_pool`          |
-//! | Memcache | [`memcache`]          | `0.15`    | [`memcache::Client`]           | `memcache_pool`        |
+//! | Kind     | Driver                | Version     | `Poolable` Type                | Feature                |
+//! |----------|-----------------------|-------------|--------------------------------|------------------------|
+//! | Sqlite   | [Diesel]              | `2`         | [`diesel::SqliteConnection`]   | `diesel_sqlite_pool`   |
+//! | Postgres | [Diesel]              | `2`         | [`diesel::PgConnection`]       | `diesel_postgres_pool` |
+//! | MySQL    | [Diesel]              | `2`         | [`diesel::MysqlConnection`]    | `diesel_mysql_pool`    |
+//! | Postgres | [Rust-Postgres]       | `0.19`      | [`postgres::Client`]           | `postgres_pool`        |
+//! | Sqlite   | [`Rusqlite`]          | `0.39-0.42` | [`rusqlite::Connection`]       | `sqlite_pool`          |
+//! | Memcache | [`memcache`]          | `0.15`      | [`memcache::Client`]           | `memcache_pool`        |
 //!
 //! [Diesel]: https://diesel.rs
 //! [`diesel::SqliteConnection`]: https://docs.rs/diesel/2/diesel/sqlite/struct.SqliteConnection.html
@@ -328,7 +328,7 @@
 //! [`postgres::Client`]: https://docs.rs/postgres/0.19/postgres/struct.Client.html
 //! [`Rusqlite`]: https://github.com/jgallagher/rusqlite
 //! [`rusqlite::Connection`]:
-//! https://docs.rs/rusqlite/0.32/rusqlite/struct.Connection.html
+//! https://docs.rs/rusqlite/0.42/rusqlite/struct.Connection.html
 //! [`diesel::PgConnection`]: http://docs.diesel.rs/diesel/pg/struct.PgConnection.html
 //! [`memcache`]: https://github.com/aisk/rust-memcache
 //! [`memcache::Client`]: https://docs.rs/memcache/0.15/memcache/struct.Client.html
@@ -338,6 +338,11 @@
 //! you must first enable the feature listed in the "Feature" column. The
 //! interior type of your decorated database type should match the type in the
 //! "`Poolable` Type" column.
+//!
+//! Cargo selects the version of Rusqlite from the range listed above, so the
+//! version reexported as `rusqlite` depends on dependency resolution.
+//! Applications that use `rusqlite` types should depend on the desired version
+//! directly, for example `rusqlite = "0.42"`.
 //!
 //! ## Extending
 //!
