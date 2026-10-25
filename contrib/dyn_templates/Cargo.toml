@@ -10,7 +10,7 @@ readme = "README.md"
 keywords = ["rocket", "framework", "templates", "templating", "engine"]
 license = "MIT OR Apache-2.0"
 edition = "2021"
-rust-version = "1.64"
+rust-version = "1.89"
 
 [features]
 tera = ["dep:tera"]
@@ -31,7 +31,7 @@ optional = true
 features = ["loader", "speedups", "json", "urlencode"]
 
 [dependencies.rocket]
-version = "0.5.1"
+version = "0.5.2"
 path = "../../core/lib"
 default-features = false
 

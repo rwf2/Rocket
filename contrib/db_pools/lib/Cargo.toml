@@ -8,7 +8,7 @@ readme = "../README.md"
 keywords = ["rocket", "framework", "database", "pools"]
 license = "MIT OR Apache-2.0"
 edition = "2021"
-rust-version = "1.64"
+rust-version = "1.89"
 
 [package.metadata.docs.rs]
 all-features = true
@@ -29,7 +29,7 @@ diesel_mysql = ["diesel-async/mysql", "diesel-async/deadpool", "diesel", "deadpo
 
 [dependencies.rocket]
 path = "../../../core/lib"
-version = "0.5.1"
+version = "0.5.2"
 default-features = false
 
 [dependencies.rocket_db_pools_codegen]

@@ -10,7 +10,7 @@ readme = "README.md"
 keywords = ["rocket", "web", "framework", "websocket"]
 license = "MIT OR Apache-2.0"
 edition = "2021"
-rust-version = "1.64"
+rust-version = "1.89"
 
 [features]
 default = ["tungstenite"]
@@ -20,7 +20,7 @@ tungstenite = ["tokio-tungstenite"]
 tokio-tungstenite = { version = "0.21", optional = true }
 
 [dependencies.rocket]
-version = "0.5.1"
+version = "0.5.2"
 path = "../../core/lib"
 default-features = false
 
