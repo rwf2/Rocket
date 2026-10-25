@@ -38,10 +38,19 @@ pub struct WebSocket {
 
 impl WebSocket {
     fn new(key: String) -> WebSocket {
-        WebSocket { config: Config::default(), key }
+        // `Config::default()` eagerly allocates a 128KiB read buffer for each
+        // connection. A smaller buffer keeps idle connections inexpensive.
+        let config = Config::default().read_buffer_size(8 * 1024);
+        WebSocket { config, key }
     }
 
     /// Change the default connection configuration to `config`.
+    ///
+    /// `config` replaces the default configuration entirely. By default, each
+    /// connection allocates an 8KiB read buffer, while [`Config::default()`]
+    /// uses a 128KiB read buffer. To keep a small buffer, set its size
+    /// explicitly with [`Config::read_buffer_size()`]. See [`Config`] for
+    /// details.
     ///
     /// # Example
     ///
@@ -51,10 +60,11 @@ impl WebSocket {
     /// #
     /// #[get("/echo")]
     /// fn echo_stream(ws: ws::WebSocket) -> ws::Stream!['static] {
-    ///     let ws = ws.config(ws::Config {
-    ///         max_send_queue: Some(5),
-    ///         ..Default::default()
-    ///     });
+    ///     let config = ws::Config::default()
+    ///         .max_message_size(Some(4 << 20))
+    ///         .read_buffer_size(8 * 1024);
+    ///
+    ///     let ws = ws.config(config);
     ///
     ///     ws::Stream! { ws =>
     ///         for await message in ws {

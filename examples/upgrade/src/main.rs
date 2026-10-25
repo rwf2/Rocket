@@ -15,11 +15,12 @@ fn echo_stream(ws: ws::WebSocket) -> ws::Stream!['static] {
 #[get("/echo?channel", rank = 2)]
 fn echo_channel(ws: ws::WebSocket) -> ws::Channel<'static> {
     // This is entirely optional. Change default configuration.
-    let ws = ws.config(ws::Config {
-        // set max message size to 3MiB
-        max_message_size: Some(3 << 20),
-        ..Default::default()
-    });
+    let config = ws::Config::default()
+        // Keep the 8KiB read buffer that is used by default.
+        .read_buffer_size(8 * 1024)
+        // Set the maximum message size to 3MiB.
+        .max_message_size(Some(3 << 20));
+    let ws = ws.config(config);
 
     ws.channel(move |mut stream| Box::pin(async move {
         while let Some(message) = stream.next().await {
