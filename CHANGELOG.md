@@ -4,6 +4,7 @@ This release contains the following crate updates:
 
   - `rocket` `0.5.3`
   - `rocket_dyn_templates` `0.3.0`
+  - `rocket_ws` `0.1.2`
 
 ## [`rocket`](https://api.rocket.rs/v0.5/rocket/) `0.5.3`
 
@@ -65,6 +66,17 @@ This release contains the following crate updates:
 
   * `notify` was updated to `8.2.1`, fixing unaligned memory accesses and hangs
     when moving watched directories to the trash on Windows.
+
+## [`rocket_ws`](https://api.rocket.rs/v0.5/rocket_ws/) `0.1.2`
+
+### General Improvements
+
+  * `MessageStream` now sends a yielded Close frame before ending the stream,
+    preserving the close code and reason. The application's stream is no longer
+    polled after yielding a Close frame.
+
+  * `MessageStream` now flushes replies to received Close frames, including
+    when the application's stream ends without yielding a reply.
 
 [#3004]: https://github.com/rwf2/Rocket/issues/3004
 [#3018]: https://github.com/rwf2/Rocket/issues/3018
