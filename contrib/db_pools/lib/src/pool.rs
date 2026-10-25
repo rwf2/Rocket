@@ -207,10 +207,9 @@ mod deadpool_postgres {
     }
 }
 
-// TODO: Remove when new release of diesel-async with deadpool 0.10 is out.
-#[cfg(all(feature = "deadpool_09", any(feature = "diesel_postgres", feature = "diesel_mysql")))]
-mod deadpool_old {
-    use deadpool_09::{managed::{Manager, Pool, PoolError, Object, BuildError}, Runtime};
+#[cfg(all(feature = "deadpool_13", any(feature = "diesel_postgres", feature = "diesel_mysql")))]
+mod deadpool_diesel {
+    use deadpool_13::{managed::{Manager, Pool, PoolError, Object}, Runtime};
     use diesel_async::pooled_connection::AsyncDieselConnectionManager;
 
     use super::{Duration, Error, Config, Figment};
@@ -235,15 +234,15 @@ mod deadpool_old {
 
     #[rocket::async_trait]
     impl<M: DeadManager, C: From<Object<M>>> crate::Pool for Pool<M, C>
-        where M::Type: Send, C: Send + Sync + 'static, M::Error: std::error::Error
+        where M::Type: Send, C: Send + 'static, M::Error: std::error::Error
     {
-        type Error = Error<BuildError<M::Error>, PoolError<M::Error>>;
+        type Error = Error<PoolError<M::Error>>;
 
         type Connection = C;
 
         async fn init(figment: &Figment) -> Result<Self, Self::Error> {
             let config: Config = figment.extract()?;
-            let manager = M::new(&config).map_err(|e| Error::Init(BuildError::Backend(e)))?;
+            let manager = M::new(&config).map_err(|e| Error::Init(e.into()))?;
 
             Pool::builder(manager)
                 .max_size(config.max_connections)
@@ -252,7 +251,7 @@ mod deadpool_old {
                 .recycle_timeout(config.idle_timeout.map(Duration::from_secs))
                 .runtime(Runtime::Tokio1)
                 .build()
-                .map_err(Error::Init)
+                .map_err(|_| Error::Init(PoolError::NoRuntimeSpecified))
         }
 
         async fn get(&self) -> Result<Self::Connection, Self::Error> {

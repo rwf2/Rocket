@@ -8,11 +8,11 @@
 //!
 //! ```toml
 //! [dependencies]
-//! rocket = "0.5.1"
-//! diesel = "2"
+//! rocket = "0.5.2"
+//! diesel = "2.4.0"
 //!
 //! [dependencies.rocket_db_pools]
-//! version = "0.2.0"
+//! version = "0.3.0"
 //! features = ["diesel_mysql"]
 //! ```
 //!

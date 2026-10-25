@@ -103,7 +103,7 @@
 //! Drivers have a varying degree of support for graceful shutdown, affected by
 //! the `Type::init()` fairing on Rocket shutdown.
 //!
-//! ## `deadpool` (v0.13)
+//! ## `deadpool` (v0.12)
 //!
 //! | Database | Feature                     | [`Pool`] Type               | [`Connection`] Deref                 |
 //! |----------|-----------------------------|-----------------------------|--------------------------------------|
@@ -144,7 +144,7 @@
 //! | Database | Feature           | [`Pool`] Type         | [`Connection`] Deref             |
 //! |----------|-------------------|-----------------------|----------------------------------|
 //! | Postgres | `diesel_postgres` | [`diesel::PgPool`]    | [`diesel::AsyncPgConnection`]    |
-//! | MySQL    | `diesel_mysql`    | [`diesel::MysqlPool`] | [`diesel::AsyncMysqlConnection`] | //!
+//! | MySQL    | `diesel_mysql`    | [`diesel::MysqlPool`] | [`diesel::AsyncMysqlConnection`] |
 //!
 //! See [`diesel`] for usage details.
 //!
