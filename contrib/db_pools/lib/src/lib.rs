@@ -131,7 +131,7 @@
 //! On shutdown, new connections are denied. Shutdown waits for connections to
 //! be returned.
 //!
-//! ## `mongodb` (v2)
+//! ## `mongodb` (v3)
 //!
 //! | Database | Feature   | [`Pool`] Type and [`Connection`] Deref |
 //! |----------|-----------|----------------------------------------|

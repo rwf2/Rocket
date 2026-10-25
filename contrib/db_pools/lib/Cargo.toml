@@ -1,6 +1,6 @@
 [package]
 name = "rocket_db_pools"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Sergio Benitez <sb@sergio.bz>", "Jeb Rosen <jeb@jebrosen.com>"]
 description = "Rocket async database pooling support"
 repository = "https://github.com/rwf2/Rocket/tree/v0.5/contrib/db_pools"
@@ -25,7 +25,8 @@ sqlx_macros = ["sqlx/macros"]
 # diesel features
 diesel_postgres = ["diesel-async/postgres", "diesel-async/deadpool", "diesel", "deadpool_09"]
 diesel_mysql = ["diesel-async/mysql", "diesel-async/deadpool", "diesel", "deadpool_09"]
-# implicit features: mongodb
+# mongodb features
+mongodb = ["dep:mongodb", "dep:rustls", "dep:rustls-webpki", "dep:webpki-roots"]
 
 [dependencies.rocket]
 path = "../../../core/lib"
@@ -34,7 +35,7 @@ default-features = false
 
 [dependencies.rocket_db_pools_codegen]
 path = "../codegen"
-version = "0.2.0"
+version = "=0.3.0"
 
 [dependencies.deadpool_09]
 package = "deadpool"
@@ -62,9 +63,9 @@ features = ["rt_tokio_1"]
 optional = true
 
 [dependencies.mongodb]
-version = "2"
+version = "3.9.1"
 default-features = false
-features = ["tokio-runtime"]
+features = ["compat-3-0-0", "rustls-tls", "dns-resolver"]
 optional = true
 
 [dependencies.diesel-async]
@@ -81,6 +82,21 @@ optional = true
 version = "0.7"
 default-features = false
 features = ["runtime-tokio-rustls"]
+optional = true
+
+[dependencies.rustls]
+version = "0.23.46"
+default-features = false
+features = ["ring", "std", "tls12"]
+optional = true
+
+[dependencies.rustls-webpki]
+version = "0.103.16"
+default-features = false
+optional = true
+
+[dependencies.webpki-roots]
+version = "1.0.10"
 optional = true
 
 [dev-dependencies.rocket]
