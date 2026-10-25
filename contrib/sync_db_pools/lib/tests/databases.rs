@@ -9,7 +9,7 @@ mod databases_tests {
     struct PrimaryDb(diesel::PgConnection);
 }
 
-#[cfg(all(feature = "databases", feature = "sqlite_pool"))]
+#[cfg(feature = "sqlite_pool")]
 #[cfg(test)]
 mod rusqlite_integration_test {
     use rocket_sync_db_pools::{rusqlite, database};

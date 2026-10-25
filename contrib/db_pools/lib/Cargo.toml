@@ -18,10 +18,11 @@ all-features = true
 deadpool_postgres = ["deadpool-postgres", "deadpool"]
 deadpool_redis = ["deadpool-redis", "deadpool"]
 # sqlx features
+sqlx = ["dep:sqlx", "dep:rustls", "dep:rustls-webpki", "dep:webpki-roots"]
 sqlx_mysql = ["sqlx", "sqlx/mysql"]
 sqlx_postgres = ["sqlx", "sqlx/postgres"]
 sqlx_sqlite = ["sqlx", "sqlx/sqlite"]
-sqlx_macros = ["sqlx/macros"]
+sqlx_macros = ["sqlx", "sqlx/macros"]
 # diesel features
 diesel_postgres = ["diesel-async/postgres", "diesel-async/deadpool", "diesel", "deadpool_13"]
 diesel_mysql = ["diesel-async/mysql", "diesel-async/deadpool", "diesel", "deadpool_13"]
@@ -79,9 +80,9 @@ default-features = false
 optional = true
 
 [dependencies.sqlx]
-version = "0.7"
+version = "0.8.6"
 default-features = false
-features = ["runtime-tokio-rustls"]
+features = ["runtime-tokio", "tls-rustls-ring"]
 optional = true
 
 [dependencies.rustls]
