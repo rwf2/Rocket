@@ -281,6 +281,18 @@ impl<'r, S> IoHandler for MessageStream<'r, S>
         rocket::tokio::pin!(stream);
         while let Some(msg) = stream.next().await {
             let result = match msg {
+                Ok(msg) if msg.is_close() => {
+                    use crate::tungstenite::error::ProtocolError::SendAfterClosing;
+
+                    let result = match sink.send(msg).await {
+                        // Reading Close queues a reply and closes the sink.
+                        // Flush that reply before returning.
+                        Err(Error::Protocol(SendAfterClosing)) => sink.flush().await,
+                        result => result,
+                    };
+
+                    return handle_result(result).map(|_| ());
+                }
                 Ok(msg) => sink.send(msg).await,
                 Err(e) => Err(e)
             };
