@@ -18,6 +18,7 @@ tungstenite = ["tokio-tungstenite"]
 
 [dependencies]
 tokio-tungstenite = { version = "0.21", optional = true }
+data-encoding = "2"
 
 [dependencies.rocket]
 version = "0.5.2"
