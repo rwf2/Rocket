@@ -19,7 +19,7 @@ minijinja = ["dep:minijinja"]
 
 [dependencies]
 walkdir = "2.4"
-notify = "6"
+notify = "8.2.1"
 normpath = "1"
 
 tera = { version = "1.19.0", optional = true }
@@ -37,6 +37,7 @@ default-features = false
 
 [dev-dependencies]
 pretty_assertions = "1.4"
+tempfile = "3"
 
 [package.metadata.docs.rs]
 all-features = true
