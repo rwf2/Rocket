@@ -5,6 +5,7 @@ This release contains the following crate updates:
   - `rocket` `0.5.3`
   - `rocket_db_pools` `0.3.0`
   - `rocket_dyn_templates` `0.3.0`
+  - `rocket_sync_db_pools` `0.2.0`
   - `rocket_ws` `0.1.2`
 
 ## [`rocket`](https://api.rocket.rs/v0.5/rocket/) `0.5.3`
@@ -150,6 +151,31 @@ match or use the driver reexported by `rocket_db_pools`.
   * `notify` was updated to `8.2.1`, fixing unaligned memory accesses and hangs
     when moving watched directories to the trash on Windows.
 
+## [`rocket_sync_db_pools`](https://api.rocket.rs/v0.5/rocket_sync_db_pools/) `0.2.0`
+
+### Breaking Changes
+
+This release includes one breaking change, the result of an updated database
+driver, listed below along with a short note about how to handle it in existing
+applications. Applications that depend on the driver directly must update the
+dependency to match or use the driver reexported by `rocket_sync_db_pools`.
+
+  * **`rusqlite` was updated to `0.32` and `r2d2_sqlite` to `0.25`.**
+
+    SQLx `0.8.6`, Rusqlite, and Diesel SQLite can now share one `libsqlite3-sys`
+    `0.30` dependency. Applications that also use `sqlx_sqlite` should also
+    update `rocket_db_pools` to `0.3`.
+
+### Dependency Changes
+
+  * `diesel` was updated to `2.3.14`, fixing PostgreSQL protocol length
+    overflows ([RUSTSEC-2024-0365]), undefined behavior when serializing MySQL
+    date/time values ([RUSTSEC-2026-0134]), and unaligned accesses in SQLite
+    aggregate functions ([RUSTSEC-2026-0137]).
+
+  * `tokio` was updated to `1.54.1`, fixing a soundness issue in `Interval`
+    ([RUSTSEC-2026-0384]).
+
 ## [`rocket_ws`](https://api.rocket.rs/v0.5/rocket_ws/) `0.1.2`
 
 ### General Improvements
@@ -161,6 +187,25 @@ match or use the driver reexported by `rocket_db_pools`.
   * `MessageStream` now flushes replies to received Close frames, including
     when the application's stream ends without yielding a reply.
 
+## General Changes
+
+  * `rocket_db_pools`, `rocket_dyn_templates`, `rocket_sync_db_pools`, and
+    `rocket_ws` require `rocket` `0.5.2`.
+
+    Updating `rocket` alone does not update the drivers used by older database
+    libraries. To receive the driver fixes listed above, update
+    `rocket_db_pools` and `rocket_sync_db_pools` as well.
+
+  * The `rust-version` for the contrib libraries and both database codegen
+    crates was updated to `1.89`.
+
+  * `rocket_db_pools_codegen` was updated to `0.3.0` and
+    `rocket_sync_db_pools_codegen` to `0.2.0`. Each database library requires
+    its matching codegen version exactly.
+
+  * Database codegen now uses `devise` `0.5` and `proc-macro2-diagnostics`
+    `0.11`. Macro diagnostics no longer contain ANSI escape sequences.
+
 [#3004]: https://github.com/rwf2/Rocket/issues/3004
 [#3018]: https://github.com/rwf2/Rocket/issues/3018
 [#3019]: https://github.com/rwf2/Rocket/pull/3019
@@ -171,10 +216,12 @@ match or use the driver reexported by `rocket_db_pools`.
 [RUSTSEC-2024-0365]: https://rustsec.org/advisories/RUSTSEC-2024-0365.html
 [RUSTSEC-2026-0007]: https://rustsec.org/advisories/RUSTSEC-2026-0007.html
 [RUSTSEC-2026-0134]: https://rustsec.org/advisories/RUSTSEC-2026-0134.html
+[RUSTSEC-2026-0137]: https://rustsec.org/advisories/RUSTSEC-2026-0137.html
 [RUSTSEC-2026-0138]: https://rustsec.org/advisories/RUSTSEC-2026-0138.html
 [RUSTSEC-2026-0253]: https://rustsec.org/advisories/RUSTSEC-2026-0253.html
 [RUSTSEC-2026-0381]: https://rustsec.org/advisories/RUSTSEC-2026-0381.html
 [RUSTSEC-2026-0382]: https://rustsec.org/advisories/RUSTSEC-2026-0382.html
+[RUSTSEC-2026-0384]: https://rustsec.org/advisories/RUSTSEC-2026-0384.html
 [RUSTSEC-2026-0528]: https://rustsec.org/advisories/RUSTSEC-2026-0528.html
 
 # Version 0.5.2 (Oct 23, 2026)
