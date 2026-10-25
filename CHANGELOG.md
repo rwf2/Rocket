@@ -336,6 +336,8 @@ The following changes are likely to cause compile-time errors.
     + yield ws::Message::Ping(vec![b'h', b'i'].into())
     ```
 
+    For borrowed byte slices, use `Message::from(slice)` instead of
+    `Message::binary(slice)`. For arrays, use `Message::from(array.as_slice())`.
     `Message::into_text()` and `Message::into_data()` return the new types as
     well.
 
