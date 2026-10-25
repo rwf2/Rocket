@@ -3,6 +3,7 @@
 This release contains the following crate updates:
 
   - `rocket` `0.5.3`
+  - `rocket_dyn_templates` `0.3.0`
 
 ## [`rocket`](https://api.rocket.rs/v0.5/rocket/) `0.5.3`
 
@@ -57,6 +58,13 @@ This release contains the following crate updates:
   * `ref-swap` was removed. Version `0.1.2` is unsound ([RUSTSEC-2026-0528]).
     Only Rocket itself wrote through `ref-swap`, so the unsoundness was not
     reachable through Rocket's API.
+
+## [`rocket_dyn_templates`](https://api.rocket.rs/v0.5/rocket_dyn_templates/) `0.3.0`
+
+### Dependency Changes
+
+  * `notify` was updated to `8.2.1`, fixing unaligned memory accesses and hangs
+    when moving watched directories to the trash on Windows.
 
 [#3004]: https://github.com/rwf2/Rocket/issues/3004
 [#3018]: https://github.com/rwf2/Rocket/issues/3018

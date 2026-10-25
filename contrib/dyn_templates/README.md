@@ -22,7 +22,7 @@ supports [Handlebars] and [Tera].
 
      ```toml
      [dependencies.rocket_dyn_templates]
-     version = "0.2.0"
+     version = "0.3.0"
      features = ["handlebars", "tera"]
      ```
 
