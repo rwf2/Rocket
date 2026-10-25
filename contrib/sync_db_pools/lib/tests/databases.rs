@@ -56,14 +56,13 @@ mod rusqlite_integration_test {
 }
 
 #[cfg(test)]
-#[cfg(feature = "databases")]
 mod sentinel_and_runtime_test {
     use rocket::{Rocket, Build};
     use r2d2::{ManageConnection, Pool};
     use rocket_sync_db_pools::{database, Poolable, PoolResult};
     use tokio::runtime::Runtime;
 
-    struct ContainsRuntime(Runtime);
+    struct ContainsRuntime { _runtime: Runtime }
     struct TestConnection;
 
     impl ManageConnection for ContainsRuntime {
@@ -88,7 +87,7 @@ mod sentinel_and_runtime_test {
         type Error = ();
 
         fn pool(_db_name: &str, _rocket: &Rocket<Build>) -> PoolResult<Self> {
-            let manager = ContainsRuntime(tokio::runtime::Runtime::new().unwrap());
+            let manager = ContainsRuntime { _runtime: Runtime::new().unwrap() };
             Ok(Pool::builder().build(manager)?)
         }
     }
@@ -103,7 +102,7 @@ mod sentinel_and_runtime_test {
         let config = Figment::from(rocket::Config::debug_default())
             .merge(("databases", map!["test_db" => map!["url" => ""]]));
 
-        let rocket = rocket::custom(config).attach(TestDb::fairing());
+        let rocket = rocket::custom(config).attach(TestDb::fairing()).ignite().await.unwrap();
         drop(rocket);
     }
 

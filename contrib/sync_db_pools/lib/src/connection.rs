@@ -255,3 +255,76 @@ impl<K: 'static, C: Poolable> Sentinel for Connection<K, C> {
         false
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::{mpsc, Mutex as StdMutex};
+    use std::time::Duration;
+
+    struct SlowConnection {
+        started: mpsc::Sender<()>,
+        release: mpsc::Receiver<()>,
+    }
+
+    impl Drop for SlowConnection {
+        fn drop(&mut self) {
+            let _ = self.started.send(());
+            let _ = self.release.recv_timeout(Duration::from_secs(3));
+        }
+    }
+
+    struct Manager(StdMutex<Option<SlowConnection>>);
+
+    impl r2d2::ManageConnection for Manager {
+        type Connection = SlowConnection;
+        type Error = std::convert::Infallible;
+
+        fn connect(&self) -> Result<Self::Connection, Self::Error> {
+            Ok(self.0.lock().unwrap().take().expect("one test connection"))
+        }
+
+        fn is_valid(&self, _: &mut Self::Connection) -> Result<(), Self::Error> {
+            Ok(())
+        }
+
+        fn has_broken(&self, _: &mut Self::Connection) -> bool {
+            true
+        }
+    }
+
+    impl Poolable for SlowConnection {
+        type Manager = Manager;
+        type Error = ();
+
+        fn pool(_: &str, _: &Rocket<rocket::Build>) -> crate::PoolResult<Self> {
+            unreachable!("test constructs the pool directly")
+        }
+    }
+
+    #[rocket::async_test]
+    async fn permit_is_held_until_connection_is_dropped() {
+        let (started_tx, started_rx) = mpsc::channel();
+        let (release_tx, release_rx) = mpsc::channel();
+        let connection = SlowConnection { started: started_tx, release: release_rx };
+        let pool = r2d2::Pool::builder().max_size(1).min_idle(Some(0))
+            .build(Manager(StdMutex::new(Some(connection))))
+            .unwrap();
+        let semaphore = Arc::new(Semaphore::new(1));
+        let conn = Connection::<(), SlowConnection> {
+            connection: Arc::new(Mutex::new(Some(pool.get().unwrap()))),
+            permit: Some(semaphore.clone().acquire_owned().await.unwrap()),
+            _marker: PhantomData,
+        };
+
+        drop(conn);
+        run_blocking(move || started_rx.recv_timeout(Duration::from_secs(3)))
+            .await.expect("connection drop started");
+        assert!(semaphore.try_acquire().is_err());
+
+        // Releasing the destructor must also release the connection's permit.
+        release_tx.send(()).unwrap();
+        let _permit = timeout(Duration::from_secs(3), semaphore.acquire())
+            .await.expect("connection drop completed").unwrap();
+    }
+}
