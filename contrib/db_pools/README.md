@@ -17,9 +17,15 @@ full usage details.
 
    ```toml
    [dependencies.rocket_db_pools]
-   version = "0.2.0"
-   features = ["sqlx_sqlite"]
+   version = "0.3.0"
+   features = ["sqlx_sqlite", "sqlx_macros"]
+
+   [dependencies.sqlx]
+   version = "0.8"
+   default-features = false
    ```
+
+   The direct `sqlx` dependency is required by SQLx's query macros.
 
 2. Choose a name for your database, here `sqlite_logs`. [Configure] _at least_ a
    URL for the database:
@@ -53,10 +59,10 @@ full usage details.
    ```rust
    #[get("/<id>")]
    async fn read(mut db: Connection<Logs>, id: i64) -> Result<Log> {
-       sqlx::query!("SELECT content FROM logs WHERE id = ?", id)
-           .fetch_one(&mut *db)
+       Ok(sqlx::query!("SELECT content FROM logs WHERE id = ?", id)
+           .fetch_one(&mut **db)
            .map_ok(|r| Log(r.content))
-           .await
+           .await?)
    }
    ```
 

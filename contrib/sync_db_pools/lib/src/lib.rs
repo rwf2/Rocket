@@ -30,7 +30,7 @@
 //!
 //! ```toml
 //! [dependencies.rocket_sync_db_pools]
-//! version = "0.1.0"
+//! version = "0.2.0"
 //! features = ["diesel_sqlite_pool"]
 //! ```
 //!
@@ -83,7 +83,7 @@
 //! #[get("/logs/<id>")]
 //! async fn get_logs(conn: LogsDbConn, id: usize) -> Result<Logs> {
 //! # /*
-//!     conn.run(|c| Logs::by_id(c, id)).await
+//!     conn.run(move |c| Logs::by_id(c, id)).await
 //! # */
 //! # Ok(())
 //! }

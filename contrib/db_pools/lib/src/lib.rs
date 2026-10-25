@@ -7,7 +7,7 @@
 //!
 //!    ```toml
 //!    [dependencies.rocket_db_pools]
-//!    version = "0.2.0"
+//!    version = "0.3.0"
 //!    features = ["sqlx_sqlite"]
 //!    ```
 //!
@@ -168,7 +168,7 @@
 //! features = ["macros", "migrate"]
 //!
 //! [dependencies.rocket_db_pools]
-//! version = "0.2.0"
+//! version = "0.3.0"
 //! features = ["sqlx_sqlite"]
 //! ```
 //!
