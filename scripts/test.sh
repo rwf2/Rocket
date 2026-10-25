@@ -76,6 +76,7 @@ function indir() {
 function test_contrib() {
   DB_POOLS_FEATURES=(
     deadpool_postgres
+    deadpool_postgres,postgres_rustls_native_certs
     deadpool_redis
     sqlx_mysql
     sqlx_postgres
@@ -83,6 +84,7 @@ function test_contrib() {
     mongodb
     diesel_mysql
     diesel_postgres
+    diesel_postgres,postgres_rustls_native_certs
   )
 
   SYNC_DB_POOLS_FEATURES=(
