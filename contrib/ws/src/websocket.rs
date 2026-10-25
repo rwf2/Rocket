@@ -302,7 +302,12 @@ impl<'r, S> IoHandler for MessageStream<'r, S>
             }
         }
 
-        Ok(())
+        // A broken pipe means the connection is gone, for instance because
+        // graceful shutdown cancelled it. There's no reply left to deliver.
+        match sink.flush().await {
+            Err(Error::Io(e)) if e.kind() == io::ErrorKind::BrokenPipe => Ok(()),
+            result => handle_result(result).map(|_| ()),
+        }
     }
 }
 

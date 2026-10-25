@@ -25,10 +25,11 @@ fn close_frame() -> CloseFrame<'static> {
     CloseFrame { code: CloseCode::Away, reason: "going away".into() }
 }
 
-#[get("/close/<peer>")]
+#[get("/close/<peer>/<echo>")]
 fn close(
     socket: ws::WebSocket,
     peer: bool,
+    echo: bool,
     polled: &State<Arc<AtomicUsize>>,
     dropped: &State<Arc<Notify>>,
 ) -> ws::Stream!['static] {
@@ -40,6 +41,10 @@ fn close(
         if peer {
             let message = socket.next().await.expect("peer close")?;
             assert!(message.is_close());
+            if !echo {
+                return;
+            }
+
             yield message;
         } else {
             yield ws::Message::Close(Some(close_frame()));
@@ -51,7 +56,7 @@ fn close(
 }
 
 #[async_test]
-async fn close_frames_are_sent_before_the_stream_is_dropped() {
+async fn close_frames_are_sent() {
     let polled = Arc::new(AtomicUsize::new(0));
     let dropped = Arc::new(Notify::new());
     let (tx, rx) = oneshot::channel();
@@ -66,8 +71,8 @@ async fn close_frames_are_sent_before_the_stream_is_dropped() {
 
     let server = rocket::tokio::spawn(rocket.launch());
     let (port, shutdown) = rx.await.unwrap();
-    for peer in [false, true] {
-        let url = format!("ws://127.0.0.1:{port}/close/{peer}");
+    for (peer, echo) in [(false, false), (true, true), (true, false)] {
+        let url = format!("ws://127.0.0.1:{port}/close/{peer}/{echo}");
         let (mut client, _) = tokio_tungstenite::connect_async(url).await.unwrap();
         if peer {
             client.send(ws::Message::Close(Some(close_frame()))).await.unwrap();
