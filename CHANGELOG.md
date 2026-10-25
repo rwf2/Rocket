@@ -3,6 +3,7 @@
 This release contains the following crate updates:
 
   - `rocket` `0.5.3`
+  - `rocket_db_pools` `0.3.0`
   - `rocket_dyn_templates` `0.3.0`
   - `rocket_ws` `0.1.2`
 
@@ -60,6 +61,88 @@ This release contains the following crate updates:
     Only Rocket itself wrote through `ref-swap`, so the unsoundness was not
     reachable through Rocket's API.
 
+## [`rocket_db_pools`](https://api.rocket.rs/v0.5/rocket_db_pools/) `0.3.0`
+
+### Breaking Changes
+
+This release includes several breaking changes, all of which are the result of
+updated database drivers. These changes are listed below along with a short
+note about how to handle the breaking change in existing applications.
+Applications that depend on a driver directly must update the dependency to
+match or use the driver reexported by `rocket_db_pools`.
+
+  * **`sqlx` was updated to `0.8.6`.**
+
+    Custom `Encode` implementations return a `Result`. This update fixes
+    protocol length overflows ([RUSTSEC-2024-0363]) and PostgreSQL build
+    failures on newer compilers.
+
+  * **`mongodb` was updated to `3`.**
+
+    Operations are now configured with builders. Remove `None` option arguments
+    and pass options via `with_options()`:
+
+    ```diff
+    - collection.find_one(filter, None).await?
+    + collection.find_one(filter).await?
+
+    - collection.find_one(filter, options).await?
+    + collection.find_one(filter).with_options(options).await?
+    ```
+
+    BSON `2` and `mongodb+srv` URLs remain supported.
+
+  * **`diesel` was updated to `2.4` and `diesel-async` to `0.10`.**
+
+    Transactions take `async` closures instead of boxed futures:
+
+    ```diff
+    - db.transaction(|mut conn| Box::pin(async move {
+    + db.transaction(async |mut conn| {
+          ...
+    - })).await?;
+    + }).await?;
+    ```
+
+    Use `diesel::define_sql_function!` in place of `diesel::sql_function!`.
+    Applications using Diesel migrations should also update `diesel_migrations`
+    to `2.4`.
+
+    Diesel pools now use `deadpool` `0.13`. Their error type, also returned by
+    the `Connection` request guard, is now `Error<PoolError<E>>`. It was
+    previously `Error<BuildError<E>, PoolError<E>>`.
+
+    This update fixes PostgreSQL protocol length overflows
+    ([RUSTSEC-2024-0365]) and undefined behavior when serializing or
+    deserializing MySQL date/time values ([RUSTSEC-2026-0134],
+    [RUSTSEC-2026-0138]). `diesel_mysql` now uses `lru` `0.18`; `0.18.2` fixes
+    a use-after-free ([RUSTSEC-2026-0253]).
+
+### New Features
+
+  * TLS connections are now supported by `deadpool_postgres` and
+    `diesel_postgres` via the new `postgres_rustls_native_certs` feature. Set
+    `sslmode=require` in the database URL to require TLS.
+
+    The server's certificate and hostname are verified using the platform's
+    native root certificates. To use a private CA, set `SSL_CERT_FILE` or
+    `SSL_CERT_DIR`. If no root certificates can be loaded, TLS connections fail.
+
+### General Improvements
+
+  * `Config::default()` now sets `max_connections` to the default number of
+    workers * 4 and `connect_timeout` to `5`, matching the documented defaults.
+    Both values were previously `0`. Configuration defaults are unchanged.
+
+### Dependency Changes
+
+  * `rustls` was updated to `0.23.46`, `rustls-webpki` to `0.103.16`, and
+    `webpki-roots` to `1.0.10`, fixing [RUSTSEC-2026-0382] and
+    [RUSTSEC-2026-0381]. Distrusted intermediate certificates are rejected, and
+    the affected emSign root was removed from the bundled trust store.
+
+  * `sqlx_mysql` remains affected by [RUSTSEC-2023-0071].
+
 ## [`rocket_dyn_templates`](https://api.rocket.rs/v0.5/rocket_dyn_templates/) `0.3.0`
 
 ### Dependency Changes
@@ -83,7 +166,15 @@ This release contains the following crate updates:
 [#3019]: https://github.com/rwf2/Rocket/pull/3019
 [`linger`]: https://api.rocket.rs/v0.5/rocket/struct.Config.html#structfield.linger
 [RUSTSEC-2023-0018]: https://rustsec.org/advisories/RUSTSEC-2023-0018.html
+[RUSTSEC-2023-0071]: https://rustsec.org/advisories/RUSTSEC-2023-0071.html
+[RUSTSEC-2024-0363]: https://rustsec.org/advisories/RUSTSEC-2024-0363.html
+[RUSTSEC-2024-0365]: https://rustsec.org/advisories/RUSTSEC-2024-0365.html
 [RUSTSEC-2026-0007]: https://rustsec.org/advisories/RUSTSEC-2026-0007.html
+[RUSTSEC-2026-0134]: https://rustsec.org/advisories/RUSTSEC-2026-0134.html
+[RUSTSEC-2026-0138]: https://rustsec.org/advisories/RUSTSEC-2026-0138.html
+[RUSTSEC-2026-0253]: https://rustsec.org/advisories/RUSTSEC-2026-0253.html
+[RUSTSEC-2026-0381]: https://rustsec.org/advisories/RUSTSEC-2026-0381.html
+[RUSTSEC-2026-0382]: https://rustsec.org/advisories/RUSTSEC-2026-0382.html
 [RUSTSEC-2026-0528]: https://rustsec.org/advisories/RUSTSEC-2026-0528.html
 
 # Version 0.5.2 (Oct 23, 2026)
