@@ -172,6 +172,29 @@
 //! features = ["sqlx_sqlite"]
 //! ```
 //!
+//! TLS connections are supported by `deadpool_postgres` and `diesel_postgres`
+//! when the `postgres_rustls_native_certs` feature is enabled:
+//!
+//! ```toml
+//! [dependencies.rocket_db_pools]
+//! version = "0.3.0"
+//! features = ["diesel_postgres", "postgres_rustls_native_certs"]
+//! ```
+//!
+//! To require TLS, set `sslmode=require` in the database URL. With
+//! `sslmode=prefer`, a connection without TLS is allowed if the server does not
+//! support TLS. The server's certificate and hostname are verified using the
+//! platform's native root certificates.
+//!
+//! To trust a private CA, set `SSL_CERT_FILE` to a PEM certificate bundle or
+//! `SSL_CERT_DIR` to a directory of PEM certificates. These replace the native
+//! roots. Errors loading certificates are logged. If no root certificates can
+//! be loaded, TLS connections fail.
+//!
+//! **Note:** Without this feature, `deadpool_postgres` and `diesel_postgres`
+//! connect without TLS. The `sqlx_postgres` driver supports TLS without
+//! additional features.
+//!
 //! # Configuration
 //!
 //! Configuration for a database named `db_name` is deserialized from a

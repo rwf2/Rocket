@@ -26,6 +26,11 @@ sqlx_macros = ["sqlx", "sqlx/macros"]
 # diesel features
 diesel_postgres = ["diesel-async/postgres", "diesel-async/deadpool", "diesel", "deadpool_13"]
 diesel_mysql = ["diesel-async/mysql", "diesel-async/deadpool", "diesel", "deadpool_13"]
+# postgres features
+postgres_rustls_native_certs = [
+  "dep:tokio-postgres", "dep:tokio-postgres-rustls",
+  "dep:rustls-native-certs", "dep:rustls", "dep:rustls-webpki",
+]
 # mongodb features
 mongodb = ["dep:mongodb", "dep:rustls", "dep:rustls-webpki", "dep:webpki-roots"]
 
@@ -83,6 +88,22 @@ optional = true
 version = "0.8.6"
 default-features = false
 features = ["runtime-tokio", "tls-rustls-ring"]
+optional = true
+
+[dependencies.tokio-postgres]
+version = "0.7"
+default-features = false
+features = ["runtime"]
+optional = true
+
+[dependencies.tokio-postgres-rustls]
+version = "0.14"
+default-features = false
+optional = true
+
+[dependencies.rustls-native-certs]
+version = "0.8"
+default-features = false
 optional = true
 
 [dependencies.rustls]
