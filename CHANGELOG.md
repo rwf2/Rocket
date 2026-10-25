@@ -78,6 +78,21 @@ These changes are invisible to the compiler and will _not_ yield errors or
 warnings at compile-time. We **strongly** advise all application authors to
 review this list carefully.
 
+  * **Redis commands time out after 0.5 seconds by default.**
+
+    Previously, Redis commands had no response timeout. Commands that block by
+    design, such as `BLPOP`, now fail if they block for longer than the
+    timeout. Use the new `response_timeout` configuration option to set the
+    timeout in seconds. A value of `0` disables the timeout:
+
+    ```toml
+    [default.databases.redis]
+    url = "redis://localhost:6379"
+    response_timeout = 0
+    ```
+
+    A timeout does not cancel a command already executing on Redis.
+
   * **The `extensions` configuration option is ignored.**
 
     Loading a SQLite extension requires an `unsafe` call in SQLx `0.9`. As
@@ -148,15 +163,34 @@ The following changes are likely to cause compile-time errors.
     Applications using Diesel migrations should also update `diesel_migrations`
     to `2.4`.
 
-    Diesel pools now use `deadpool` `0.13`. Their error type, also returned by
-    the `Connection` request guard, is now `Error<PoolError<E>>`. It was
-    previously `Error<BuildError<E>, PoolError<E>>`.
-
     This update fixes PostgreSQL protocol length overflows
     ([RUSTSEC-2024-0365]) and undefined behavior when serializing or
     deserializing MySQL date/time values ([RUSTSEC-2026-0134],
     [RUSTSEC-2026-0138]). `diesel_mysql` now uses `lru` `0.18`; `0.18.2` fixes
     a use-after-free ([RUSTSEC-2026-0253]).
+
+  * **`deadpool-postgres` was updated to `0.14` and `deadpool-redis` to `0.23`,
+    with `redis` `1`.**
+
+    Postgres, Redis, and Diesel pools now use `deadpool` `0.13`. Notable changes
+    include:
+
+    - `deadpool::Runtime` methods are now free functions in `deadpool-runtime`
+      `0.3`, taking the runtime as the first argument. `Runtime` is now
+      non-exhaustive, and `SpawnBlockingError` is no longer reexported.
+    - The error type of Diesel pools, also returned by the `Connection`
+      request guard, is now `Error<PoolError<E>>`. It was previously
+      `Error<BuildError<E>, PoolError<E>>`.
+    - `query_async::<_, T>()` is now `query_async::<T>()`.
+    - Redis iterators yield `Result`s.
+    - Use `mget` and `mset`, not `get` and `set`, for multiple keys or
+      key/value pairs.
+    - `FromRedisValue::from_redis_value()` takes an owned `Value` and returns
+      `Result<Self, ParsingError>`. Use `from_redis_value_ref()` for borrowed
+      values.
+    - The `Value` variants `Data`, `Bulk`, and `Status` were renamed to
+      `BulkString`, `Array`, and `SimpleString`, respectively.
+    - Public Redis enums are non-exhaustive.
 
 ### New Features
 
@@ -177,6 +211,11 @@ The following changes are likely to cause compile-time errors.
   * `Config::default()` now sets `max_connections` to the default number of
     workers * 4 and `connect_timeout` to `5`, matching the documented defaults.
     Both values were previously `0`. Configuration defaults are unchanged.
+
+  * The documentation for `idle_timeout` now describes its effect for each
+    driver. For Deadpool and Diesel pools, it limits the time allowed to
+    recycle a connection, including health checks, and does not close idle
+    connections.
 
 ### Dependency Changes
 

@@ -24,8 +24,8 @@ sqlx_postgres = ["sqlx", "sqlx/postgres"]
 sqlx_sqlite = ["sqlx", "sqlx/sqlite"]
 sqlx_macros = ["sqlx", "sqlx/macros"]
 # diesel features
-diesel_postgres = ["diesel-async/postgres", "diesel-async/deadpool", "diesel", "deadpool_13"]
-diesel_mysql = ["diesel-async/mysql", "diesel-async/deadpool", "diesel", "deadpool_13"]
+diesel_postgres = ["diesel-async/postgres", "diesel-async/deadpool", "diesel", "deadpool"]
+diesel_mysql = ["diesel-async/mysql", "diesel-async/deadpool", "diesel", "deadpool"]
 # postgres features
 postgres_rustls_native_certs = [
   "dep:tokio-postgres", "dep:tokio-postgres-rustls",
@@ -43,27 +43,20 @@ default-features = false
 path = "../codegen"
 version = "=0.3.0"
 
-[dependencies.deadpool_13]
-package = "deadpool"
-version = "0.13.1"
-default-features = false
-features = ["rt_tokio_1", "managed"]
-optional = true
-
 [dependencies.deadpool-postgres]
-version = "0.13.2"
+version = "0.14.2"
 default-features = false
 features = ["rt_tokio_1"]
 optional = true
 
 [dependencies.deadpool]
-version = "0.12.1"
+version = "0.13.1"
 default-features = false
 features = ["rt_tokio_1", "managed"]
 optional = true
 
 [dependencies.deadpool-redis]
-version = "0.15"
+version = "0.23.1"
 default-features = false
 features = ["rt_tokio_1"]
 optional = true

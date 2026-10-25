@@ -103,12 +103,12 @@
 //! Drivers have a varying degree of support for graceful shutdown, affected by
 //! the `Type::init()` fairing on Rocket shutdown.
 //!
-//! ## `deadpool` (v0.12)
+//! ## `deadpool` (v0.13)
 //!
 //! | Database | Feature                     | [`Pool`] Type               | [`Connection`] Deref                 |
 //! |----------|-----------------------------|-----------------------------|--------------------------------------|
-//! | Postgres | `deadpool_postgres` (v0.13) | [`deadpool_postgres::Pool`] | [`deadpool_postgres::ClientWrapper`] |
-//! | Redis    | `deadpool_redis` (v0.15)    | [`deadpool_redis::Pool`]    | [`deadpool_redis::Connection`]       |
+//! | Postgres | `deadpool_postgres` (v0.14) | [`deadpool_postgres::Pool`] | [`deadpool_postgres::ClientWrapper`] |
+//! | Redis    | `deadpool_redis` (v0.23)    | [`deadpool_redis::Pool`]    | [`deadpool_redis::Connection`]       |
 //!
 //! On shutdown, new connections are denied. Shutdown _does not_ wait for
 //! connections to be returned.
@@ -222,13 +222,44 @@
 //! See [`Config`] for details on configuration parameters.
 //!
 //! **Note:** `deadpool` and `diesel` drivers do not support and thus ignore the
-//! `min_connections` value.
+//! `min_connections` value. For these drivers, `idle_timeout` limits the time
+//! allowed to recycle a connection before reuse, including any health check.
+//! It does not close idle connections. By default, no timeout is set.
+//!
+//! ## Redis
+//!
+//! The `deadpool_redis` driver accepts an additional `response_timeout` option:
+//!
+//! ```toml
+//! [default.databases.redis]
+//! url = "redis://localhost:6379"
+//! response_timeout = 0.5
+//! ```
+//!
+//! This option limits how long the client waits for a command's response, in
+//! seconds, and defaults to `0.5`. Both integer and fractional values are
+//! accepted. Set `response_timeout = 0` to disable the timeout, for example,
+//! when using blocking commands such as `BLPOP`. A timeout does not cancel a
+//! command already executing on Redis. Negative, nonfinite, out-of-range, and
+//! nonnumeric values result in an [`Error::Config`] during initialization.
+//! Other drivers ignore this option.
+//!
+//! The Redis driver's connection timeout is disabled. Instead, Deadpool limits
+//! both the time spent waiting for a pooled connection and the time spent
+//! creating a connection to [`Config::connect_timeout`] seconds each. These
+//! limits apply separately. Redis health checks also use `response_timeout`,
+//! even when `idle_timeout` is unset.
 //!
 //! ## Driver Defaults
 //!
 //! Some drivers provide configuration defaults different from the underlying
 //! database's defaults. A best-effort attempt is made to document those
 //! differences below:
+//!
+//! * `deadpool_redis`
+//!
+//!   - response timeout   : `0.5` seconds
+//!   - connection timeout : disabled (Deadpool's creation timeout applies)
 //!
 //! * `sqlx_sqlite`
 //!

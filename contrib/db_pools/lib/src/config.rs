@@ -71,13 +71,12 @@ pub struct Config {
     ///
     /// _Default:_ `5`.
     pub connect_timeout: u64,
-    /// Maximum number of seconds to keep a connection alive for.
+    /// Maximum number of seconds to keep a connection idle or to recycle it.
     ///
-    /// After a connection is established, it is maintained in a pool for
-    /// efficient connection retrieval. When an `idle_timeout` is set, that
-    /// connection will be closed after the timeout elapses. If an
-    /// `idle_timeout` is not specified, the behavior is driver specific but
-    /// typically defaults to keeping a connection active indefinitely.
+    /// For SQLx and MongoDB, an idle connection is closed after this timeout
+    /// elapses. For Deadpool and Diesel, this limits the time allowed to
+    /// recycle a connection before reuse, including any health check; idle
+    /// connections are not closed. `None` disables the corresponding timeout.
     ///
     /// _Default:_ `None`.
     pub idle_timeout: Option<u64>,
