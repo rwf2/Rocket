@@ -19,7 +19,7 @@ use crate::{Template, context::ContextManager};
 /// ```rust
 /// # #[macro_use] extern crate rocket;
 /// # #[macro_use] extern crate rocket_dyn_templates;
-/// use rocket_dyn_templates::{Template, Metadata, context};
+/// use rocket_dyn_templates::{Template, Templating, Metadata, context};
 ///
 /// #[get("/")]
 /// fn homepage(metadata: Metadata) -> Template {
@@ -34,7 +34,7 @@ use crate::{Template, context::ContextManager};
 ///
 /// fn main() {
 ///     rocket::build()
-///         .attach(Template::fairing())
+///         .attach(Templating::new())
 ///         // ...
 ///     # ;
 /// }
@@ -137,10 +137,10 @@ impl Sentinel for Metadata<'_> {
     fn abort(rocket: &Rocket<Ignite>) -> bool {
         if rocket.state::<ContextManager>().is_none() {
             let md = "Metadata".primary().bold();
-            let fairing = "Template::fairing()".primary().bold();
+            let fairing = "Templating::new()".primary().bold();
             error!("requested `{}` guard without attaching `{}`.", md, fairing);
             info_!("To use or query templates, you must attach `{}`.", fairing);
-            info_!("See the `Template` documentation for more information.");
+            info_!("See the `Templating` documentation for more information.");
             return true;
         }
 
@@ -160,8 +160,8 @@ impl<'r> FromRequest<'r> for Metadata<'r> {
             .map(|cm| request::Outcome::Success(Metadata(cm)))
             .unwrap_or_else(|| {
                 error_!("Uninitialized template context: missing fairing.");
-                info_!("To use templates, you must attach `Template::fairing()`.");
-                info_!("See the `Template` documentation for more information.");
+                info_!("To use templates, you must attach `Templating::new()`.");
+                info_!("See the `Templating` documentation for more information.");
                 request::Outcome::Error((Status::InternalServerError, ()))
             })
     }

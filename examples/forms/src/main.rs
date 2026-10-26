@@ -5,7 +5,7 @@ use rocket::http::{Status, ContentType};
 use rocket::form::{Form, Contextual, FromForm, FromFormField, Context};
 use rocket::fs::{FileServer, TempFile, relative};
 
-use rocket_dyn_templates::Template;
+use rocket_dyn_templates::{Template, Templating};
 
 #[derive(Debug, FromForm)]
 struct Password<'v> {
@@ -92,6 +92,6 @@ fn submit<'r>(form: Form<Contextual<'r, Submit<'r>>>) -> (Status, Template) {
 fn rocket() -> _ {
     rocket::build()
         .mount("/", routes![index, submit])
-        .attach(Template::fairing())
+        .attach(Templating::new())
         .mount("/", FileServer::from(relative!("/static")))
 }

@@ -12,7 +12,7 @@ use rocket::{Rocket, Build};
 use rocket::config::Config;
 use rocket::figment::value::Value;
 use rocket::serde::{Serialize, Deserialize};
-use rocket_dyn_templates::{Template, Metadata, context};
+use rocket_dyn_templates::{Template, Templating, Metadata, context};
 
 #[get("/<engine>/<name>")]
 fn template_check(md: Metadata<'_>, engine: &str, name: &str) -> Option<()> {
@@ -30,7 +30,7 @@ fn template_root() -> PathBuf {
 
 fn rocket() -> Rocket<Build> {
     rocket::custom(Config::figment().merge(("template_dir", template_root())))
-        .attach(Template::fairing())
+        .attach(Templating::new())
         .mount("/", routes![template_check, is_reloading])
 }
 
@@ -38,14 +38,20 @@ fn rocket() -> Rocket<Build> {
 fn test_callback_error() {
     use rocket::{local::blocking::Client, error::ErrorKind::FailedFairings};
 
-    let rocket = rocket::build().attach(Template::try_custom(|_| {
-        Err("error reloading templates!".into())
-    }));
-
-    let error = Client::debug(rocket).expect_err("client failure");
-    match error.kind() {
-        FailedFairings(failures) => assert_eq!(failures[0].name, "Templating"),
-        _ => panic!("Wrong kind of launch error"),
+    let dir = tempfile::tempdir().expect("template directory");
+    for templating in [
+        Templating::try_init(|_| Err("error initializing templates!".into()))
+            .on_load(|_| panic!("loading after failed initialization")),
+        Templating::new()
+            .try_on_load(|_| Err("error loading templates!".into())),
+    ] {
+        let rocket = rocket::custom(Config::figment().merge(("template_dir", dir.path())))
+            .attach(templating);
+        let error = Client::debug(rocket).expect_err("client failure");
+        match error.kind() {
+            FailedFairings(failures) => assert_eq!(failures[0].name, "Templating"),
+            _ => panic!("Wrong kind of launch error"),
+        }
     }
 }
 
@@ -486,7 +492,7 @@ fn test_template_reload() {
         let callback_path = path.clone();
         let (failed, failure) = mpsc::channel();
         let rocket = rocket::custom(Config::figment().merge(("template_dir", dir.path())))
-            .attach(Template::try_custom(move |_| {
+            .attach(Templating::new().try_on_load(move |_| {
                 if matches!(fs::read_to_string(&callback_path), Ok(text) if text == "reject") {
                     failed.send(()).unwrap();
                     return Err("reject reload".into());

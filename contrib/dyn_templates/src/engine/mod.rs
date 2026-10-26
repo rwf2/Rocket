@@ -23,7 +23,8 @@ use ::minijinja::Environment;
 pub(crate) trait Engine: Send + Sync + Sized + 'static {
     const EXT: &'static str;
 
-    fn init<'a>(templates: impl Iterator<Item = (&'a str, &'a Path)>) -> Option<Self>;
+    fn init<'a>(templates: impl Iterator<Item = (&'a str, &'a Path)>) -> Self;
+    fn load<'a>(&mut self, templates: impl Iterator<Item = (&'a str, &'a Path)>) -> Option<()>;
     fn render<C: Serialize>(&self, name: &str, context: C) -> Option<String>;
 }
 
@@ -40,7 +41,7 @@ pub(crate) trait Engine: Send + Sync + Sized + 'static {
 /// # #[cfg(feature = "tera")] {
 /// use std::collections::HashMap;
 ///
-/// use rocket_dyn_templates::{Template, Engines};
+/// use rocket_dyn_templates::{Templating, Engines};
 /// use rocket_dyn_templates::tera::{self, Value};
 ///
 /// fn my_filter(value: &Value, _: &HashMap<String, Value>) -> tera::Result<Value> {
@@ -52,7 +53,7 @@ pub(crate) trait Engine: Send + Sync + Sized + 'static {
 /// fn main() {
 ///     rocket::build()
 ///         // ...
-///         .attach(Template::custom(|engines: &mut Engines| {
+///         .attach(Templating::init(|engines: &mut Engines| {
 ///             engines.tera.register_filter("my_filter", my_filter);
 ///         }))
 ///         // ...
@@ -98,40 +99,40 @@ impl Engines {
         #[cfg(feature = "minijinja")] Environment::EXT,
     ];
 
-    pub(crate) fn init(templates: &HashMap<String, TemplateInfo>) -> Option<Engines> {
-        fn inner<E: Engine>(templates: &HashMap<String, TemplateInfo>) -> Option<E> {
-            let named_templates = templates.iter()
-                .filter(|&(_, i)| i.engine_ext == E::EXT)
-                .filter_map(|(k, i)| Some((k.as_str(), i.path.as_ref()?)))
-                .map(|(k, p)| (k, p.as_path()));
+    fn files<E: Engine>(
+        templates: &HashMap<String, TemplateInfo>
+    ) -> impl Iterator<Item = (&str, &Path)> {
+        templates.iter()
+            .filter(|&(_, info)| info.engine_ext == E::EXT)
+            .filter_map(|(name, info)| Some((name.as_str(), info.path.as_deref()?)))
+    }
 
-            E::init(named_templates)
-        }
-
-        Some(Engines {
+    pub(crate) fn init(templates: &HashMap<String, TemplateInfo>) -> Engines {
+        Engines {
             #[cfg(feature = "tera")]
-            tera: match inner::<Tera>(templates) {
-                Some(tera) => tera,
-                None => return None
-            },
+            tera: Tera::init(Self::files::<Tera>(templates)),
             #[cfg(feature = "handlebars")]
-            handlebars: match inner::<Handlebars<'static>>(templates) {
-                Some(hb) => hb,
-                None => return None
-            },
+            handlebars: Handlebars::init(Self::files::<Handlebars>(templates)),
             #[cfg(feature = "minijinja")]
-            minijinja: match inner::<Environment<'static>>(templates) {
-                Some(hb) => hb,
-                None => return None
-            },
-        })
+            minijinja: Environment::init(Self::files::<Environment>(templates)),
+        }
+    }
+
+    pub(crate) fn load(&mut self, templates: &HashMap<String, TemplateInfo>) -> Option<()> {
+        #[cfg(feature = "tera")]
+        self.tera.load(Self::files::<Tera>(templates))?;
+        #[cfg(feature = "handlebars")]
+        self.handlebars.load(Self::files::<Handlebars>(templates))?;
+        #[cfg(feature = "minijinja")]
+        self.minijinja.load(Self::files::<Environment>(templates))?;
+        Some(())
     }
 
     pub(crate) fn render<C: Serialize>(
         &self,
         name: &str,
         info: &TemplateInfo,
-        context: C,
+        context: C
     ) -> Option<String> {
         #[cfg(feature = "tera")] {
             if info.engine_ext == Tera::EXT {

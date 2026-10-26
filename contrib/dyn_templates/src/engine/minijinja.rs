@@ -10,7 +10,7 @@ use crate::engine::Engine;
 impl Engine for Environment<'static> {
     const EXT: &'static str = "j2";
 
-    fn init<'a>(templates: impl Iterator<Item = (&'a str, &'a Path)>) -> Option<Self> {
+    fn init<'a>(templates: impl Iterator<Item = (&'a str, &'a Path)>) -> Self {
         let _templates = Arc::new(templates
             .map(|(k, p)| (k.to_owned(), p.to_owned()))
             .collect::<HashMap<_, _>>());
@@ -39,7 +39,11 @@ impl Engine for Environment<'static> {
                 .unwrap_or(AutoEscape::None)
         });
 
-        Some(env)
+        env
+    }
+
+    fn load<'a>(&mut self, _: impl Iterator<Item = (&'a str, &'a Path)>) -> Option<()> {
+        Some(())
     }
 
     fn render<C: Serialize>(&self, name: &str, context: C) -> Option<String> {

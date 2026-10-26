@@ -8,11 +8,14 @@ use crate::engine::Engine;
 impl Engine for Handlebars<'static> {
     const EXT: &'static str = "hbs";
 
-    fn init<'a>(templates: impl Iterator<Item = (&'a str, &'a Path)>) -> Option<Self> {
-        let mut hb = Handlebars::new();
+    fn init<'a>(_: impl Iterator<Item = (&'a str, &'a Path)>) -> Self {
+        Handlebars::new()
+    }
+
+    fn load<'a>(&mut self, templates: impl Iterator<Item = (&'a str, &'a Path)>) -> Option<()> {
         let mut ok = true;
         for (name, path) in templates {
-            if let Err(e) = hb.register_template_file(name, path) {
+            if let Err(e) = self.register_template_file(name, path) {
                 error!("Handlebars template '{}' failed to register.", name);
                 error_!("{}", e);
                 info_!("Template path: '{}'.", path.to_string_lossy());
@@ -20,7 +23,7 @@ impl Engine for Handlebars<'static> {
             }
         }
 
-        ok.then(|| hb)
+        ok.then_some(())
     }
 
     fn render<C: Serialize>(&self, name: &str, context: C) -> Option<String> {

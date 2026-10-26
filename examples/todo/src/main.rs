@@ -14,7 +14,7 @@ use rocket::serde::Serialize;
 use rocket::form::Form;
 use rocket::fs::{FileServer, relative};
 
-use rocket_dyn_templates::Template;
+use rocket_dyn_templates::{Template, Templating};
 
 use crate::task::{Task, Todo};
 
@@ -108,7 +108,7 @@ async fn run_migrations(rocket: Rocket<Build>) -> Rocket<Build> {
 fn rocket() -> _ {
     rocket::build()
         .attach(DbConn::fairing())
-        .attach(Template::fairing())
+        .attach(Templating::new())
         .attach(AdHoc::on_ignite("Run Migrations", run_migrations))
         .mount("/", FileServer::from(relative!("static")))
         .mount("/", routes![index])

@@ -6,7 +6,7 @@ mod session;
 mod message;
 
 use rocket::response::content::RawHtml;
-use rocket_dyn_templates::Template;
+use rocket_dyn_templates::Templating;
 
 #[get("/")]
 fn index() -> RawHtml<&'static str> {
@@ -16,7 +16,7 @@ fn index() -> RawHtml<&'static str> {
 #[launch]
 fn rocket() -> _ {
     rocket::build()
-        .attach(Template::fairing())
+        .attach(Templating::new())
         .mount("/", routes![index])
         .mount("/message", message::routes())
         .mount("/session", session::routes())

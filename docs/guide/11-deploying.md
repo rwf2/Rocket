@@ -44,13 +44,13 @@ For any deployment, it's important to keep in mind:
      # #[macro_use] extern crate rocket;
 
      use rocket::fs::FileServer;
-     use rocket_dyn_templates::Template;
+     use rocket_dyn_templates::Templating;
 
      #[launch]
      fn rocket() -> _ {
          rocket::build()
              .mount("/", FileServer::from("./static"))
-             .attach(Template::fairing())
+             .attach(Templating::new())
      }
      ```
 
