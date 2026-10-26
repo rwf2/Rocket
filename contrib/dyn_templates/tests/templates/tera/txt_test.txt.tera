@@ -1,4 +1,4 @@
-{% extends "tera/base" %}
+{% extends "tera/base.txt" %}
 {% block title %}{{ title }}{% endblock title %}
 {% block content %}
 {{ content }}

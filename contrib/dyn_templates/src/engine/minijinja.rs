@@ -1,9 +1,9 @@
-use std::sync::Arc;
 use std::path::Path;
 use std::collections::HashMap;
 
 use rocket::serde::Serialize;
 use minijinja::{Environment, Error, ErrorKind, AutoEscape};
+use minijinja::value::Serde;
 
 use crate::engine::Engine;
 
@@ -11,12 +11,12 @@ impl Engine for Environment<'static> {
     const EXT: &'static str = "j2";
 
     fn init<'a>(templates: impl Iterator<Item = (&'a str, &'a Path)>) -> Self {
-        let _templates = Arc::new(templates
-            .map(|(k, p)| (k.to_owned(), p.to_owned()))
-            .collect::<HashMap<_, _>>());
+        let templates = templates
+            .map(|(name, path)| (name.to_owned(), path.to_owned()))
+            .collect::<HashMap<_, _>>();
 
-        let templates = _templates.clone();
         let mut env = Environment::new();
+        env.set_auto_reload(false);
         env.set_loader(move |name| {
             let Some(path) = templates.get(name) else {
                 return Ok(None);
@@ -31,12 +31,24 @@ impl Engine for Environment<'static> {
             }
         });
 
-        let templates = _templates.clone();
-        env.set_auto_escape_callback(move |name| {
-            templates.get(name)
-                .and_then(|path| path.to_str())
-                .map(minijinja::default_auto_escape_callback)
-                .unwrap_or(AutoEscape::None)
+        env.set_auto_escape_callback(|name| {
+            let Some((stem, ext)) = name.rsplit_once('.') else {
+                return AutoEscape::None;
+            };
+
+            let ext = match ext {
+                "j2" | "jinja" | "jinja2" => match stem.rsplit_once('.') {
+                    Some((_, ext)) => ext,
+                    None => return AutoEscape::None,
+                },
+                _ => ext,
+            };
+
+            if ["html", "htm", "xml", "xhtml", "svg"].iter().any(|s| ext.eq_ignore_ascii_case(s)) {
+                AutoEscape::Html
+            } else {
+                minijinja::default_auto_escape_callback(name)
+            }
         });
 
         env
@@ -55,7 +67,7 @@ impl Engine for Environment<'static> {
             }
         };
 
-        match template.render(context) {
+        match template.render(Serde(context)) {
             Ok(result) => Some(result),
             Err(e) => {
                 error_!("Error rendering Minijinja template '{name}': {e}");

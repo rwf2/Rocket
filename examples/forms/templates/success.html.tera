@@ -20,8 +20,8 @@
       <h3>Submission Data</h3>
 
       <ul>
-          {% for key, value in values %}
-              <li><strong>{{ key }}</strong> - {{ value }}</li>
+          {% for key in values | keys | sort %}
+              <li><strong>{{ key }}</strong> - [{{ values[key] | join(sep=", ") }}]</li>
           {% endfor %}
       </ul>
 

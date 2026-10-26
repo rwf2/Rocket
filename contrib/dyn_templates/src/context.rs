@@ -226,10 +226,10 @@ fn remove_extension(path: &Path) -> PathBuf {
 /// Splits a path into a name that may be used to identify the template, and the
 /// template's data type, if any.
 fn split_path(root: &Path, path: &Path) -> (String, Option<String>) {
-    let rel_path = path.strip_prefix(root).unwrap().to_path_buf();
-    let path_no_ext = remove_extension(&rel_path);
+    let rel_path = path.strip_prefix(root).unwrap();
+    let path_no_ext = remove_extension(rel_path);
     let data_type = path_no_ext.extension();
-    let mut name = remove_extension(&path_no_ext).to_string_lossy().into_owned();
+    let mut name = path_no_ext.to_string_lossy().into_owned();
 
     // Ensure template name consistency on Windows systems
     if cfg!(windows) {
@@ -250,7 +250,7 @@ mod tests {
                 let path = Path::new(root).join(filename);
                 let (name, data_type) = split_path(Path::new(root), &path);
 
-                assert_eq!(name, "index");
+                assert_eq!(name, "index.html");
                 assert_eq!(data_type, Some("html".into()));
             }
         }
@@ -264,7 +264,7 @@ mod tests {
                     let path = Path::new(root).join(sub).join(filename);
                     let (name, data_type) = split_path(Path::new(root), &path);
 
-                    let expected_name = format!("{}index", sub);
+                    let expected_name = format!("{}index.html", sub);
                     assert_eq!(name, expected_name.as_str());
                     assert_eq!(data_type, Some("html".into()));
                 }
@@ -278,12 +278,12 @@ mod tests {
             split_path(Path::new("templates/"), &Path::new("templates/").join(path)).0
         }
 
-        assert_eq!(name_for("index.html.hbs"), "index");
+        assert_eq!(name_for("index.html.hbs"), "index.html");
         assert_eq!(name_for("index.tera"), "index");
         assert_eq!(name_for("index.hbs"), "index");
         assert_eq!(name_for("dir/index.hbs"), "dir/index");
-        assert_eq!(name_for("dir/index.html.tera"), "dir/index");
-        assert_eq!(name_for("index.template.html.hbs"), "index.template");
-        assert_eq!(name_for("subdir/index.template.html.hbs"), "subdir/index.template");
+        assert_eq!(name_for("dir/index.html.tera"), "dir/index.html");
+        assert_eq!(name_for("index.template.html.hbs"), "index.template.html");
+        assert_eq!(name_for("subdir/index.template.html.hbs"), "subdir/index.template.html");
     }
 }

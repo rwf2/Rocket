@@ -1,5 +1,3 @@
-{% import "macros" as m %}
-
 <!DOCTYPE html>
 <html>
   <head>
@@ -39,27 +37,27 @@
           <legend>About You</legend>
           <div class="row">
             <div class="col">
-                {{ m::input(label="Name", type="text", name="account.name") }}
+                {{ <input label="Name" type="text" name="account.name" /> }}
                 <!-- required -->
             </div>
             <div class="col">
-            {{ m::input(label="Email Address", type="text", name="account.email") }}
+            {{ <input label="Email Address" type="text" name="account.email" /> }}
               <!-- required pattern=".*@.*"/> -->
             </div>
           </div>
 
           <div class="row">
             <div class="col">
-              {{ m::input(label="Password", type="password", name="account.password.first") }}
+              {{ <input label="Password" type="password" name="account.password.first" /> }}
               <!--   required minlength="6" value="" /> -->
             </div>
 
             <div class="col">
 
             {{
-                m::input(label="Confirm Password",
-                type="password",
-                name="account.password.second")
+                <input label="Confirm Password"
+                type="password"
+                name="account.password.second" />
             }}
 
               <!--   required minlength="6" value="" /> -->
@@ -72,24 +70,24 @@
 
           <div class="row">
             <div class="col">
-            {{ m::input(label="Title", type="text", name="submission.title") }}
+            {{ <input label="Title" type="text" name="submission.title" /> }}
               <!-- required -->
             </div>
           </div>
 
           <div class="row">
             <div class="col">
-            {{ m::input(label="Publish Date", type="date", name="submission.date") }}
+            {{ <input label="Publish Date" type="date" name="submission.date" /> }}
               <!-- <input type="date" name="submission.date" id="date" value="2020&#45;12&#45;26"> -->
             </div>
 
             <div class="col">
             {{
-                m::select(
-                    label="Rights Assignment",
-                    name="submission.rights",
-                    options=["Public", "Reserved", "Exclusive"]
-                )
+                <select
+                    label="Rights Assignment"
+                    name="submission.rights"
+                    options={["Public", "Reserved", "Exclusive"]}
+                />
             }}
             </div>
           </div>
@@ -98,13 +96,13 @@
             <div class="col">
               <label>Applicable Categories</label>
               <br />
-              {{ m::checkbox(name="submission.category", label="Biology", value="Biology") }}
+              {{ <checkbox name="submission.category" label="Biology" value="Biology" /> }}
               <br />
-              {{ m::checkbox(name="submission.category", label="Chemistry", value="Chemistry") }}
+              {{ <checkbox name="submission.category" label="Chemistry" value="Chemistry" /> }}
               <br />
-              {{ m::checkbox(name="submission.category", label="Physics", value="Physics") }}
+              {{ <checkbox name="submission.category" label="Physics" value="Physics" /> }}
               <br />
-              {{ m::checkbox(name="submission.category", label="CS", value="CS") }}
+              {{ <checkbox name="submission.category" label="CS" value="CS" /> }}
             </div>
           </div>
 
@@ -114,27 +112,27 @@
           <legend>Contents</legend>
 
             {{
-                m::textarea(
-                    label="Abstract",
-                    name="submission.abstract",
-                    placeholder="Your abstract, max 250 characters...",
-                    max=250
-                )
+                <textarea
+                    label="Abstract"
+                    name="submission.abstract"
+                    placeholder="Your abstract, max 250 characters..."
+                    max={250}
+                />
             }}
 
           {{
-              m::input(
-                  label="File to Upload (PDF, max 1MiB)",
-                  type="file",
+              <input
+                  label="File to Upload (PDF, max 1MiB)"
+                  type="file"
                   name="submission.file"
-              )
+              />
           }}
 
           <!-- <input type="file" name="submission.file" id="file" required accept=".pdf"> -->
 
           <div class="row">
             <div class="col">
-                {{ m::checkbox(name="submission.ready", label="Submission is ready for review.") }}
+                {{ <checkbox name="submission.ready" label="Submission is ready for review." /> }}
             </div>
           </div>
 

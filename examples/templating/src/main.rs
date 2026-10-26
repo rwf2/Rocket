@@ -21,7 +21,9 @@ fn rocket() -> _ {
         .mount("/hbs", routes![hbs::index, hbs::hello, hbs::about])
         .register("/hbs", catchers![hbs::not_found])
         .register("/tera", catchers![tera::not_found])
-        .attach(Templating::new().on_load(|engines| {
+        .attach(Templating::init(|engines| {
+            hbs::init(&mut engines.handlebars);
+        }).on_load(|engines| {
             hbs::customize(&mut engines.handlebars);
             tera::customize(&mut engines.tera);
         }))

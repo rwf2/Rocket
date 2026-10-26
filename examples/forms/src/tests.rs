@@ -1,193 +1,88 @@
-use std::fmt;
-use super::{rocket, FormInput, FormOption};
+use super::rocket;
 
+use rocket::http::{ContentType, RawStr, Status};
 use rocket::local::blocking::Client;
-use rocket::http::ContentType;
 
-impl fmt::Display for FormOption {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match *self {
-            FormOption::A => write!(f, "a"),
-            FormOption::B => write!(f, "b"),
-            FormOption::C => write!(f, "c"),
-        }
+#[test]
+fn test_empty_form() {
+    let client = Client::tracked(rocket()).unwrap();
+    let response = client.get("/").dispatch();
+    assert_eq!(response.status(), Status::Ok);
+    assert_eq!(response.content_type(), Some(ContentType::HTML));
+
+    let body = response.into_string().unwrap();
+    assert!(body.contains("name=\"account.name\""));
+    assert!(body.contains("name=\"submission.file\""));
+    assert!(body.contains("name=\"submission.category\" value=\"Biology\""));
+}
+
+#[test]
+fn test_invalid_form() {
+    let client = Client::tracked(rocket()).unwrap();
+    let name = RawStr::new("<b>'\"&</b>").percent_encode();
+    let text = RawStr::new("</textarea><script>x</script>").percent_encode();
+    let body = format!("account.name={name}&account.email=invalid&\
+        submission.abstract={text}&submission.rights=Reserved&\
+        submission.category=Biology&submission.category=CS&submission.ready=yes");
+
+    let response = client.post("/").header(ContentType::Form).body(body).dispatch();
+
+    assert_eq!(response.status(), Status::UnprocessableEntity);
+    assert_eq!(response.content_type(), Some(ContentType::HTML));
+    let body = response.into_string().unwrap();
+    let body = body.split_whitespace().collect::<Vec<_>>().join(" ");
+
+    assert!(body.contains("invalid email address"));
+    assert!(body.contains("value='&lt;b&gt;&#39;&quot;&amp;&lt;/b&gt;'"));
+    assert!(body.contains("&lt;/textarea&gt;&lt;script&gt;x&lt;/script&gt;"));
+    assert!(body.contains("name=\"submission.category\" value=\"Biology\" checked"));
+    assert!(body.contains("name=\"submission.category\" value=\"CS\" checked"));
+    assert!(body.contains("name=\"submission.category\" value=\"Chemistry\" >"));
+    assert!(body.contains("name=\"submission.ready\" value=\"yes\" checked"));
+    assert!(body.contains("<option value=\"Reserved\" selected"));
+}
+
+#[test]
+fn test_valid_form() {
+    use std::fmt::Write;
+
+    let client = Client::tracked(rocket()).unwrap();
+    let mut body = String::new();
+    for (name, value) in [
+        ("account.name", "<b>Alice</b>"),
+        ("account.email", "alice@example.com"),
+        ("account.password.first", "password"),
+        ("account.password.second", "password"),
+        ("submission.title", "A paper"),
+        ("submission.date", "2026-10-26"),
+        ("submission.abstract", "An abstract"),
+        ("submission.category", "Biology"),
+        ("submission.category", "CS"),
+        ("submission.rights", "Reserved"),
+        ("submission.ready", "yes"),
+    ] {
+        write!(body,
+            "--FORM\r\nContent-Disposition: form-data; name=\"{name}\"\r\n\r\n{value}\r\n"
+        ).unwrap();
     }
-}
 
-macro_rules! assert_form_eq {
-    ($client:expr, $form_str:expr, $expected:expr) => {{
-        let res = $client.post("/")
-            .header(ContentType::Form)
-            .body($form_str)
-            .dispatch();
+    body.push_str(concat!(
+        "--FORM\r\n",
+        "Content-Disposition: form-data; name=\"submission.file\"; filename=\"paper.pdf\"\r\n",
+        "Content-Type: application/pdf\r\n\r\n",
+        "%PDF-1.7\r\n",
+        "--FORM--\r\n",
+    ));
 
-        assert_eq!(res.into_string(), Some($expected));
-    }};
-}
+    let response = client.post("/")
+        .header("multipart/form-data; boundary=FORM".parse::<ContentType>().unwrap())
+        .body(body)
+        .dispatch();
 
-macro_rules! assert_valid_form {
-    ($client:expr, $input:expr) => {{
-        let f = format!("checkbox={}&number={}&type={}&password={}&textarea={}&select={}",
-                $input.checkbox, $input.number, $input.radio, $input.password,
-                $input.text_area, $input.select);
-        assert_form_eq!($client, &f, format!("{:?}", $input));
-    }};
-}
-
-macro_rules! assert_valid_raw_form {
-    ($client:expr, $form_str:expr, $input:expr) => {{
-        assert_form_eq!($client, $form_str, format!("{:?}", $input));
-    }};
-}
-
-#[test]
-fn test_good_forms() {
-    let client = Client::tracked(rocket()).unwrap();
-    let mut input = FormInput {
-        checkbox: true,
-        number: 310,
-        radio: FormOption::A,
-        password: "beep".into(),
-        text_area: "bop".to_string(),
-        select: FormOption::B
-    };
-
-    assert_valid_form!(&client, &input);
-
-    input.checkbox = false;
-    assert_valid_form!(&client, &input);
-
-    input.number = 0;
-    assert_valid_form!(&client, &input);
-    input.number = 120;
-    assert_valid_form!(&client, &input);
-    input.number = 133;
-    assert_valid_form!(&client, &input);
-
-    input.radio = FormOption::B;
-    assert_valid_form!(&client, &input);
-    input.radio = FormOption::C;
-    assert_valid_form!(&client, &input);
-
-    input.password = "".into();
-    assert_valid_form!(&client, &input);
-    input.password = "----90138490285u2o3hndslkv".into();
-    assert_valid_form!(&client, &input);
-    input.password = "hi".into();
-    assert_valid_form!(&client, &input);
-
-    input.text_area = "".to_string();
-    assert_valid_form!(&client, &input);
-    input.text_area = "----90138490285u2o3hndslkv".to_string();
-    assert_valid_form!(&client, &input);
-    input.text_area = "hey".to_string();
-    assert_valid_form!(&client, &input);
-
-    input.select = FormOption::A;
-    assert_valid_form!(&client, &input);
-    input.select = FormOption::C;
-    assert_valid_form!(&client, &input);
-
-    // checkbox need not be present; defaults to false; accepts 'on' and 'off'
-    assert_valid_raw_form!(&client,
-                          "number=133&type=c&password=hi&textarea=hey&select=c",
-                          &input);
-
-    assert_valid_raw_form!(&client,
-                          "checkbox=off&number=133&type=c&password=hi&textarea=hey&select=c",
-                          &input);
-
-    input.checkbox = true;
-    assert_valid_raw_form!(&client,
-                          "checkbox=on&number=133&type=c&password=hi&textarea=hey&select=c",
-                          &input);
-}
-
-macro_rules! assert_invalid_form {
-    ($client:expr, $vals:expr) => {{
-        let vals = $vals;
-        let s = format!("checkbox={}&number={}&type={}&password={}&textarea={}&select={}",
-                        vals[0], vals[1], vals[2], vals[3], vals[4], vals[5]);
-        assert_form_eq!($client, &s, format!("Invalid form input: {}", s));
-        *vals = ["true", "1", "a", "hi", "hey", "b"];
-    }};
-}
-
-macro_rules! assert_invalid_raw_form {
-    ($client:expr, $form_str:expr) => {{
-        assert_form_eq!($client, $form_str, format!("Invalid form input: {}", $form_str));
-    }};
-}
-
-#[test]
-fn check_semantically_invalid_forms() {
-    let client = Client::tracked(rocket()).unwrap();
-    let mut form_vals = ["true", "1", "a", "hi", "hey", "b"];
-
-    form_vals[0] = "not true";
-    assert_invalid_form!(&client, &mut form_vals);
-    form_vals[0] = "bing";
-    assert_invalid_form!(&client, &mut form_vals);
-    form_vals[0] = "true0";
-    assert_invalid_form!(&client, &mut form_vals);
-    form_vals[0] = " false";
-    assert_invalid_form!(&client, &mut form_vals);
-
-    form_vals[1] = "-1";
-    assert_invalid_form!(&client, &mut form_vals);
-    form_vals[1] = "1e10";
-    assert_invalid_form!(&client, &mut form_vals);
-    form_vals[1] = "-1-1";
-    assert_invalid_form!(&client, &mut form_vals);
-    form_vals[1] = "NaN";
-    assert_invalid_form!(&client, &mut form_vals);
-
-    form_vals[2] = "A?";
-    assert_invalid_form!(&client, &mut form_vals);
-    form_vals[2] = " B";
-    assert_invalid_form!(&client, &mut form_vals);
-    form_vals[2] = "d";
-    assert_invalid_form!(&client, &mut form_vals);
-    form_vals[2] = "100";
-    assert_invalid_form!(&client, &mut form_vals);
-    form_vals[2] = "";
-    assert_invalid_form!(&client, &mut form_vals);
-
-    // password and textarea are always valid, so we skip them
-    form_vals[5] = "A.";
-    assert_invalid_form!(&client, &mut form_vals);
-    form_vals[5] = "b ";
-    assert_invalid_form!(&client, &mut form_vals);
-    form_vals[5] = "d";
-    assert_invalid_form!(&client, &mut form_vals);
-    form_vals[5] = "-a";
-    assert_invalid_form!(&client, &mut form_vals);
-    form_vals[5] = "";
-    assert_invalid_form!(&client, &mut form_vals);
-
-    // now forms with missing fields
-    assert_invalid_raw_form!(&client, "number=10&type=a&password=hi&textarea=hey");
-    assert_invalid_raw_form!(&client, "number=10&radio=a&password=hi&textarea=hey&select=b");
-    assert_invalid_raw_form!(&client, "number=10&password=hi&select=b");
-    assert_invalid_raw_form!(&client, "number=10&select=b");
-    assert_invalid_raw_form!(&client, "password=hi&select=b");
-    assert_invalid_raw_form!(&client, "password=hi");
-    assert_invalid_raw_form!(&client, "");
-}
-
-#[test]
-fn check_structurally_invalid_forms() {
-    let client = Client::tracked(rocket()).unwrap();
-    assert_invalid_raw_form!(&client, "==&&&&&&==");
-    assert_invalid_raw_form!(&client, "a&=b");
-    assert_invalid_raw_form!(&client, "=");
-}
-
-#[test]
-fn check_bad_utf8() {
-    let client = Client::tracked(rocket()).unwrap();
-    unsafe {
-        let bad_str = std::str::from_utf8_unchecked(b"a=\xff");
-        assert_form_eq!(&client, bad_str, "Form input was invalid UTF-8.".into());
-    }
+    assert_eq!(response.status(), Status::Ok);
+    assert_eq!(response.content_type(), Some(ContentType::HTML));
+    let body = response.into_string().unwrap();
+    assert!(body.contains("<h1>Success!</h1>"));
+    assert!(body.contains("<strong>account.name</strong> - [&lt;b&gt;Alice&lt;/b&gt;]"));
+    assert!(body.contains("<strong>submission.category</strong> - [Biology, CS]"));
 }

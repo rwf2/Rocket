@@ -64,7 +64,7 @@ to `Cargo.toml`:
 - rocket = "0.4"
 - rocket_contrib = { version = "0.4", features = ["json"], default-features = false }
 + rocket = { version = "0.5.3", features = ["json"] }
-+ rocket_dyn_templates = { version = "0.2.0", features = ["tera"] }
++ rocket_dyn_templates = { version = "0.3.0", features = ["tera"] }
 ```
 
 ! note: `rocket_dyn_templates` (and co.) _does not_ follow in version lock-step

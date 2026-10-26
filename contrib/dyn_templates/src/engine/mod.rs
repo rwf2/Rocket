@@ -34,17 +34,15 @@ pub(crate) trait Engine: Send + Sync + Sized + 'static {
 /// types from the respective templating engine library. These types should be
 /// imported from the reexported crate at the root of `rocket_dyn_templates` to
 /// avoid version mismatches. For instance, when registering a Tera filter, the
-/// [`tera::Value`] and [`tera::Result`] types are required. Import them from
-/// `rocket_dyn_templates::tera`. The example below illustrates this:
+/// [`tera::Value`] and [`tera::TeraResult`] types are required. Import them
+/// from `rocket_dyn_templates::tera`. The example below illustrates this:
 ///
 /// ```rust
 /// # #[cfg(feature = "tera")] {
-/// use std::collections::HashMap;
-///
 /// use rocket_dyn_templates::{Templating, Engines};
-/// use rocket_dyn_templates::tera::{self, Value};
+/// use rocket_dyn_templates::tera::{Value, Kwargs, State, TeraResult};
 ///
-/// fn my_filter(value: &Value, _: &HashMap<String, Value>) -> tera::Result<Value> {
+/// fn my_filter(value: &Value, _: Kwargs, _: &State) -> TeraResult<Value> {
 ///     # /*
 ///     ...
 ///     # */ unimplemented!();
@@ -63,13 +61,44 @@ pub(crate) trait Engine: Send + Sync + Sized + 'static {
 /// ```
 ///
 /// [`tera::Value`]: crate::tera::Value
-/// [`tera::Result`]: crate::tera::Result
+/// [`tera::TeraResult`]: crate::tera::TeraResult
 pub struct Engines {
     /// A `Tera` templating engine.
     ///
     /// This field is only available when the `tera` feature is enabled. When
     /// calling methods on the `Tera` instance, ensure you use types imported
     /// from `rocket_dyn_templates::tera` to avoid version mismatches.
+    ///
+    /// # Escaping
+    ///
+    /// HTML escaping is enabled for template names ending in `.html`, `.htm`,
+    /// `.xml`, `.xhtml`, or `.svg`, regardless of ASCII case, optionally
+    /// followed by `.tera`. Included templates use the escaping policy of the
+    /// template that includes them. To change these defaults, call
+    /// [`Tera::autoescape_on()`] or [`Tera::set_escape_fn()`] from a
+    /// [`Templating::init()`] callback.
+    ///
+    /// Only the template's _name_ is considered. A template added from a file
+    /// under a different name, as with `add_template_file(path, Some(name))`,
+    /// is escaped only if `name` ends in one of the extensions above,
+    /// regardless of the file's extension.
+    ///
+    /// # Template Loading
+    ///
+    /// Tera checks a template as soon as it's added: every filter, test,
+    /// function, component, and template it uses must already exist.
+    /// Similarly, delimiters cannot be changed once a template has been added.
+    /// As a result, the order of [`Templating`] callbacks matters for Tera.
+    /// See [customization](crate::Templating#customization) for which to use.
+    ///
+    /// Templates added together can use each other: Rocket adds all templates
+    /// in `template_dir` at once, as does [`Tera::add_raw_templates()`]. A
+    /// template in `template_dir` cannot, however, use a template added in an
+    /// `on_load` callback. If templates must use each other in both
+    /// directions, place them all in `template_dir`.
+    ///
+    /// [`Templating`]: crate::Templating
+    /// [`Templating::init()`]: crate::Templating::init()
     #[cfg(feature = "tera")]
     pub tera: Tera,
 
@@ -79,6 +108,15 @@ pub struct Engines {
     /// When calling methods on the `Handlebars` instance, ensure you use types
     /// imported from `rocket_dyn_templates::handlebars` to avoid version
     /// mismatches.
+    ///
+    /// Handlebars uses HTML escaping regardless of the template name. To
+    /// change this default, call [`Handlebars::register_escape_fn()`] from a
+    /// [`Templating::init()`](crate::Templating::init()) callback.
+    ///
+    /// Handlebars parses a template when it's added but looks up helpers and
+    /// partials only when rendering. As such, Handlebars templates can use
+    /// helpers and templates registered in either
+    /// [`Templating`](crate::Templating) callback.
     #[cfg(feature = "handlebars")]
     pub handlebars: Handlebars<'static>,
 
@@ -88,6 +126,38 @@ pub struct Engines {
     /// When calling methods on the [`Environment`] instance, ensure you use
     /// types imported from `rocket_dyn_templates::minijinja` to avoid version
     /// mismatches.
+    ///
+    /// # Escaping
+    ///
+    /// HTML escaping is enabled for template names ending in `.html`, `.htm`,
+    /// `.xml`, `.xhtml`, or `.svg`, regardless of ASCII case. The lowercase
+    /// extensions `.json`, `.json5`, `.js`, `.yaml`, and `.yml` enable JSON
+    /// escaping. A final `.j2`, `.jinja`, or `.jinja2` extension is ignored.
+    ///
+    /// Included templates use their own escaping policy. As such, HTML
+    /// fragments should use an HTML extension: including a text template in an
+    /// HTML template can render values without escaping them. To change these
+    /// defaults, call [`Environment::set_auto_escape_callback()`] from a
+    /// [`Templating::init()`](crate::Templating::init()) callback.
+    ///
+    /// # Template Loading
+    ///
+    /// MiniJinja parses templates in `template_dir` when they are first
+    /// rendered, not when Rocket loads them, and looks up filters, tests,
+    /// functions, and other templates only when rendering. As such, MiniJinja
+    /// templates can use anything registered in either
+    /// [`Templating`](crate::Templating) callback. A template added via
+    /// [`Environment::add_template()`], however, is parsed immediately using
+    /// the current syntax and escaping settings, so configure these first.
+    ///
+    /// Because templates in `template_dir` are parsed when rendered, a syntax
+    /// error is only reported then. Rocket cannot detect such an error when it
+    /// reloads templates, so the previous templates are not restored.
+    ///
+    /// Rocket loads templates in `template_dir` via the environment's loader
+    /// and reloads them in debug mode, so MiniJinja's own automatic reloading
+    /// is disabled. Replacing the loader via [`Environment::set_loader()`]
+    /// makes templates in `template_dir` unavailable.
     #[cfg(feature = "minijinja")]
     pub minijinja: Environment<'static>,
 }

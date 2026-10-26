@@ -236,10 +236,139 @@ The following changes are likely to cause compile-time errors.
 
 ## [`rocket_dyn_templates`](https://api.rocket.rs/v0.5/rocket_dyn_templates/) `0.3.0`
 
+### Breaking Changes
+
+This release includes many breaking changes, most of which are the result of
+updated templating engines. These changes are listed below along with a short
+note about how to handle the breaking change in existing applications.
+
+#### Silent Changes
+
+These changes are invisible to the compiler and will _not_ yield errors or
+warnings at compile-time. We **strongly** advise all application authors to
+review this list carefully.
+
+  * **Template names include the file type extension.**
+
+    A template in a file named `index.html.tera` was previously named `index`.
+    It is now named `index.html`. Change the names in `Template::render()`
+    calls and in templates, including in inheritance, includes, and partials:
+
+    ```diff
+    - Template::render("index", context! { .. })
+    + Template::render("index.html", context! { .. })
+    ```
+
+    ```diff
+    - {% extends "base" %}
+    + {% extends "base.html" %}
+    ```
+
+    The names of templates registered directly with an engine are unchanged.
+
+  * **HTML escaping is determined by template names alone.**
+
+    Tera and MiniJinja templates with names ending in `.html`, `.htm`, `.xml`,
+    `.xhtml`, or `.svg`, regardless of case, are now escaped. This includes
+    templates registered in callbacks. For Tera, the extension may be followed
+    by `.tera`, as in `email.html.tera`. To render a value without escaping,
+    mark it as safe. To change these defaults, configure the engine's escaping
+    in [`Templating::init()`].
+
+    Previously, Tera considered a template's file path. A Tera template added
+    from a file under a different name, as with
+    `add_template_file(path, Some(name))`, was escaped according to the file's
+    extension. It is now escaped only if `name` ends in one of the extensions
+    above.
+
+    **Note:** In Tera, an included template uses the escaping policy of the
+    template that includes it. In MiniJinja, it uses its own. As such, name
+    MiniJinja HTML fragments with an HTML extension: values in a fragment
+    without one are not escaped, even when included in an HTML template.
+
+  * **Tera templates use Tera 2 syntax and are checked when added.**
+
+    - A template's helpers and the templates it references must exist when it
+      is added. Register helpers in [`Templating::init()`]. A template in
+      `template_dir` cannot depend on a template first added in `on_load()`;
+      place templates that depend on each other together in `template_dir`.
+    - Macros were replaced with components.
+    - Arrays are indexed with `items[0]` in place of `items.0`.
+    - Apostrophes are escaped as `&#39;`. Slashes are no longer escaped.
+
+    See [Tera's update notes] for changes to built-in filters, tests,
+    functions, and undefined values.
+
+  * **MiniJinja templates follow MiniJinja 3 semantics.**
+
+    - Floor division, modulo, and rounding follow Python's behavior. Ties are
+      rounded to the nearest even number.
+    - The `tojson` filter includes spaces after commas and colons.
+    - Imported names beginning with `_` are private.
+
+    See [MiniJinja's update notes] for further details.
+
+  * **Handlebars partials and whitespace render differently.**
+
+    Handlebars `6` fixes partial contexts, indentation, and whitespace handling,
+    which may change rendered output. Default HTML escaping is unchanged.
+
+#### General
+
+The following changes are likely to cause compile-time errors.
+
+  * **The templating fairing is now [`Templating`].**
+
+    `Template::fairing()`, `Template::custom()`, and `Template::try_custom()`
+    were removed. Use `Templating::new()` in place of `Template::fairing()`.
+
+    `Template::custom()` callbacks ran _after_ templates were loaded. Callbacks
+    that register helpers or configure engines should instead use
+    `Templating::init()`, which runs _before_ templates are loaded:
+
+    ```diff
+    - .attach(Template::custom(|engines| {
+    + .attach(Templating::init(|engines| {
+          engines.handlebars.register_helper("wow", Box::new(wow_helper));
+      }))
+    ```
+
+    Callbacks that add templates which use templates in `template_dir` should
+    use `on_load()`. Use `try_init()` and `try_on_load()` in place of
+    `try_custom()`. As before, callbacks are called again when templates are
+    reloaded. See [`Templating`] for details on which callback to use.
+
+  * **`tera` was updated to `2.4`.**
+
+    Helpers now use Tera's `Value`, `Kwargs`, and `State` types, and fallible
+    helpers return `TeraResult`. Extra built-ins moved to `tera-contrib`; enable
+    the desired features and register them in [`Templating::init()`].
+
+  * **`minijinja` was updated to `3.0`.**
+
+    - `Value::from_serialize(value)` was replaced with
+      `Value::from(Serde(value))`. MiniJinja's rendering methods accept
+      `Into<Value>`; use `Serde(context)` for serializable contexts. Rocket's
+      `Template` methods and `context!` continue to accept serializable values.
+    - Calls through `Value` and custom `Object` implementations use
+      `&mut State`.
+    - The `loader` feature was removed; loaders are always available.
+    - Whitespace settings moved to `SyntaxConfig`.
+
+  * **`handlebars` was updated to `6.4`.**
+
+    Public types are now non-exhaustive. `RenderContext::set_partial()` and
+    `remove_partial()` were removed. Use `BlockContext::set_local_partial()` to
+    configure local partials.
+
 ### Dependency Changes
 
   * `notify` was updated to `8.2.1`, fixing unaligned memory accesses and hangs
-    when moving watched directories to the trash on Windows.
+    when moving watched directories to the trash on Windows, watcher startup
+    errors on macOS, and watch cleanup on Linux.
+
+  * `normpath` was updated to `1.5.2`, fixing unsound path normalization on
+    Windows.
 
 ## [`rocket_sync_db_pools`](https://api.rocket.rs/v0.5/rocket_sync_db_pools/) `0.2.0`
 
@@ -424,6 +553,10 @@ The following changes are likely to cause compile-time errors.
 [`Database::custom()`]: https://api.rocket.rs/v0.5/rocket_db_pools/trait.Database.html#method.custom
 [`Database::try_custom()`]: https://api.rocket.rs/v0.5/rocket_db_pools/trait.Database.html#method.try_custom
 [`Configurable`]: https://api.rocket.rs/v0.5/rocket_db_pools/trait.Configurable.html
+[`Templating`]: https://api.rocket.rs/v0.5/rocket_dyn_templates/struct.Templating.html
+[`Templating::init()`]: https://api.rocket.rs/v0.5/rocket_dyn_templates/struct.Templating.html#method.init
+[Tera's update notes]: https://github.com/Keats/tera/blob/v2.4.0/MIGRATION.md
+[MiniJinja's update notes]: https://github.com/mitsuhiko/minijinja/blob/3.0.3/UPDATING.md
 [`MemcacheConnectionManager`]: https://api.rocket.rs/v0.5/rocket_sync_db_pools/struct.MemcacheConnectionManager.html
 [known vulnerabilities]: https://www.sqlite.org/cves.html
 [RUSTSEC-2023-0018]: https://rustsec.org/advisories/RUSTSEC-2023-0018.html
