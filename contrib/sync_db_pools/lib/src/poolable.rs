@@ -16,8 +16,9 @@ use crate::{Config, Error};
 ///   * `diesel::MysqlConnection`
 ///   * `diesel::PgConnection`
 ///   * `diesel::SqliteConnection`
-///   * `postgres::Connection`
+///   * `postgres::Client`
 ///   * `rusqlite::Connection`
+///   * `memcache::Client`
 ///
 /// # Implementation Guide
 ///
@@ -263,19 +264,87 @@ impl Poolable for rusqlite::Connection {
 }
 
 #[cfg(feature = "memcache_pool")]
-impl Poolable for memcache::Client {
-    type Manager = r2d2_memcache::MemcacheConnectionManager;
-    // Unused, but we might want it in the future without a breaking change.
-    type Error = memcache::MemcacheError;
+pub(crate) mod memcache_pool {
+    use std::time::Instant;
+    use memcache::{Client, Connectable, MemcacheError};
 
-    fn pool(db_name: &str, rocket: &Rocket<Build>) -> PoolResult<Self> {
-        let config = Config::from(db_name, rocket)?;
-        let manager = r2d2_memcache::MemcacheConnectionManager::new(&*config.url);
-        let pool = r2d2::Pool::builder()
-            .max_size(config.pool_size)
-            .connection_timeout(Duration::from_secs(config.timeout as u64))
-            .build(manager)?;
+    use super::*;
 
-        Ok(pool)
+    /// An [`r2d2`] connection manager for [`memcache::Client`].
+    ///
+    /// This is the [`Poolable::Manager`](crate::Poolable::Manager) for
+    /// `memcache::Client`. Each pooled connection is a `Client` with a single
+    /// underlying connection per server.
+    #[derive(Debug)]
+    pub struct MemcacheConnectionManager {
+        urls: Vec<String>,
+    }
+
+    impl MemcacheConnectionManager {
+        /// Creates a manager for the server(s) in `target`.
+        ///
+        /// Returns [`MemcacheError::BadURL`] if a URL is invalid or its
+        /// `timeout` or `connect_timeout` option is not a positive, finite
+        /// number of seconds.
+        pub fn new<C: Connectable>(target: C) -> Result<Self, MemcacheError> {
+            let urls = target.get_urls();
+            for url in &urls {
+                let parsed = memcache::Url::parse(url)?;
+                for name in ["timeout", "connect_timeout"] {
+                    let Some((_, value)) = parsed.query_pairs().find(|(key, _)| key == name) else {
+                        continue;
+                    };
+
+                    let invalid = || MemcacheError::BadURL(format!(
+                        "invalid `{name}`: expected positive, finite seconds within range"
+                    ));
+                    let seconds = value.parse::<f64>().map_err(|_| invalid())?;
+                    let timeout = Duration::try_from_secs_f64(seconds).map_err(|_| invalid())?;
+                    if timeout.is_zero() {
+                        return Err(invalid());
+                    }
+
+                    // r2d2 computes an Instant deadline for this timeout.
+                    if name == "connect_timeout" && Instant::now().checked_add(timeout).is_none() {
+                        return Err(invalid());
+                    }
+                }
+            }
+
+            Ok(Self { urls })
+        }
+    }
+
+    impl r2d2::ManageConnection for MemcacheConnectionManager {
+        type Connection = Client;
+        type Error = MemcacheError;
+
+        fn connect(&self) -> Result<Client, MemcacheError> {
+            Client::with_pool_size(self.urls.clone(), 1)
+        }
+
+        fn is_valid(&self, connection: &mut Client) -> Result<(), MemcacheError> {
+            connection.version().map(|_| ())
+        }
+
+        fn has_broken(&self, _connection: &mut Client) -> bool {
+            false
+        }
+    }
+
+    impl super::Poolable for Client {
+        type Manager = MemcacheConnectionManager;
+        type Error = MemcacheError;
+
+        fn pool(db_name: &str, rocket: &Rocket<Build>) -> PoolResult<Self> {
+            let config = Config::from(db_name, rocket)?;
+            let manager = MemcacheConnectionManager::new(&*config.url).map_err(Error::Custom)?;
+            let pool = r2d2::Pool::builder()
+                .max_size(config.pool_size)
+                .connection_timeout(Duration::from_secs(config.timeout as u64))
+                .build(manager)?;
+
+            Ok(pool)
+        }
     }
 }

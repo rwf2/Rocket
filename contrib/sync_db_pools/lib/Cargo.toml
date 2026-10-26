@@ -16,7 +16,7 @@ diesel_postgres_pool = ["diesel/postgres", "diesel/r2d2"]
 diesel_mysql_pool = ["diesel/mysql", "diesel/r2d2"]
 sqlite_pool = ["rusqlite", "r2d2_sqlite"]
 postgres_pool = ["postgres", "r2d2_postgres"]
-memcache_pool = ["memcache", "r2d2-memcache"]
+memcache_pool = ["memcache"]
 
 [dependencies]
 r2d2 = "0.8"
@@ -31,8 +31,7 @@ r2d2_postgres = { version = "0.18", optional = true }
 rusqlite = { version = ">=0.39.0, <0.43", optional = true }
 r2d2_sqlite = { version = ">=0.34.0, <0.38", optional = true }
 
-memcache = { version = "0.15.2", optional = true }
-r2d2-memcache = { version = "0.6", optional = true }
+memcache = { version = "0.21", optional = true }
 
 [dependencies.rocket_sync_db_pools_codegen]
 version = "=0.2.0"

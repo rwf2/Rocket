@@ -245,10 +245,11 @@ The following changes are likely to cause compile-time errors.
 
 ### Breaking Changes
 
-This release includes one breaking change, the result of an updated database
-driver, listed below along with a short note about how to handle it in existing
-applications. Applications that depend on the driver directly must update the
-dependency to match or use the driver reexported by `rocket_sync_db_pools`.
+This release includes several breaking changes, all of which are the result of
+updated database drivers. These changes are listed below along with a short
+note about how to handle the breaking change in existing applications.
+Applications that depend on a driver directly must update the dependency to
+match or use the driver reexported by `rocket_sync_db_pools`.
 
   * **`rusqlite` was updated to `0.39` through `0.42` and `r2d2_sqlite` to
     `0.34` through `0.37`.**
@@ -273,6 +274,21 @@ dependency to match or use the driver reexported by `rocket_sync_db_pools`.
     deallocation in `ToSqlOutput::from_rc()`, and missing `Send` bounds on
     aggregate and window functions. Its `bundled` feature builds SQLite `3.54`
     ([RUSTSEC-2026-0459]).
+
+  * **`memcache` was updated to `0.21`. The `r2d2_memcache` reexport was
+    removed.**
+
+    The `r2d2-memcache` dependency and feature were removed as well. Use
+    [`MemcacheConnectionManager`] in place of
+    `r2d2_memcache::MemcacheConnectionManager`. It returns
+    `memcache::MemcacheError` directly. The driver
+    now supports typed values with flags and compare-and-swap identifiers, as
+    well as UDP bind addresses, and fixes ASCII write timeouts and responses
+    split across socket reads.
+
+    The `timeout` and `connect_timeout` URL options accept positive, finite
+    numbers of seconds, including fractions. Invalid or out-of-range values
+    abort initialization with `Error::Custom(MemcacheError::BadURL(..))`.
 
 ### Dependency Changes
 
@@ -408,6 +424,7 @@ The following changes are likely to cause compile-time errors.
 [`Database::custom()`]: https://api.rocket.rs/v0.5/rocket_db_pools/trait.Database.html#method.custom
 [`Database::try_custom()`]: https://api.rocket.rs/v0.5/rocket_db_pools/trait.Database.html#method.try_custom
 [`Configurable`]: https://api.rocket.rs/v0.5/rocket_db_pools/trait.Configurable.html
+[`MemcacheConnectionManager`]: https://api.rocket.rs/v0.5/rocket_sync_db_pools/struct.MemcacheConnectionManager.html
 [known vulnerabilities]: https://www.sqlite.org/cves.html
 [RUSTSEC-2023-0018]: https://rustsec.org/advisories/RUSTSEC-2023-0018.html
 [RUSTSEC-2023-0071]: https://rustsec.org/advisories/RUSTSEC-2023-0071.html
