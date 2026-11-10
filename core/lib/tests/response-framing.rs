@@ -2,6 +2,7 @@
 
 use std::io::{self, Cursor, SeekFrom};
 use std::pin::Pin;
+use std::sync::Arc;
 use std::task::{Context, Poll};
 use std::time::Duration;
 
@@ -10,10 +11,24 @@ use hyper::body::{Bytes, Incoming};
 use hyper_util::rt::{TokioExecutor, TokioIo};
 
 use rocket::fairing::AdHoc;
+use rocket::futures::{stream, StreamExt};
 use rocket::http::Status;
 use rocket::response::{Response, Responder};
 use rocket::tokio::io::{AsyncRead, AsyncSeek, ReadBuf};
-use rocket::tokio::{net::TcpStream, sync::oneshot, time::timeout};
+use rocket::tokio::{net::TcpStream, sync::{oneshot, Notify}, time::timeout};
+
+#[get("/failed-stream")]
+fn failed_stream(release: &rocket::State<Arc<Notify>>) -> RawResponse {
+    let release = release.inner().clone();
+    let stream = stream::once(async { Ok::<_, io::Error>(Bytes::from_static(b"hello")) })
+        .chain(stream::once(async move {
+            release.notified().await;
+            Err(io::Error::other("response reader failed"))
+        }));
+
+    let reader = tokio_util::io::StreamReader::new(Box::pin(stream));
+    RawResponse(Response::build().streamed_body(reader).finalize())
+}
 
 struct RawResponse(Response<'static>);
 
@@ -199,4 +214,63 @@ async fn http1_framing() {
 #[rocket::async_test]
 async fn http2_framing() {
     timeout(Duration::from_secs(10), check_framing(true)).await.unwrap();
+}
+
+async fn check_stream_error(http2: bool, known_length: bool) {
+    let release = Arc::new(Notify::new());
+    let (tx, rx) = oneshot::channel();
+    let mut config = rocket::Config { port: 0, ..rocket::Config::debug_default() };
+    config.shutdown.ctrlc = false;
+    let rocket = rocket::custom(config).manage(release.clone())
+        .mount("/", routes![failed_stream])
+        .attach(AdHoc::on_response("Optional Length", move |_, response| Box::pin(async move {
+            if known_length {
+                response.set_raw_header("Content-Length", "10");
+            }
+        })))
+        .attach(AdHoc::on_liftoff("Send Port and Shutdown", |rocket| Box::pin(async move {
+            tx.send((rocket.config().port, rocket.shutdown())).unwrap();
+        })));
+
+    let server = rocket::tokio::spawn(rocket.launch());
+    let (port, shutdown) = rx.await.unwrap();
+    let tcp = TcpStream::connect(("127.0.0.1", port)).await.unwrap();
+    let io = TokioIo::new(tcp);
+    let (mut client, connection) = if http2 {
+        let (client, connection) = hyper::client::conn::http2::handshake(TokioExecutor::new(), io)
+            .await.unwrap();
+        (Client::Http2(client), rocket::tokio::spawn(connection))
+    } else {
+        let (client, connection) = hyper::client::conn::http1::handshake(io).await.unwrap();
+        (Client::Http1(client), rocket::tokio::spawn(connection))
+    };
+
+    let mut response = client.request("GET", "/failed-stream").await;
+    assert_eq!(response.status(), 200);
+    assert_eq!(response.headers().contains_key("Content-Length"), known_length);
+    let first = response.frame().await.unwrap().unwrap();
+    assert_eq!(first.data_ref().unwrap(), "hello");
+    release.notify_one();
+    let result = response.collect().await;
+
+    drop(client);
+    shutdown.notify();
+    server.await.unwrap().unwrap();
+    connection.abort();
+    assert!(result.is_err(), "failed reader must not produce a successful truncated response");
+}
+
+#[rocket::async_test]
+async fn http1_stream_errors() {
+    for known_length in [false, true] {
+        timeout(Duration::from_secs(10), check_stream_error(false, known_length)).await.unwrap();
+    }
+}
+
+#[cfg(feature = "http2")]
+#[rocket::async_test]
+async fn http2_stream_errors() {
+    for known_length in [false, true] {
+        timeout(Duration::from_secs(10), check_stream_error(true, known_length)).await.unwrap();
+    }
 }
