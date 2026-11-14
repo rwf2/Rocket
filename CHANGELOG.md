@@ -166,8 +166,7 @@ The following changes are likely to cause compile-time errors.
     This update fixes PostgreSQL protocol length overflows
     ([RUSTSEC-2024-0365]) and undefined behavior when serializing or
     deserializing MySQL date/time values ([RUSTSEC-2026-0134],
-    [RUSTSEC-2026-0138]). `diesel_mysql` now uses `lru` `0.18`; `0.18.2` fixes
-    a use-after-free ([RUSTSEC-2026-0253]).
+    [RUSTSEC-2026-0138]).
 
   * **`deadpool-postgres` was updated to `0.14` and `deadpool-redis` to `0.23`,
     with `redis` `1`.**
@@ -224,15 +223,18 @@ The following changes are likely to cause compile-time errors.
     [RUSTSEC-2026-0381]. Distrusted intermediate certificates are rejected, and
     the affected emSign root was removed from the bundled trust store.
 
-  * `sqlx_sqlite` permits `libsqlite3-sys` `0.37`, which bundles SQLite
-    `3.51.3` with fixes for [known vulnerabilities]. Run
-    `cargo update -p libsqlite3-sys` to update existing lockfiles.
+  * `tokio-postgres` was updated to `0.7.18` for `deadpool_postgres` and
+    `diesel_postgres`, fixing denial of service from malformed rows, `hstore`
+    values, and SCRAM iteration counts ([RUSTSEC-2026-0178],
+    [RUSTSEC-2026-0179], [RUSTSEC-2026-0180]).
 
-  * `sqlx_mysql` permits `rsa` `0.10.0`, which fixes [RUSTSEC-2023-0071]. Run
-    `cargo update -p rsa` to update existing lockfiles.
+  * `sqlx` was updated to `0.9.1`, and `libsqlite3-sys` to `0.39.0` for
+    `sqlx_sqlite`, bundling SQLite `3.54.0` and fixing [RUSTSEC-2026-0459].
 
-  * `sqlx_sqlite` remains affected by [RUSTSEC-2026-0459]. SQLx `0.9.0` does
-    not permit `libsqlite3-sys` `0.39`, which bundles the fixed SQLite `3.54`.
+  * `rsa` was updated to `0.10.0` for `sqlx_mysql`, fixing [RUSTSEC-2023-0071].
+
+  * `lru` was updated to `0.18.2` for `diesel_mysql`, fixing a use-after-free
+    ([RUSTSEC-2026-0253]).
 
 ## [`rocket_dyn_templates`](https://api.rocket.rs/v0.5/rocket_dyn_templates/) `0.3.0`
 
@@ -380,12 +382,11 @@ note about how to handle the breaking change in existing applications.
 Applications that depend on a driver directly must update the dependency to
 match or use the driver reexported by `rocket_sync_db_pools`.
 
-  * **`rusqlite` was updated to `0.39` through `0.42` and `r2d2_sqlite` to
-    `0.34` through `0.37`.**
+  * **`rusqlite` was updated to `0.41` through `0.42` and `r2d2_sqlite` to
+    `0.36` through `0.37`.**
 
     Cargo selects the newest version compatible with the application's other
-    SQLite dependencies. Applications that also use `sqlx_sqlite` remain on
-    Rusqlite `0.39` until SQLx permits `libsqlite3-sys` `0.39`, and should also
+    SQLite dependencies. Applications that also use `sqlx_sqlite` should also
     update `rocket_db_pools` to `0.3`.
 
     As such, the version of `rusqlite` reexported by `rocket_sync_db_pools`
@@ -421,13 +422,25 @@ match or use the driver reexported by `rocket_sync_db_pools`.
 
 ### Dependency Changes
 
-  * `diesel` was updated to `2.3.14`, fixing PostgreSQL protocol length
+  * `diesel` was updated to `2.4.0`, fixing PostgreSQL protocol length
     overflows ([RUSTSEC-2024-0365]), undefined behavior when serializing MySQL
     date/time values ([RUSTSEC-2026-0134]), and unaligned accesses in SQLite
     aggregate functions ([RUSTSEC-2026-0137]).
 
+  * `libsqlite3-sys` was updated to `0.39.0` for `diesel_sqlite_pool` and
+    `sqlite_pool`. When SQLite is bundled, it is now SQLite `3.54.0` or newer,
+    which fixes [RUSTSEC-2026-0459]. By default, these features link the
+    system's SQLite, whose version this update does not change.
+
+  * `postgres` was updated to `0.19.14`, fixing denial of service from malformed
+    rows, `hstore` values, and SCRAM iteration counts ([RUSTSEC-2026-0178],
+    [RUSTSEC-2026-0179], [RUSTSEC-2026-0180]).
+
   * `tokio` was updated to `1.54.1`, fixing a soundness issue in `Interval`
     ([RUSTSEC-2026-0384]).
+
+  * `r2d2` was updated to `0.8.9`, which no longer depends on an unsound
+    `lock_api` ([RUSTSEC-2020-0070]).
 
 ## [`rocket_ws`](https://api.rocket.rs/v0.5/rocket_ws/) `0.2.0`
 
@@ -558,7 +571,7 @@ The following changes are likely to cause compile-time errors.
 [Tera's update notes]: https://github.com/Keats/tera/blob/v2.4.0/MIGRATION.md
 [MiniJinja's update notes]: https://github.com/mitsuhiko/minijinja/blob/3.0.3/UPDATING.md
 [`MemcacheConnectionManager`]: https://api.rocket.rs/v0.5/rocket_sync_db_pools/struct.MemcacheConnectionManager.html
-[known vulnerabilities]: https://www.sqlite.org/cves.html
+[RUSTSEC-2020-0070]: https://rustsec.org/advisories/RUSTSEC-2020-0070.html
 [RUSTSEC-2023-0018]: https://rustsec.org/advisories/RUSTSEC-2023-0018.html
 [RUSTSEC-2023-0071]: https://rustsec.org/advisories/RUSTSEC-2023-0071.html
 [RUSTSEC-2024-0363]: https://rustsec.org/advisories/RUSTSEC-2024-0363.html
@@ -567,6 +580,9 @@ The following changes are likely to cause compile-time errors.
 [RUSTSEC-2026-0134]: https://rustsec.org/advisories/RUSTSEC-2026-0134.html
 [RUSTSEC-2026-0137]: https://rustsec.org/advisories/RUSTSEC-2026-0137.html
 [RUSTSEC-2026-0138]: https://rustsec.org/advisories/RUSTSEC-2026-0138.html
+[RUSTSEC-2026-0178]: https://rustsec.org/advisories/RUSTSEC-2026-0178.html
+[RUSTSEC-2026-0179]: https://rustsec.org/advisories/RUSTSEC-2026-0179.html
+[RUSTSEC-2026-0180]: https://rustsec.org/advisories/RUSTSEC-2026-0180.html
 [RUSTSEC-2026-0253]: https://rustsec.org/advisories/RUSTSEC-2026-0253.html
 [RUSTSEC-2026-0381]: https://rustsec.org/advisories/RUSTSEC-2026-0381.html
 [RUSTSEC-2026-0382]: https://rustsec.org/advisories/RUSTSEC-2026-0382.html
