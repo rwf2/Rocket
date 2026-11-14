@@ -1,6 +1,6 @@
 use std::fmt;
 use std::ops::RangeFrom;
-use std::sync::{Arc, atomic::Ordering};
+use std::sync::Arc;
 use std::borrow::Cow;
 use std::future::Future;
 use std::net::{IpAddr, SocketAddr};
@@ -8,7 +8,7 @@ use std::net::{IpAddr, SocketAddr};
 use yansi::Paint;
 use state::{TypeMap, InitCell};
 use futures::future::BoxFuture;
-use ref_swap::OptionRefSwap;
+use parking_lot::Mutex;
 
 use crate::{Rocket, Route, Orbit};
 use crate::request::{FromParam, FromSegments, FromRequest, Outcome, AtomicMethod};
@@ -46,7 +46,7 @@ pub(crate) struct ConnectionMeta {
 /// Information derived from the request.
 pub(crate) struct RequestState<'r> {
     pub rocket: &'r Rocket<Orbit>,
-    pub route: OptionRefSwap<'r, Route>,
+    pub route: Mutex<Option<&'r Route>>,
     pub cookies: CookieJar<'r>,
     pub accept: InitCell<Option<Accept>>,
     pub content_type: InitCell<Option<ContentType>>,
@@ -70,7 +70,7 @@ impl RequestState<'_> {
     fn clone(&self) -> Self {
         RequestState {
             rocket: self.rocket,
-            route: OptionRefSwap::new(self.route.load(Ordering::Acquire)),
+            route: Mutex::new(*self.route.lock()),
             cookies: self.cookies.clone(),
             accept: self.accept.clone(),
             content_type: self.content_type.clone(),
@@ -98,7 +98,7 @@ impl<'r> Request<'r> {
             },
             state: RequestState {
                 rocket,
-                route: OptionRefSwap::new(None),
+                route: Mutex::new(None),
                 cookies: CookieJar::new(rocket.config()),
                 accept: InitCell::new(),
                 content_type: InitCell::new(),
@@ -701,7 +701,7 @@ impl<'r> Request<'r> {
     /// ```
     #[inline(always)]
     pub fn route(&self) -> Option<&'r Route> {
-        self.state.route.load(Ordering::Acquire)
+        *self.state.route.lock()
     }
 
     /// Invokes the request guard implementation for `T`, returning its outcome.
@@ -979,7 +979,7 @@ impl<'r> Request<'r> {
     /// was `route`. Use during routing when attempting a given route.
     #[inline(always)]
     pub(crate) fn set_route(&self, route: &'r Route) {
-        self.state.route.store(Some(route), Ordering::Release)
+        *self.state.route.lock() = Some(route);
     }
 
     /// Set the method of `self`, even when `self` is a shared reference. Used

@@ -18,8 +18,13 @@ This release contains the following crate updates:
     macros when `yield` and `?` are used in the same expression, as in
     `yield message?`.
 
+  * `ref-swap` was removed. Version `0.1.2` is unsound ([RUSTSEC-2026-0528]).
+    Only Rocket itself wrote through `ref-swap`, so the unsoundness was not
+    reachable through Rocket's API.
+
 [RUSTSEC-2023-0018]: https://rustsec.org/advisories/RUSTSEC-2023-0018.html
 [RUSTSEC-2026-0007]: https://rustsec.org/advisories/RUSTSEC-2026-0007.html
+[RUSTSEC-2026-0528]: https://rustsec.org/advisories/RUSTSEC-2026-0528.html
 
 # Version 0.5.2 (Oct 23, 2026)
 

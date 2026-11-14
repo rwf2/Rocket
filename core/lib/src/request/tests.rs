@@ -44,3 +44,9 @@ fn test_multiple_headers_merge_into_one_from_hyp() {
     assert_headers!("friend" => ["alice"], "friend" => ["bob"], "friend" => ["carol"]);
     assert_headers!("friend" => ["alice"], "friend" => ["bob"], "enemy" => ["carol"]);
 }
+
+#[test]
+fn ensure_is_send_sync() {
+    fn is_send_sync<T: Send + Sync>() {}
+    is_send_sync::<Request<'static>>();
+}

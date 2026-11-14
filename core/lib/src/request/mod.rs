@@ -8,6 +8,19 @@ mod atomic_method;
 #[cfg(test)]
 mod tests;
 
+#[cfg(doctest)]
+mod doctest {
+    /// ```compile_fail
+    /// use rocket::Request;
+    ///
+    /// fn covariant<'a, 'b: 'a>(req: &'a Request<'b>) -> &'a Request<'a> {
+    ///     req
+    /// }
+    /// ```
+    #[allow(dead_code)]
+    fn test_request_invariant() {}
+}
+
 pub use self::request::Request;
 pub use self::from_request::{FromRequest, Outcome};
 pub use self::from_param::{FromParam, FromSegments};
