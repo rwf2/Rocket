@@ -1,3 +1,26 @@
+# Version 0.5.3 (Nov 18, 2026)
+
+This release contains the following crate updates:
+
+  - `rocket` `0.5.3`
+
+## [`rocket`](https://api.rocket.rs/v0.5/rocket/) `0.5.3`
+
+### Dependency Changes
+
+  * `bytes` was updated to `1.11.1`, fixing an integer overflow in
+    `BytesMut::reserve()` ([RUSTSEC-2026-0007]).
+
+  * `tempfile` was updated to `3.4.0`, which no longer depends on the vulnerable
+    `remove_dir_all` `0.5` ([RUSTSEC-2023-0018]).
+
+  * `async-stream` was updated to `0.3.3`, fixing compile errors in stream
+    macros when `yield` and `?` are used in the same expression, as in
+    `yield message?`.
+
+[RUSTSEC-2023-0018]: https://rustsec.org/advisories/RUSTSEC-2023-0018.html
+[RUSTSEC-2026-0007]: https://rustsec.org/advisories/RUSTSEC-2026-0007.html
+
 # Version 0.5.2 (Oct 23, 2026)
 
 This release contains the following crate updates:

@@ -52,9 +52,9 @@ figment = { version = "0.10.6", features = ["toml", "env"] }
 either = "1"
 pin-project-lite = "0.2"
 indexmap = { version = "2", features = ["serde"] }
-tempfile = "3"
+tempfile = "3.4.0"
 async-trait = "0.1.43"
-async-stream = "0.3.2"
+async-stream = "0.3.3"
 multer = { version = "3.0.0", features = ["tokio-io"] }
 tokio-stream = { version = "0.1.6", features = ["signal", "time"] }
 state = "0.6"
@@ -84,7 +84,7 @@ default-features = false
 features = ["io"]
 
 [dependencies.bytes]
-version = "1.0"
+version = "1.11.1"
 
 [build-dependencies]
 version_check = "0.9.1"
