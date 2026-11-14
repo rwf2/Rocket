@@ -542,7 +542,7 @@ The following changes are likely to cause compile-time errors.
 ## General Changes
 
   * `rocket_db_pools`, `rocket_dyn_templates`, `rocket_sync_db_pools`, and
-    `rocket_ws` require `rocket` `0.5.2`.
+    `rocket_ws` require `rocket` `0.5.3`.
 
     Updating `rocket` alone does not update the drivers used by older database
     libraries. To receive the driver fixes listed above, update

@@ -21,7 +21,7 @@ tokio-tungstenite = { version = "0.30", optional = true }
 data-encoding = "2"
 
 [dependencies.rocket]
-version = "0.5.2"
+version = "0.5.3"
 path = "../../core/lib"
 default-features = false
 

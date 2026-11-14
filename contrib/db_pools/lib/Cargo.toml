@@ -42,7 +42,7 @@ mongodb = ["dep:mongodb", "dep:rustls", "dep:rustls-webpki", "dep:webpki-roots"]
 
 [dependencies.rocket]
 path = "../../../core/lib"
-version = "0.5.2"
+version = "0.5.3"
 default-features = false
 
 [dependencies.rocket_db_pools_codegen]

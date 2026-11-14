@@ -40,7 +40,7 @@ version = "=0.2.0"
 path = "../codegen"
 
 [dependencies.rocket]
-version = "0.5.2"
+version = "0.5.3"
 path = "../../../core/lib"
 default-features = false
 

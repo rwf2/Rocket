@@ -8,7 +8,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! rocket = "0.5.2"
+//! rocket = "0.5.3"
 //! diesel = "2.4.0"
 //!
 //! [dependencies.rocket_db_pools]
