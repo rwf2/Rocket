@@ -306,7 +306,7 @@ impl<'r> Responder<'r, 'static> for Value {
 crate::export! {
     /// A macro to create ad-hoc JSON serializable values using JSON syntax.
     ///
-    /// The return type of a `json!` invocation is [`Value`](Value). A value
+    /// The return type of a `json!` invocation is [`Value`]. A value
     /// created with this macro can be returned from a handler as follows:
     ///
     /// ```rust
@@ -322,7 +322,7 @@ crate::export! {
     /// }
     /// ```
     ///
-    /// The [`Responder`](crate::response::Responder) implementation for
+    /// The [`Responder`] implementation for
     /// `Value` serializes the value into a JSON string and sets it as the body
     /// of the response with a `Content-Type` of `application/json`.
     ///
