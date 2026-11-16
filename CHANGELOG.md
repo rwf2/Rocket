@@ -36,6 +36,12 @@ This release contains the following crate updates:
     Previously, an error that occurred while Rocket peeked into the body was
     lost, and handlers read a truncated or malformed body as complete.
 
+  * Graceful shutdown now completes as soon as all connections close.
+
+    Previously, Rocket waited for the entire grace period if any connection was
+    open when shutdown was requested, and often for the entire mercy period as
+    well.
+
 ### Dependency Changes
 
   * `bytes` was updated to `1.11.1`, fixing an integer overflow in

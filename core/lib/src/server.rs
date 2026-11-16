@@ -7,7 +7,7 @@ use std::pin::{pin, Pin};
 use yansi::Paint;
 use bytes::Bytes;
 use tokio::sync::{mpsc, oneshot};
-use tokio::time::sleep;
+use tokio::time::{sleep, sleep_until, Instant};
 use tokio_stream::wrappers::ReceiverStream;
 use futures::stream::StreamExt;
 use futures::future::{FutureExt, Future, BoxFuture};
@@ -575,26 +575,24 @@ impl Rocket<Orbit> {
         // without waiting for the connection tasks or their ongoing responses.
         // That is, `server` resolves even when there are running tasks that are
         // generating a response. So, `server` resolving implies little to
-        // nothing about the state of connections. As a result, we depend on the
-        // timing of grace + mercy + some buffer to determine when all
-        // connections should be closed, thus all tasks should be complete, thus
-        // all references to `Arc<Rocket>` should be dropped and we can get a
-        // unique reference.
+        // nothing about the state of connections. As a result, we wait until
+        // all tasks are complete, thus all references to `Arc<Rocket>` are
+        // dropped and we can get a unique reference. Since all connections
+        // should be closed after grace + mercy, we wait at most grace + mercy +
+        // some buffer.
         tokio::pin!(server);
         tokio::select! {
             biased;
 
             _ = shutdown => {
-                // Run shutdown fairings. We compute `sleep()` for grace periods
+                // Run shutdown fairings. We compute `sleep()` for the timeout
                 // beforehand to ensure we don't add shutdown fairing completion
-                // time, which is arbitrary, to these periods.
+                // time, which is arbitrary, to the grace and mercy periods.
                 info!("Shutdown requested. Waiting for pending I/O...");
-                let grace_timer = sleep(Duration::from_secs(grace));
-                let mercy_timer = sleep(Duration::from_secs(grace + mercy));
                 let shutdown_timer = sleep(Duration::from_secs(grace + mercy + 1));
                 rocket.fairings.handle_shutdown(&*rocket).await;
 
-                tokio::pin!(grace_timer, mercy_timer, shutdown_timer);
+                tokio::pin!(shutdown_timer);
                 tokio::select! {
                     biased;
 
@@ -604,9 +602,12 @@ impl Rocket<Orbit> {
                             return Err(Error::shutdown(rocket.clone(), e));
                         }
 
-                        if Arc::strong_count(&rocket) != 1 { grace_timer.await; }
-                        if Arc::strong_count(&rocket) != 1 { mercy_timer.await; }
-                        if Arc::strong_count(&rocket) != 1 { shutdown_timer.await; }
+                        let deadline = shutdown_timer.deadline();
+                        while Arc::strong_count(&rocket) != 1 && Instant::now() < deadline {
+                            let next = Instant::now() + Duration::from_millis(10);
+                            sleep_until(next.min(deadline)).await;
+                        }
+
                         match Arc::try_unwrap(rocket) {
                             Ok(rocket) => {
                                 info!("Graceful shutdown completed successfully.");

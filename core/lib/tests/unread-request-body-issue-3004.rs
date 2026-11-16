@@ -125,9 +125,8 @@ async fn linger_can_be_disabled() {
     server.await;
 }
 
-// A client that keeps sending after the response is uncooperative. Like any
-// uncooperative client, it can stall shutdown for at most `grace + mercy`
-// seconds, not `linger` seconds.
+// A client that keeps sending after the response stalls shutdown for at most
+// the grace period, not `linger` seconds: lingering ends when it elapses.
 #[rocket::async_test]
 async fn linger_does_not_delay_shutdown() {
     let (port, shutdown, server) = launch(rocket(10, 1, 2)).await;
@@ -139,6 +138,6 @@ async fn linger_does_not_delay_shutdown() {
     shutdown.notify();
     server.await;
     let elapsed = start.elapsed();
-    assert!(elapsed < Duration::from_millis(3500), "{elapsed:?}");
+    assert!(elapsed < Duration::from_millis(1500), "{elapsed:?}");
     sender.abort();
 }
