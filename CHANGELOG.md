@@ -15,6 +15,11 @@ This release contains the following crate updates:
     a complete response. Rocket now closes the HTTP/1.1 connection or resets
     the HTTP/2 stream, so clients see an incomplete response.
 
+  * A request body that fails to read now fails every subsequent read.
+
+    Previously, an error that occurred while Rocket peeked into the body was
+    lost, and handlers read a truncated or malformed body as complete.
+
 ### Dependency Changes
 
   * `bytes` was updated to `1.11.1`, fixing an integer overflow in

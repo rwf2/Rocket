@@ -54,6 +54,9 @@ pub struct StreamReader<'r> {
 enum State {
     Pending,
     Partial(Cursor<hyper::body::Bytes>),
+    /// The stream failed. Streams may end after an error, so the error is kept
+    /// to prevent a read after a failed read from reporting EOF.
+    Failed(io::ErrorKind, String),
     Done,
 }
 
@@ -308,7 +311,10 @@ impl AsyncRead for StreamReader<'_> {
             self.state = match self.state {
                 State::Pending => {
                     match ready!(Pin::new(&mut self.inner).poll_next(cx)) {
-                        Some(Err(e)) => return Poll::Ready(Err(e)),
+                        Some(Err(e)) => {
+                            self.state = State::Failed(e.kind(), e.to_string());
+                            return Poll::Ready(Err(e));
+                        }
                         Some(Ok(bytes)) => State::Partial(Cursor::new(bytes)),
                         None => State::Done,
                     }
@@ -319,6 +325,9 @@ impl AsyncRead for StreamReader<'_> {
                         Ok(()) if rem == buf.remaining() => State::Pending,
                         result => return Poll::Ready(result),
                     }
+                }
+                State::Failed(kind, ref msg) => {
+                    return Poll::Ready(Err(io::Error::new(kind, msg.clone())));
                 }
                 State::Done => return Poll::Ready(Ok(())),
             }
