@@ -1,4 +1,5 @@
 #![allow(dead_code)] // This test is only here so that we can ensure it compiles.
+#![allow(mismatched_lifetime_syntaxes)] // The elided lifetimes are part of the test.
 
 #[macro_use] extern crate rocket;
 

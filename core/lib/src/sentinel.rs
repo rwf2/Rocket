@@ -447,7 +447,6 @@ pub mod resolution {
 #[cfg(test)]
 mod test {
     use std::any::TypeId;
-    use crate::sentinel::resolve;
 
     struct NotASentinel;
     struct YesASentinel;

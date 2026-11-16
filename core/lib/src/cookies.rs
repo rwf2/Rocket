@@ -120,7 +120,6 @@ pub use self::cookie::{Cookie, SameSite, Iter};
 ///     }
 /// }
 /// # }
-/// # fn main() { }
 /// ```
 ///
 /// # Private Cookies
