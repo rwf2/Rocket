@@ -209,7 +209,17 @@ impl Rocket<Orbit> {
         let max_chunk_size = body.max_chunk_size();
         let mut stream = body.into_bytes_stream(max_chunk_size);
         while let Some(next) = stream.next().await {
-            sender.send(Ok(Frame::data(next?))).await
+            let bytes = match next {
+                Ok(bytes) => bytes,
+                Err(e) => {
+                    // Send the error so Hyper aborts the response. Dropping the
+                    // sender would instead end the response successfully.
+                    let _ = sender.send(Err(io::Error::new(e.kind(), e.to_string()))).await;
+                    return Err(e);
+                }
+            };
+
+            sender.send(Ok(Frame::data(bytes))).await
                 .map_err(|e| io::Error::new(io::ErrorKind::BrokenPipe, e))?;
         }
 

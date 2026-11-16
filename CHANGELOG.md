@@ -6,6 +6,15 @@ This release contains the following crate updates:
 
 ## [`rocket`](https://api.rocket.rs/v0.5/rocket/) `0.5.3`
 
+### General Improvements
+
+  * **(fix [#3018] via [#3019])** A response whose body fails to read is now
+    aborted.
+
+    Previously, clients received the part of the body read before the error as
+    a complete response. Rocket now closes the HTTP/1.1 connection or resets
+    the HTTP/2 stream, so clients see an incomplete response.
+
 ### Dependency Changes
 
   * `bytes` was updated to `1.11.1`, fixing an integer overflow in
@@ -22,6 +31,8 @@ This release contains the following crate updates:
     Only Rocket itself wrote through `ref-swap`, so the unsoundness was not
     reachable through Rocket's API.
 
+[#3018]: https://github.com/rwf2/Rocket/issues/3018
+[#3019]: https://github.com/rwf2/Rocket/pull/3019
 [RUSTSEC-2023-0018]: https://rustsec.org/advisories/RUSTSEC-2023-0018.html
 [RUSTSEC-2026-0007]: https://rustsec.org/advisories/RUSTSEC-2026-0007.html
 [RUSTSEC-2026-0528]: https://rustsec.org/advisories/RUSTSEC-2026-0528.html
