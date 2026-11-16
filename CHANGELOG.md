@@ -8,6 +8,22 @@ This release contains the following crate updates:
 
 ### General Improvements
 
+  * **(fix [#3004])** Connections now linger for up to 10 seconds after the
+    last response.
+
+    Previously, Rocket closed a connection immediately after the last response,
+    even if the client was still sending data, for instance, the rest of an
+    upload that exceeded a data limit. Closing a connection with unread data
+    causes TCP to send a reset, which can discard the response before the
+    client reads it. Rocket now closes connections in stages: it shuts down
+    writes, then reads and discards incoming data until the client closes the
+    connection, the linger time elapses, or the shutdown grace period ends.
+    Upgraded connections, such as WebSocket connections, do not linger.
+
+    As a result, connections may remain open for up to 10 seconds longer than
+    before. The linger time is configured via the new [`linger`] configuration
+    parameter. For the previous behavior, set `linger` to `0`.
+
   * **(fix [#3018] via [#3019])** A response whose body fails to read is now
     aborted.
 
@@ -36,8 +52,10 @@ This release contains the following crate updates:
     Only Rocket itself wrote through `ref-swap`, so the unsoundness was not
     reachable through Rocket's API.
 
+[#3004]: https://github.com/rwf2/Rocket/issues/3004
 [#3018]: https://github.com/rwf2/Rocket/issues/3018
 [#3019]: https://github.com/rwf2/Rocket/pull/3019
+[`linger`]: https://api.rocket.rs/v0.5/rocket/struct.Config.html#structfield.linger
 [RUSTSEC-2023-0018]: https://rustsec.org/advisories/RUSTSEC-2023-0018.html
 [RUSTSEC-2026-0007]: https://rustsec.org/advisories/RUSTSEC-2026-0007.html
 [RUSTSEC-2026-0528]: https://rustsec.org/advisories/RUSTSEC-2026-0528.html

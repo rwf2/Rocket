@@ -105,6 +105,26 @@ pub struct Config {
     pub temp_dir: RelativePathBuf,
     /// Keep-alive timeout in seconds; disabled when `0`. **(default: `5`)**
     pub keep_alive: u32,
+    /// Linger time in seconds; disabled when `0`. **(default: `10`)**
+    ///
+    /// When closing a connection, Rocket shuts down writes and then reads and
+    /// discards incoming data for at most `linger` seconds or until the client
+    /// closes the connection. This prevents a TCP reset from discarding a
+    /// response the client has yet to read, as can happen when the client is
+    /// still sending data, such as the rest of a request body Rocket didn't
+    /// read. See [RFC 9112 §9.6] for details. This is equivalent to nginx's
+    /// `lingering_time` and is unrelated to the `SO_LINGER` socket option.
+    ///
+    /// When disabled, Rocket closes connections immediately, and a client still
+    /// sending data may receive a reset instead of a response. Lingering always
+    /// ends when the shutdown grace period elapses.
+    ///
+    /// Upgraded connections, such as WebSocket connections, never linger: once
+    /// a connection is upgraded, its I/O handler decides when to stop reading.
+    ///
+    /// [RFC 9112 §9.6]: https://www.rfc-editor.org/rfc/rfc9112#section-9.6
+    #[serde(default = "default_linger")]
+    pub linger: u32,
     /// The TLS configuration, if any. **(default: `None`)**
     #[cfg(feature = "tls")]
     #[cfg_attr(nightly, doc(cfg(feature = "tls")))]
@@ -197,6 +217,7 @@ impl Config {
             limits: Limits::default(),
             temp_dir: std::env::temp_dir().into(),
             keep_alive: 5,
+            linger: default_linger(),
             #[cfg(feature = "tls")]
             tls: None,
             #[cfg(feature = "secrets")]
@@ -423,6 +444,11 @@ impl Config {
             ka => launch_meta_!("keep-alive: {}{}", ka.paint(VAL), "s".paint(VAL)),
         }
 
+        match self.linger {
+            0 => launch_meta_!("linger: {}", "disabled".paint(VAL)),
+            s => launch_meta_!("linger: {}{}", s.paint(VAL), "s".paint(VAL)),
+        }
+
         match (self.tls_enabled(), self.mtls_enabled()) {
             (true, true) => launch_meta_!("tls: {}", "enabled w/mtls".paint(VAL)),
             (true, false) => launch_meta_!("tls: {} w/o mtls", "enabled".paint(VAL)),
@@ -512,6 +538,9 @@ impl Config {
     /// The stringy parameter name for setting/extracting [`Config::keep_alive`].
     pub const KEEP_ALIVE: &'static str = "keep_alive";
 
+    /// The stringy parameter name for setting/extracting [`Config::linger`].
+    pub const LINGER: &'static str = "linger";
+
     /// The stringy parameter name for setting/extracting [`Config::ident`].
     pub const IDENT: &'static str = "ident";
 
@@ -542,10 +571,14 @@ impl Config {
     /// An array of all of the stringy parameter names.
     pub const PARAMETERS: &'static [&'static str] = &[
         Self::ADDRESS, Self::PORT, Self::WORKERS, Self::MAX_BLOCKING,
-        Self::KEEP_ALIVE, Self::IDENT, Self::IP_HEADER, Self::LIMITS, Self::TLS,
-        Self::SECRET_KEY, Self::TEMP_DIR, Self::LOG_LEVEL, Self::SHUTDOWN,
+        Self::KEEP_ALIVE, Self::LINGER, Self::IDENT, Self::IP_HEADER, Self::LIMITS,
+        Self::TLS, Self::SECRET_KEY, Self::TEMP_DIR, Self::LOG_LEVEL, Self::SHUTDOWN,
         Self::CLI_COLORS,
     ];
+}
+
+fn default_linger() -> u32 {
+    10
 }
 
 impl Provider for Config {

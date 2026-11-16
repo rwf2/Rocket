@@ -1,5 +1,6 @@
 use std::io;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 use std::pin::{pin, Pin};
 
@@ -24,7 +25,7 @@ use crate::{route, Rocket, Orbit, Request, Response, Data, Config};
 use crate::form::Form;
 use crate::outcome::Outcome;
 use crate::error::{Error, ErrorKind};
-use crate::ext::{AsyncReadExt, CancellableListener};
+use crate::ext::{AsyncReadExt, CancellableListener, LingeringIo};
 use crate::request::ConnectionMeta;
 use crate::data::IoHandler;
 
@@ -83,6 +84,7 @@ async fn handle<Fut, T, F>(name: Option<&str>, run: F) -> Option<T>
 async fn hyper_service_fn(
     rocket: Arc<Rocket<Orbit>>,
     conn: ConnectionMeta,
+    upgraded: Arc<AtomicBool>,
     mut hyp_req: hyper::Request<hyper::Body>,
 ) -> Result<hyper::Response<HttpBody>, io::Error> {
     // This future must return a hyper::Response, but the response body might
@@ -108,8 +110,9 @@ async fn hyper_service_fn(
                 let mut response = rocket.dispatch(token, &req, data).await;
                 let upgrade = response.take_upgrade(req.headers().get("upgrade"));
                 if let Ok(Some((proto, handler))) = upgrade {
-                    rocket.handle_upgrade(response, proto, handler, pending_upgrade, tx, version)
-                        .await;
+                    rocket.handle_upgrade(
+                        response, proto, handler, pending_upgrade, upgraded, tx, version
+                    ).await;
                 } else {
                     if upgrade.is_err() {
                         warn_!("Request wants upgrade but no I/O handler matched.");
@@ -232,6 +235,7 @@ impl Rocket<Orbit> {
         proto: uncased::Uncased<'r>,
         io_handler: Pin<Box<dyn IoHandler + 'r>>,
         pending_upgrade: hyper::upgrade::OnUpgrade,
+        upgraded: Arc<AtomicBool>,
         tx: oneshot::Sender<hyper::Response<HttpBody>>,
         version: hyper::Version,
     ) {
@@ -244,6 +248,10 @@ impl Rocket<Orbit> {
         match pending_upgrade.await {
             Ok(io_stream) => {
                 info_!("Upgrade successful.");
+
+                // The connection now belongs to the I/O handler, which may
+                // shut down writes and keep reading. Don't linger on shutdown.
+                upgraded.store(true, Ordering::Release);
                 if let Err(e) = io_handler.io(io_stream.into()).await {
                     if e.kind() == io::ErrorKind::BrokenPipe {
                         warn!("Upgraded {} I/O handler was closed.", proto);
@@ -662,6 +670,7 @@ impl Rocket<Orbit> {
             });
 
         let server = Arc::new(builder);
+        let linger = Duration::from_secs(self.config.linger as u64);
         let incoming = Incoming::new(listener).nodelay(true).take_until(self.shutdown());
         let mut incoming = pin!(incoming);
 
@@ -673,11 +682,15 @@ impl Rocket<Orbit> {
                     remote: conn.peer_address(),
                     client_certificates: conn.peer_certificates(),
                 };
-                let service = hyper::service::service_fn(move |req| {
-                    hyper_service_fn(rocket.clone(), connection.clone(), req)
+                let upgraded = Arc::new(AtomicBool::new(false));
+                let service = hyper::service::service_fn({
+                    let upgraded = upgraded.clone();
+                    move |req| {
+                        hyper_service_fn(rocket.clone(), connection.clone(), upgraded.clone(), req)
+                    }
                 });
 
-                let io = TokioIo::new(conn);
+                let io = TokioIo::new(LingeringIo::new(conn, linger, upgraded));
                 #[cfg(feature = "http2")]
                 let mut server = pin!(server.serve_connection_with_upgrades(io, service));
                 #[cfg(not(feature = "http2"))]
