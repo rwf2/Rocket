@@ -57,7 +57,7 @@ time = { version = "0.3", features = ["macros", "parsing"] }
 memchr = "2" # TODO: Use pear instead.
 binascii = "0.1"
 ref-cast = "1.0"
-ref-swap = "0.1.2"
+ref-swap = "=0.1.2" # TODO: Unpin
 parking_lot = "0.12"
 ubyte = {version = "0.10.2", features = ["serde"] }
 serde = { version = "1.0", features = ["derive"] }
