@@ -152,7 +152,6 @@ impl Rocket<Orbit> {
         let mut builder = Builder::new(TokioExecutor::new());
         let keep_alive = Duration::from_secs(self.config.keep_alive.into());
         builder.http1()
-            .half_close(true)
             .timer(TokioTimer::new())
             .keep_alive(keep_alive > Duration::ZERO)
             .preserve_header_case(true)
