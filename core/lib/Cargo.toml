@@ -96,7 +96,7 @@ path = "../http"
 features = ["serde"]
 
 [dependencies.tokio]
-version = "1.35.1"
+version = "1.54.1"
 features = ["rt-multi-thread", "net", "io-util", "fs", "time", "sync", "signal", "parking_lot"]
 
 [dependencies.tokio-util]
