@@ -504,6 +504,48 @@ async fn oversized_headers_are_refused() {
     server.shutdown().await;
 }
 
+#[get("/connection-headers")]
+fn connection_headers() -> RawResponse {
+    RawResponse(RocketResponse::build()
+        .raw_header("Transfer-Encoding", "chunked")
+        .raw_header("Connection", "close, x-hop")
+        .raw_header("X-Hop", "1")
+        .raw_header("Keep-Alive", "timeout=5")
+        .raw_header("Proxy-Connection", "keep-alive")
+        .raw_header("Upgrade", "websocket")
+        .raw_header("TE", "trailers")
+        .raw_header("X-Kept", "1")
+        .sized_body(5, std::io::Cursor::new("hello"))
+        .finalize())
+}
+
+#[rocket::async_test]
+async fn connection_headers_are_not_sent() {
+    // The response itself is unchanged: only HTTP/3 leaves the headers out.
+    let app = rocket().mount("/", routes![connection_headers]);
+    let local = rocket::local::asynchronous::Client::untracked(app).await.unwrap();
+    let response = local.get("/connection-headers").dispatch().await;
+    assert_eq!(response.headers().get_one("Transfer-Encoding"), Some("chunked"));
+    assert_eq!(response.headers().get_one("X-Hop"), Some("1"));
+
+    let server = Server::launch(rocket().mount("/", routes![connection_headers])).await;
+    let mut client = Client::connect(server.addr).await;
+    let response = client.get("/connection-headers").await;
+    assert_eq!(response.status(), 200);
+    for name in [
+        "transfer-encoding", "connection", "x-hop", "keep-alive", "proxy-connection",
+        "upgrade", "te",
+    ] {
+        assert_eq!(response.header(name), None, "{name}");
+    }
+
+    assert_eq!(response.header("x-kept"), Some("1"));
+    assert_eq!(response.into_string().await, "hello");
+
+    client.close().await;
+    server.shutdown().await;
+}
+
 // Waits for the server's 15 second header read timeout.
 #[ignore = "takes 15 seconds"]
 #[rocket::async_test]

@@ -88,7 +88,8 @@ pub(crate) fn server_name(conn: &quinn::Connection) -> Option<String> {
 pub(crate) async fn send_response<S>(tx: &mut QuicTx, response: http::Response<S>) -> io::Result<()>
     where S: Stream<Item = io::Result<Bytes>>
 {
-    let (parts, body) = response.into_parts();
+    let (mut parts, body) = response.into_parts();
+    strip_connection_headers(&mut parts.headers);
     let stream = &mut tx.stream;
     stream.send_response(http::Response::from_parts(parts, ())).await.map_err(io::Error::other)?;
 
@@ -100,6 +101,25 @@ pub(crate) async fn send_response<S>(tx: &mut QuicTx, response: http::Response<S
     stream.finish().await.map_err(io::Error::other)?;
     tx.done = true;
     Ok(())
+}
+
+/// Removes the connection-specific headers that HTTP/3 forbids (RFC 9114
+/// §4.2): the same headers hyper removes from HTTP/2 responses.
+fn strip_connection_headers(headers: &mut http::HeaderMap) {
+    use http::header::{HeaderName, CONNECTION, TE, TRANSFER_ENCODING, UPGRADE};
+
+    let keep_alive = HeaderName::from_static("keep-alive");
+    let proxy_connection = HeaderName::from_static("proxy-connection");
+    for name in [keep_alive, proxy_connection, TRANSFER_ENCODING, UPGRADE, TE] {
+        headers.remove(name);
+    }
+
+    // `Connection` may name other headers that are specific to the connection.
+    if let Some(names) = headers.remove(CONNECTION) {
+        for name in names.to_str().unwrap_or_default().split(',') {
+            headers.remove(name.trim());
+        }
+    }
 }
 
 impl QuicTx {
