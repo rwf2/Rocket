@@ -115,7 +115,7 @@ mod sentinel_and_runtime_test {
         let config = Figment::from(rocket::Config::debug_default())
             .merge(("databases", map!["test_db" => map!["url" => ""]]));
 
-        let rocket = rocket::custom(config).attach(TestDb::fairing());
+        let rocket = rocket::custom(config).attach(TestDb::fairing()).ignite().await.unwrap();
         drop(rocket);
     }
 
