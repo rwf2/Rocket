@@ -57,6 +57,20 @@ fn echo_close(socket: ws::WebSocket) -> ws::Stream!['static] {
     }
 }
 
+#[get("/end-after-close")]
+fn end_after_close(socket: ws::WebSocket) -> ws::Stream!['static] {
+    ws::Stream! { socket =>
+        for await message in socket {
+            let message = message?;
+            if message.is_close() {
+                return;
+            }
+
+            yield message;
+        }
+    }
+}
+
 struct Server {
     shutdown: rocket::Shutdown,
     task: JoinHandle<()>,
@@ -127,6 +141,21 @@ async fn peer_close_is_echoed() {
 
     let message = timeout(Duration::from_secs(3), client.next())
         .await.expect("echoed close").unwrap().unwrap();
+    assert_eq!(message, ws::Message::Close(Some(close_frame())));
+    server.stop().await;
+}
+
+#[async_test]
+async fn stream_end_flushes_peer_close() {
+    let (port, server) = serve(rocket::build().mount("/", routes![end_after_close])).await;
+    let url = format!("ws://127.0.0.1:{port}/end-after-close");
+    let (mut client, _) = timeout(Duration::from_secs(3), tokio_tungstenite::connect_async(url))
+        .await.expect("client connection").unwrap();
+    timeout(Duration::from_secs(3), client.send(ws::Message::Close(Some(close_frame()))))
+        .await.expect("peer close").unwrap();
+
+    let message = timeout(Duration::from_secs(3), client.next())
+        .await.expect("queued close reply").unwrap().unwrap();
     assert_eq!(message, ws::Message::Close(Some(close_frame())));
     server.stop().await;
 }
