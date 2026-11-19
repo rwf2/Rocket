@@ -90,10 +90,11 @@ pub struct Config {
     /// The waker requires an available worker to restore progress. If every
     /// worker is occupied by synchronous blocking operations or computations
     /// that do not yield, progress cannot resume until at least one worker
-    /// becomes available. Single-worker runtimes necessarily fall into this
-    /// category: whenever a task blocks the only worker, there can never be
-    /// another worker to restore progress. As a result, the waker provides no
-    /// benefit on these runtimes and is disabled irrespective of this setting.
+    /// becomes available. Current-thread (single-thread) runtimes necessarily
+    /// fall into this category: whenever a task blocks the only worker, there
+    /// can never be another worker to restore progress. As a result, the waker
+    /// provides no benefit on these runtimes and is disabled irrespective of
+    /// this setting.
     ///
     /// [`spawn_blocking`]: crate::tokio::task::spawn_blocking
     pub wake_interval: u32,
