@@ -273,6 +273,8 @@ fn uri_display_serde() {
         c: Q<&'a A>,
     }
 
+    let _ = GenericBorrow::<str, usize> { a: Q(Json("a")), b: Q(Json(1)), c: Q(Json("c")) };
+
     // TODO: This requires `MsgPack` to parse from value form fields.
     //
     // use rocket::serde::msgpack::MsgPack;

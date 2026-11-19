@@ -113,7 +113,7 @@ impl From<KeyError> for Error {
 
 impl From<std::convert::Infallible> for Error {
     fn from(v: std::convert::Infallible) -> Self {
-        v.into()
+        match v {}
     }
 }
 

@@ -2,7 +2,6 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 use either::{Either, Left, Right};
-use figment::error::Kind;
 use tokio::time::{sleep, Duration};
 
 use crate::fs::NamedFile;

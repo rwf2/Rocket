@@ -56,7 +56,6 @@ impl Listener for TcpListener {
     async fn accept(&self) -> io::Result<Self::Accept> {
         let conn = self.accept().await?.0;
         let _ = conn.set_nodelay(true);
-        let _ = conn.set_linger(None);
         Ok(conn)
     }
 

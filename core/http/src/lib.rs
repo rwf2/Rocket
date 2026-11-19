@@ -30,7 +30,6 @@ pub mod uncased {
 
 // Types that we expose for use _only_ by core. Please don't use this.
 #[doc(hidden)]
-#[path = "."]
 pub mod private {
     pub use crate::parse::Indexed;
 }

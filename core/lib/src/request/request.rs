@@ -45,7 +45,7 @@ pub(crate) struct ConnectionMeta {
     pub peer_endpoint: Option<Endpoint>,
     #[cfg_attr(not(feature = "mtls"), allow(dead_code))]
     pub peer_certs: Option<Arc<Certificates<'static>>>,
-    #[cfg_attr(feature = "tls", allow(dead_code))]
+    #[cfg_attr(not(feature = "tls"), allow(dead_code))]
     pub server_name: Option<String>,
 }
 

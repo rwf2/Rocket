@@ -119,7 +119,6 @@ pub use cookie::{Cookie, SameSite, Iter};
 ///     }
 /// }
 /// # }
-/// # fn main() { }
 /// ```
 ///
 /// # Private Cookies

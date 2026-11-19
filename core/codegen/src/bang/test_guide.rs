@@ -31,7 +31,7 @@ fn entry_to_tests(root_glob: &LitStr) -> Result<Vec<TokenStream>, Box<dyn Error>
         tests.push(quote_spanned!(root_glob.span() =>
             #[allow(unused_doc_comments)]
             mod #ident {
-                macro_rules! doc_comment { ($x:expr) => (#[doc = $x] extern {}); }
+                macro_rules! doc_comment { ($x:expr) => (#[doc = $x] extern "C" {}); }
                 doc_comment!(include_str!(#full_path));
             }
         ));
