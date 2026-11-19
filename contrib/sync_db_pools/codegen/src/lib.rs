@@ -48,7 +48,7 @@ use proc_macro::TokenStream;
 ///     underlying database connection (`&mut Db`). Returns the value returned
 ///     by the function or closure.
 ///
-/// [`FromRequest`]: rocket::request::FromRequest
+/// [`FromRequest`]: ../rocket/request/trait.FromRequest.html
 #[proc_macro_attribute]
 pub fn database(attr: TokenStream, input: TokenStream) -> TokenStream {
     crate::database::database_attr(attr, input)
