@@ -132,6 +132,10 @@ pub struct Config {
     /// or `None`. Deserialization semantics are identical to those of
     /// [`Config::ip_header`] (the value must be a valid HTTP header name).
     ///
+    /// **Warning:** Rocket does not verify that this header was set by a proxy.
+    /// Any client can set it to any value. Only use this header if all requests
+    /// go through a trusted proxy that overwrites it.
+    ///
     /// **(default: `None`)**
     ///
     /// [`CookieJar`]: crate::http::CookieJar
