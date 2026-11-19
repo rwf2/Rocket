@@ -72,6 +72,9 @@ pub enum RawStream<'r> {
     #[cfg(feature = "http3-preview")]
     H3Body(crate::listener::Cancellable<crate::listener::quic::QuicRx>),
     Multipart(multer::Field<'r>),
+    /// A read from the stream failed. Some streams report EOF after an error,
+    /// so the error is reported again by every subsequent read.
+    Failed(io::ErrorKind, String),
 }
 
 impl<'r> TransformReader<'r> {
@@ -338,7 +341,8 @@ impl Stream for RawStream<'_> {
     type Item = io::Result<Bytes>;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        match self.get_mut() {
+        let this = self.get_mut();
+        let next = match this {
             // TODO: Expose trailer headers, somehow.
             RawStream::Body(body) => {
                 Pin::new(body)
@@ -349,8 +353,17 @@ impl Stream for RawStream<'_> {
             #[cfg(feature = "http3-preview")]
             RawStream::H3Body(stream) => Pin::new(stream).poll_next(cx),
             RawStream::Multipart(s) => Pin::new(s).poll_next(cx).map_err(io::Error::other),
+            RawStream::Failed(kind, msg) => {
+                return Poll::Ready(Some(Err(io::Error::new(*kind, msg.clone()))));
+            },
             RawStream::Empty => Poll::Ready(None),
+        };
+
+        if let Poll::Ready(Some(Err(e))) = &next {
+            *this = RawStream::Failed(e.kind(), e.to_string());
         }
+
+        next
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
@@ -363,7 +376,7 @@ impl Stream for RawStream<'_> {
             #[cfg(feature = "http3-preview")]
             RawStream::H3Body(_) => (0, Some(0)),
             RawStream::Multipart(mp) => mp.size_hint(),
-            RawStream::Empty => (0, Some(0)),
+            RawStream::Failed(..) | RawStream::Empty => (0, Some(0)),
         }
     }
 }
@@ -376,6 +389,7 @@ impl std::fmt::Display for RawStream<'_> {
             #[cfg(feature = "http3-preview")]
             RawStream::H3Body(_) => f.write_str("http3 quic stream"),
             RawStream::Multipart(_) => f.write_str("multipart form field"),
+            RawStream::Failed(..) => f.write_str("failed stream"),
         }
     }
 }
