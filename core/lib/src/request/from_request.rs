@@ -163,7 +163,7 @@ pub type Outcome<S, E> = outcome::Outcome<S, (Status, E), Status>;
 ///
 ///     **Warning:** By default, the address can be chosen by the client via
 ///     the `X-Real-IP` header. See [`Config::ip_header`] before using this
-///     guard for access control.
+///     guard for access control, rate limiting, or audit attribution.
 ///
 ///   * **ProxyProto**
 ///

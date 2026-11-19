@@ -110,12 +110,10 @@ pub struct Config {
     /// or `None`. Deserialization semantics are identical to those of [`Ident`]
     /// except that the value must syntactically be a valid HTTP header name.
     ///
-    /// **Warning:** Rocket does not verify that this header was set by a proxy:
-    /// any client can send it with any value. Unless the application is only
-    /// reachable through a proxy that overwrites the header, a client can
-    /// choose the IP address reported by [`Request::client_ip()`], and so by
-    /// the `IpAddr` request guard. Set this to `false` when the application
-    /// is not behind such a proxy.
+    /// **Warning:** Rocket does not verify that this header was set by a proxy.
+    /// Any client can set it to any value. Only use this header if all requests
+    /// go through a trusted proxy that overwrites it. Otherwise, set this to
+    /// `false`.
     ///
     /// **(default: `"X-Real-IP"`)**
     #[serde(deserialize_with = "crate::config::http_header::deserialize")]

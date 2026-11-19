@@ -398,8 +398,8 @@ impl<'r> Request<'r> {
     /// [`ip_header`](crate::Config::ip_header) of the request if such a header
     /// is configured, exists and contains a valid IP address.
     ///
-    /// The header's value is client-controlled unless a trusted proxy sets it.
-    /// See [`Config::ip_header`](crate::Config::ip_header) for details.
+    /// The header's value is client-controlled unless a trusted proxy
+    /// overwrites it. See [`Config::ip_header`](crate::Config::ip_header).
     ///
     /// # Example
     ///
@@ -528,10 +528,11 @@ impl<'r> Request<'r> {
     ///
     /// **Warning:** With the default configuration, any client can choose the
     /// returned address by sending an `X-Real-IP` header. Do not rely on this
-    /// value for access control unless the application is only reachable
-    /// through a proxy that sets the header, or `ip_header` is disabled. See
-    /// [`Config::ip_header`](crate::Config::ip_header) for details. The
-    /// connection's address is always available via [`Request::remote()`].
+    /// value for access control, rate limiting, or audit attribution unless
+    /// the application is only reachable through a proxy that overwrites the
+    /// header, or `ip_header` is disabled. See
+    /// [`Config::ip_header`](crate::Config::ip_header) for details. Use
+    /// [`Request::remote()`] to retrieve the connection's address directly.
     ///
     /// # Example
     ///

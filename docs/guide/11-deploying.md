@@ -219,7 +219,9 @@ Our recommendation for a direct self-managed deployment is to:
     NGINX overwrites any `X-Real-IP` header sent by the client, so the value
     can be trusted as long as the application is only reachable via NGINX.
     Otherwise, clients can send the header themselves to spoof their IP; set
-    `ip_header = false` if the application isn't behind such a proxy.
+    `ip_header = false` if the application isn't behind such a proxy. This
+    applies whenever the address is used for access control, rate limiting,
+    or audit attribution.
 
 [`cargo-zigbuild`]: https://github.com/rust-cross/cargo-zigbuild
 [`ip_header`]: @api/master/rocket/config/struct.Config.html#structfield.ip_header
