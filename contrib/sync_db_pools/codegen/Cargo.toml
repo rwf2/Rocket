@@ -17,12 +17,12 @@ proc-macro = true
 workspace = true
 
 [dependencies]
-quote = "1.0"
+quote = "1.0.47"
 devise = "0.5"
 proc-macro2-diagnostics = { version = "0.11", features = ["nightly"] }
 
 [dev-dependencies]
-version_check = "0.9"
+version_check = "0.9.4"
 trybuild = "1.0"
 rocket_sync_db_pools = { path = "../lib" }
 rocket = { path = "../../../core/lib" }

@@ -24,7 +24,7 @@ memcache_pool = ["memcache"]
 [dependencies]
 r2d2 = "0.8.9"
 tokio = { version = "1.54.1", features = ["rt", "rt-multi-thread"] }
-serde = { version = "1.0", features = ["derive"] }
+serde = { version = "1.0.220", features = ["derive"] }
 
 diesel = { version = "2.3.10", default-features = false, optional = true }
 
@@ -46,7 +46,7 @@ path = "../../../core/lib"
 default-features = false
 
 [build-dependencies]
-version_check = "0.9.1"
+version_check = "0.9.4"
 
 [dev-dependencies.rocket]
 version = "0.6.0-dev"
