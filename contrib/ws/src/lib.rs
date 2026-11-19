@@ -57,8 +57,11 @@
 //! #
 //! #[get("/echo")]
 //! fn echo_stream(ws: ws::WebSocket) -> ws::Stream!['static] {
-//!     let ws = ws.config(ws::Config::default()
-//!         .max_write_buffer_size(1 << 20));
+//!     let config = ws::Config::default()
+//!         .max_message_size(Some(4 << 20))
+//!         .read_buffer_size(8 * 1024);
+//!
+//!     let ws = ws.config(config);
 //!
 //!     ws::Stream! { ws =>
 //!         for await message in ws {
@@ -80,6 +83,7 @@ mod duplex;
 mod websocket;
 
 pub use self::websocket::{WebSocket, Channel};
+pub use self::tungstenite::{Bytes, Utf8Bytes};
 
 /// A WebSocket message.
 ///
@@ -120,10 +124,20 @@ pub use self::tungstenite::Message;
 /// WebSocket connection configuration.
 ///
 /// The default configuration for a [`WebSocket`] can be changed by calling
-/// [`WebSocket::config()`] with a value of this type. The defaults are obtained
-/// via [`Default::default()`]. You don't generally need to reconfigure a
-/// `WebSocket` unless you're certain you need different values. In other words,
-/// this structure should rarely be used.
+/// [`WebSocket::config()`] with a value of this type, which replaces the
+/// default configuration entirely. Values are obtained via
+/// [`Default::default()`] and changed with builder methods.
+///
+/// By default, each connection allocates an 8KiB read buffer when it is
+/// created. `Config::default()`, however, uses a 128KiB read buffer. Unless
+/// [`Config::read_buffer_size()`] is used to set a smaller size, applications
+/// with many mostly idle connections may use considerably more memory with a
+/// custom configuration. Larger buffers can improve performance when reading
+/// many messages.
+///
+/// The read buffer size does not limit the size of incoming messages. Use
+/// [`Config::max_message_size()`] and [`Config::max_frame_size()`] to set
+/// limits.
 ///
 /// # Example
 ///
@@ -134,14 +148,14 @@ pub use self::tungstenite::Message;
 ///
 /// #[get("/echo")]
 /// fn echo_stream(ws: ws::WebSocket) -> ws::Stream!['static] {
-///     // Use the default values for the rest.
-///     let ws = ws.config(ws::Config::default()
-///         // Enable backpressure with a max write buffer size of 1MiB.
-///         .max_write_buffer_size(1.mebibytes().as_u64() as usize)
+///     let config = ws::Config::default()
+///         // Keep the 8KiB read buffer that is used by default.
+///         .read_buffer_size(8.kibibytes().as_u64() as usize)
 ///         // Decrease the maximum (complete) message size to 4MiB.
 ///         .max_message_size(Some(4.mebibytes().as_u64() as usize))
 ///         // Decrease the maximum size of _one_ frame (not message) to 1MiB.
-///         .max_frame_size(Some(1.mebibytes().as_u64() as usize)));
+///         .max_frame_size(Some(1.mebibytes().as_u64() as usize));
+///     let ws = ws.config(config);
 ///
 ///     ws::Stream! { ws =>
 ///         for await message in ws {

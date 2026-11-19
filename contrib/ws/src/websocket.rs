@@ -36,7 +36,20 @@ pub struct WebSocket {
 }
 
 impl WebSocket {
+    fn new(key: String) -> WebSocket {
+        // `Config::default()` eagerly allocates a 128KiB read buffer for each
+        // connection. A smaller buffer keeps idle connections inexpensive.
+        let config = Config::default().read_buffer_size(8 * 1024);
+        WebSocket { config, key }
+    }
+
     /// Change the default connection configuration to `config`.
+    ///
+    /// `config` replaces the default configuration entirely. By default, each
+    /// connection allocates an 8KiB read buffer, while [`Config::default()`]
+    /// uses a 128KiB read buffer. To keep a small buffer, set its size
+    /// explicitly with [`Config::read_buffer_size()`]. See [`Config`] for
+    /// details.
     ///
     /// # Example
     ///
@@ -46,8 +59,11 @@ impl WebSocket {
     /// #
     /// #[get("/echo")]
     /// fn echo_stream(ws: ws::WebSocket) -> ws::Stream!['static] {
-    ///     let ws = ws.config(ws::Config::default()
-    ///         .max_write_buffer_size(1 << 20));
+    ///     let config = ws::Config::default()
+    ///         .max_message_size(Some(4 << 20))
+    ///         .read_buffer_size(8 * 1024);
+    ///
+    ///     let ws = ws.config(config);
     ///
     ///     ws::Stream! { ws =>
     ///         for await message in ws {
@@ -230,9 +246,7 @@ impl<'r> FromRequest<'r> for WebSocket {
                 .is_ok_and(|bytes| bytes.len() == 16)
         }).map(|key| derive_accept_key(key.as_bytes()));
         match key {
-            Some(key) if is_upgrade && is_ws && is_13 => {
-                Outcome::Success(WebSocket { key, config: Config::default() })
-            },
+            Some(key) if is_upgrade && is_ws && is_13 => Outcome::Success(WebSocket::new(key)),
             Some(_) | None => Outcome::Forward(Status::BadRequest)
         }
     }
