@@ -31,6 +31,13 @@ use crate::tls::error::{Result, Error, KeyError};
 ///     most to least. It is not required and defaults to
 ///     [`CipherSuite::DEFAULT_SET`], the recommended setting.
 ///
+///     If the application installs a process-wide default
+///     [`CryptoProvider`], Rocket uses that provider as installed and does not
+///     apply `ciphers`. Clients negotiate from the provider's cipher suites,
+///     and `prefer_server_cipher_order` applies to the provider's order. An
+///     application that wants the configured suites to apply reads them with
+///     [`TlsConfig::ciphers()`] and builds its provider from them.
+///
 ///   * `prefer_server_cipher_order`
 ///
 ///     A boolean that indicates whether the server should regard its own
@@ -83,6 +90,8 @@ use crate::tls::error::{Result, Error, KeyError};
 /// # assert_eq!(tls_config.ciphers().count(), 9);
 /// # assert!(!tls_config.prefer_server_cipher_order());
 /// ```
+///
+/// [`CryptoProvider`]: https://docs.rs/rustls/0.23/rustls/crypto/struct.CryptoProvider.html
 #[derive(Debug, PartialEq, Clone, Deserialize, Serialize)]
 pub struct TlsConfig {
     /// Path to a PEM file with, or raw bytes for, a DER-encoded X.509 TLS
@@ -107,6 +116,8 @@ pub struct TlsConfig {
 }
 
 /// A supported TLS cipher suite.
+///
+/// See [`TlsConfig`] for when the configured cipher suites apply.
 #[allow(non_camel_case_types)]
 #[derive(PartialEq, Eq, Debug, Copy, Clone, Hash, Deserialize, Serialize)]
 #[non_exhaustive]
@@ -196,7 +207,7 @@ impl TlsConfig {
     /// If a suite appears more than once in `ciphers`, only the first suite
     /// (and its relative order) is considered. If all cipher suites for a
     /// version oF TLS are disabled, the respective protocol itself is disabled
-    /// entirely.
+    /// entirely. See [`TlsConfig`] for when the configured cipher suites apply.
     ///
     /// # Example
     ///
@@ -364,8 +375,9 @@ impl TlsConfig {
         to_reader(&self.key)
     }
 
-    /// Returns an iterator over the enabled cipher suites in their order of
-    /// preference from most to least preferred.
+    /// Returns an iterator over the configured cipher suites in their order of
+    /// preference from most to least preferred. See [`TlsConfig`] for when
+    /// they apply.
     ///
     /// # Example
     ///
@@ -399,7 +411,7 @@ impl TlsConfig {
     ///
     /// # let certs_buf = &[];
     /// # let key_buf = &[];
-    /// // The default prefers the server's order.
+    /// // The default prefers the client's order.
     /// let tls_config = TlsConfig::from_bytes(certs_buf, key_buf);
     /// assert!(!tls_config.prefer_server_cipher_order());
     ///
@@ -570,7 +582,7 @@ impl CipherSuite {
         CipherSuite::TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
     ];
 
-    /// The default set and order of cipher suites. These are the TLS 1.3
+    /// The TLS v1.3 set and order of cipher suites. These are the TLS 1.3
     /// variants in [`CipherSuite`] in their declaration order.
     pub const TLS_V13_SET: [CipherSuite; 3] = [
         CipherSuite::TLS_CHACHA20_POLY1305_SHA256,
@@ -578,7 +590,7 @@ impl CipherSuite {
         CipherSuite::TLS_AES_128_GCM_SHA256,
     ];
 
-    /// The default set and order of cipher suites. These are the TLS 1.2
+    /// The TLS v1.2 set and order of cipher suites. These are the TLS 1.2
     /// variants in [`CipherSuite`] in their declaration order.
     pub const TLS_V12_SET: [CipherSuite; 6] = [
         CipherSuite::TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
