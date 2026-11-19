@@ -10,4 +10,4 @@ rocket = { path = "../../core/lib", features = ["tls", "mtls", "secrets", "http3
 yansi = "1.0.1"
 
 [target.'cfg(unix)'.dependencies]
-rustls = { version = "0.23", features = ["aws_lc_rs"] }
+rustls = { version = "0.23.46", features = ["aws_lc_rs"] }
