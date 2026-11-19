@@ -4,7 +4,7 @@ use rocket::http::Status;
 /****************************** `File` Responder ******************************/
 
 // We use a lock to synchronize between tests so FS operations don't race.
-static FS_LOCK: parking_lot::Mutex<()> = parking_lot::const_mutex(());
+static FS_LOCK: parking_lot::Mutex<()> = parking_lot::Mutex::new(());
 
 #[test]
 fn test_file() {

@@ -13,4 +13,4 @@ harness = false
 
 [dev-dependencies]
 rocket = { path = "../core/lib/" }
-criterion = "0.5.1"
+criterion = "0.8"

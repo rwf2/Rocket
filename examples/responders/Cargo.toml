@@ -7,4 +7,4 @@ publish = false
 
 [dependencies]
 rocket = { path = "../../core/lib" }
-parking_lot = "0.12"
+parking_lot = "0.13"

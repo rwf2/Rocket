@@ -74,11 +74,11 @@ impl<T: Shareable> SharedStack<T>
         //     would result in a race to `vec.push()`; `RawMutex` ensures that
         //     this doesn't occur.
         unsafe {
-            self.mutex.lock();
+            let guard = self.mutex.lock();
             let vec: &mut Vec<T> = &mut *self.stack.get();
             vec.push(string.into());
             let last = vec.last().expect("push() => non-empty");
-            self.mutex.unlock();
+            self.mutex.unlock(guard);
             last
         }
     }

@@ -31,7 +31,7 @@ pub enum Error {
     #[error("bad request: {0}")]
     Request(#[from] reqwest::Error),
     #[error("IPC failure: {0}")]
-    Ipc(#[from] ipc_channel::ipc::IpcError),
+    Ipc(#[from] ipc_channel::IpcError),
     #[error("liftoff failed")]
     Liftoff(String, String),
 }

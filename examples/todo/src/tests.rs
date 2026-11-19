@@ -8,7 +8,7 @@ use rocket::http::{Status, ContentType};
 // We use a lock to synchronize between tests so DB operations don't collide.
 // For now. In the future, we'll have a nice way to run each test in a DB
 // transaction so we can regain concurrency.
-static DB_LOCK: parking_lot::Mutex<()> = parking_lot::const_mutex(());
+static DB_LOCK: parking_lot::Mutex<()> = parking_lot::Mutex::new(());
 
 macro_rules! run_test {
     (|$client:ident, $conn:ident| $block:expr) => ({
