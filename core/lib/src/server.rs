@@ -17,7 +17,6 @@ use crate::listener::{Listener, Connection, BouncedExt, CancellableExt, Lingerin
 use crate::error::log_server_error;
 use crate::data::{IoStream, RawStream};
 use crate::util::{spawn_inspect, FutureExt, ReaderStream};
-use crate::http::Status;
 use crate::trace::{Trace, TraceAll};
 
 type Result<T, E = crate::Error> = std::result::Result<T, E>;
@@ -45,13 +44,7 @@ impl Rocket<Orbit> {
         let mut response = request.into_response(
             stream,
             |rocket, request, data| Box::pin(rocket.preprocess(request, data)),
-            |token, rocket, request, data| Box::pin(async move {
-                if !request.errors.is_empty() {
-                    return rocket.dispatch_error(Status::BadRequest, request).await;
-                }
-
-                rocket.dispatch(token, request, data).await
-            })
+            |token, rocket, request, data| Box::pin(rocket.dispatch(token, request, data))
         ).await;
 
         // TODO: Should upgrades be handled in dispatch?

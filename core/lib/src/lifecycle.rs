@@ -79,7 +79,8 @@ impl Rocket<Orbit> {
     /// Dispatches the request to the router and processes the outcome to
     /// produce a response. If the initial outcome is a *forward* and the
     /// request was a HEAD request, the request is rewritten and rerouted as a
-    /// GET. This is automatic HEAD handling.
+    /// GET. This is automatic HEAD handling. A request that failed to parse
+    /// isn't routed; its outcome is a `400` error.
     ///
     /// After performing the above, if the outcome is a forward or error, the
     /// appropriate error catcher is invoked to produce the response. Otherwise,
@@ -99,7 +100,12 @@ impl Rocket<Orbit> {
         let was_head_request = request.method() == Method::Head;
 
         // Route the request and run the user's handlers.
-        let mut response = match self.route(request, data).await {
+        let outcome = match request.errors.is_empty() {
+            true => self.route(request, data).await,
+            false => Outcome::Error(Status::BadRequest),
+        };
+
+        let mut response = match outcome {
             Outcome::Success(response) => response,
             Outcome::Forward((data, _)) if request.method() == Method::Head => {
                 tracing::Span::current().record("autohandled", true);
