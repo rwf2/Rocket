@@ -57,6 +57,13 @@ use either::Either;
 /// guard, the extension is identified by the Content-Type of the request, if
 /// any. If there is no Content-Type, the limit `file` is used.
 ///
+/// Multipart data fields without a Content-Type use [`ContentType::Binary`],
+/// so `file/bin` applies when configured, and `file` otherwise. A field's file
+/// name does not select its limit.
+///
+/// Value fields are buffered in memory. Data fields, including multipart fields
+/// with a file name, are stored in `temp_dir`, which must exist and be writable.
+///
 /// # Cappable
 ///
 /// A data stream can be partially read into a `TempFile` even if the incoming

@@ -213,6 +213,13 @@ use crate::http::uncased::AsUncased;
 /// data fields. Multipart values preserve their UTF-8 contents, including a
 /// leading byte order mark (BOM).
 ///
+/// Data fields are subject to the receiving guard's data limit. For example,
+/// strings use `string`, byte slices use `bytes`, and [`TempFile`] uses `file`
+/// or `file/$ext`. See [`Limits`] for defaults.
+///
+/// [`TempFile`]: crate::fs::TempFile
+/// [`Limits`]: crate::data::Limits
+///
 /// [field wire format]: crate::form#field-wire-format
 ///
 /// Parsing is split into 3 stages. After preprocessing, the three stages are:
