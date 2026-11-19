@@ -25,13 +25,13 @@ workspace = true
 [features]
 default = ["http2", "tokio-macros", "trace"]
 http2 = ["hyper/http2", "hyper-util/http2", "dep:h2"]
-http3-preview = ["quinn", "h3", "h3-quinn", "tls"]
+http3-preview = ["quinn", "h3", "h3-quinn", "tls", "dep:quinn-proto"]
 secrets = ["cookie/private", "cookie/key-expansion"]
 json = ["serde_json"]
 xml = ["quick-xml"]
 msgpack = ["rmp-serde"]
 uuid = ["uuid_", "rocket_http/uuid"]
-tls = ["rustls", "tokio-rustls", "dep:rustls-webpki"]
+tls = ["rustls", "tokio-rustls", "dep:rustls-webpki", "dep:ring"]
 mtls = ["tls", "x509-parser"]
 tokio-macros = ["tokio/macros"]
 trace = ["tracing-subscriber", "tinyvec", "thread_local", "rustls?/logging", "tokio-rustls?/logging", "multer/log", "h3?/tracing", "h3-quinn?/tracing"]
@@ -123,10 +123,22 @@ version = "0.103.16"
 default-features = false
 optional = true
 
+# Require the fix for RUSTSEC-2025-0009.
+[dependencies.ring]
+version = "0.17.12"
+default-features = false
+optional = true
+
 [dependencies.quinn]
 version = "0.11.12"
 default-features = false
 features = ["runtime-tokio", "rustls-ring"]
+optional = true
+
+# Require the fixes for RUSTSEC-2026-0523 and RUSTSEC-2026-0524.
+[dependencies.quinn-proto]
+version = "0.11.19"
+default-features = false
 optional = true
 
 [dependencies.h3]
