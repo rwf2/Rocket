@@ -146,6 +146,63 @@ impl Drop for QuicTx {
     }
 }
 
+/// Logs an error from serving an HTTP/3 connection or request. A client
+/// closing its connection, cancelling a request, or going idle is routine and
+/// logged at `debug`. Other errors from h3 or quinn are logged at `warn`, as
+/// hyper's are. Any other error is a server error.
+pub(crate) fn log_error(error: &io::Error) {
+    use h3::error::{Code, ConnectionError, LocalError, StreamError};
+    use h3::quic::ConnectionErrorIncoming;
+
+    fn quinn_routine(error: &quinn::ConnectionError) -> bool {
+        use quinn::ConnectionError::*;
+
+        match error {
+            ApplicationClosed(close) => close.error_code.into_inner() == Code::H3_NO_ERROR.value(),
+            Reset | TimedOut | LocallyClosed => true,
+            _ => false,
+        }
+    }
+
+    // h3's error variants are non-exhaustive, so fields are matched by name.
+    fn h3_routine(error: &ConnectionError) -> bool {
+        match error {
+            ConnectionError::Timeout { .. } => true,
+            ConnectionError::Local { error: LocalError::Closing { .. }, .. } => true,
+            ConnectionError::Remote { 0: ConnectionErrorIncoming::Timeout, .. } => true,
+            ConnectionError::Remote { 0: ConnectionErrorIncoming::Undefined(e), .. } => {
+                e.downcast_ref().is_some_and(quinn_routine)
+            }
+            error => error.is_h3_no_error(),
+        }
+    }
+
+    let Some(inner) = error.get_ref() else {
+        return crate::error::log_server_error(error);
+    };
+
+    let routine = if let Some(e) = inner.downcast_ref::<ConnectionError>() {
+        h3_routine(e)
+    } else if let Some(e) = inner.downcast_ref::<StreamError>() {
+        match e {
+            StreamError::RemoteTerminate { .. } | StreamError::RemoteClosing { .. } => true,
+            StreamError::ConnectionError { 0: e, .. } => h3_routine(e),
+            _ => false,
+        }
+    } else if let Some(e) = inner.downcast_ref::<quinn::ConnectionError>() {
+        quinn_routine(e)
+    } else if inner.is::<tokio::time::error::Elapsed>() {
+        false
+    } else {
+        return crate::error::log_server_error(error);
+    };
+
+    match routine {
+        true => debug!(error = %error, "http/3 connection or request closed"),
+        false => warn!(error = %error, "http/3 connection or request failed"),
+    }
+}
+
 impl Stream for QuicRx {
     type Item = io::Result<Bytes>;
 

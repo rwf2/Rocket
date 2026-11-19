@@ -216,16 +216,17 @@ impl Rocket<Orbit> {
     #[cfg(feature = "http3-preview")]
     async fn serve3(self: Arc<Self>, endpoint: quinn::Endpoint) -> Result<()> {
         use std::future::IntoFuture;
+        use std::io::ErrorKind::TimedOut;
         use either::Either;
         use crate::listener::{Endpoint, quic::{self, QuicRx, QuicTx}};
 
         while let Some(Some(incoming)) = endpoint.accept().race(self.shutdown()).await.left() {
             let rocket = self.clone();
-            spawn_inspect(|e: &io::Error| log_server_error(e), async move {
-                let conn = incoming.into_future()
-                    .map_err(io::Error::other)
-                    .race_io(rocket.shutdown())
-                    .await?;
+            spawn_inspect(quic::log_error, async move {
+                let conn = match incoming.into_future().race(rocket.shutdown()).await {
+                    Either::Left(conn) => conn.map_err(io::Error::other)?,
+                    Either::Right(_) => return Ok(()),
+                };
 
                 let remote = Endpoint::Quic(conn.remote_address()).assume_tls();
                 let (certs, sni) = (quic::certificates(&conn), quic::server_name(&conn));
@@ -253,23 +254,24 @@ impl Rocket<Orbit> {
                     };
 
                     let (rocket, meta, conn) = (rocket.clone(), meta.clone(), conn.clone());
-                    spawn_inspect(|e: &io::Error| log_server_error(e), async move {
+                    spawn_inspect(quic::log_error, async move {
                         // Limit the time to read headers as `serve12` does for HTTP/1.
-                        let headers = resolver.resolve_request().map_err(io::Error::other);
-                        let (req, stream) = tokio::time::timeout(Duration::from_secs(15), headers)
-                            .map_err(io::Error::from)
-                            .and_then(futures::future::ready)
-                            .race_io(rocket.shutdown())
-                            .await?;
+                        let headers = resolver.resolve_request();
+                        let headers = tokio::time::timeout(Duration::from_secs(15), headers);
+                        let (req, stream) = match headers.race(rocket.shutdown()).await {
+                            Either::Left(Ok(headers)) => headers.map_err(io::Error::other)?,
+                            Either::Left(Err(e)) => return Err(io::Error::new(TimedOut, e)),
+                            Either::Right(_) => return Ok(()),
+                        };
 
                         let (tx, rx) = stream.split();
                         let mut tx = QuicTx::new(tx, rocket.shutdown.grace.clone());
                         let rx = QuicRx(rx).cancellable(rocket.shutdown.clone());
-                        let response = rocket.clone()
-                            .service(req.into_parts().0, rx, None, meta)
-                            .map_err(io::Error::other)
-                            .race_io(rocket.shutdown.mercy.clone())
-                            .await?;
+                        let service = rocket.clone().service(req.into_parts().0, rx, None, meta);
+                        let response = match service.race(rocket.shutdown.mercy.clone()).await {
+                            Either::Left(response) => response.map_err(io::Error::other)?,
+                            Either::Right(_) => return Ok(()),
+                        };
 
                         // A body may wait indefinitely for data, so stop waiting when
                         // the connection closes or the grace period ends.

@@ -546,6 +546,63 @@ async fn connection_headers_are_not_sent() {
     server.shutdown().await;
 }
 
+#[derive(Default)]
+struct Slow {
+    entered: Notify,
+    release: Notify,
+}
+
+#[get("/slow")]
+async fn slow(slow: &rocket::State<Arc<Slow>>) -> &'static str {
+    slow.entered.notify_one();
+    slow.release.notified().await;
+    "slow"
+}
+
+#[rocket::async_test]
+async fn shutdown_waits_for_requests_in_flight() {
+    let state = Arc::new(Slow::default());
+    let server = Server::launch(rocket().manage(state.clone()).mount("/", routes![slow])).await;
+    let mut client = Client::connect(server.addr).await;
+    let mut stream = client.request("GET", "/slow", None).await;
+    state.entered.notified().await;
+
+    let start = std::time::Instant::now();
+    server.shutdown.notify();
+    rocket::tokio::time::sleep(Duration::from_millis(100)).await;
+    assert!(!server.task.is_finished());
+
+    state.release.notify_one();
+    let head = stream.recv_response().await.unwrap();
+    assert_eq!(Response { head, stream }.into_string().await, "slow");
+    client.close().await;
+    server.task.await.unwrap();
+    assert!(start.elapsed() < Duration::from_secs(1), "shutdown took {:?}", start.elapsed());
+}
+
+#[rocket::async_test]
+async fn shutdown_cancels_responses_after_grace() {
+    let signals = Arc::new(Signals::default());
+    let rocket = rocket();
+    let figment = rocket.figment().clone().merge(("shutdown.grace", 1));
+    let rocket = rocket.reconfigure(figment).manage(signals.clone()).mount("/", routes![stalled]);
+    let server = Server::launch(rocket).await;
+    let mut client = Client::connect(server.addr).await;
+    let mut response = client.get("/stalled?sized=false").await;
+    assert_eq!(response.chunk().await.unwrap(), "hello");
+    signals.stalled.notified().await;
+
+    // When the grace period ends, the stream is reset and the connection is
+    // closed. Either way, the response must not appear complete.
+    server.shutdown.notify();
+    let (rest, end) = timeout(Duration::from_secs(3), response.body()).await.unwrap();
+    assert!(rest.is_empty());
+    assert_ne!(end, End::Finished);
+    timeout(Duration::from_secs(1), signals.dropped.notified()).await.unwrap();
+    client.close().await;
+    server.task.await.unwrap();
+}
+
 // Waits for the server's 15 second header read timeout.
 #[ignore = "takes 15 seconds"]
 #[rocket::async_test]
