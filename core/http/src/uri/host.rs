@@ -28,9 +28,9 @@ use crate::uri::{Absolute, Authority};
 /// construction of URIs to internal routes in a manner controllable by an
 /// attacker, inevitably leading to "HTTP Host header attacks".
 ///
-/// Instead, a `Host` must be checked before being converted to a [`Uri`]
-/// value. The [`Host::to_authority`] and [`Host::to_absolute`] methods provide
-/// these mechanisms:
+/// Instead, a `Host` must be checked before being converted to a
+/// [`Uri`](crate::uri::Uri) value. The [`Host::to_authority`] and
+/// [`Host::to_absolute`] methods provide these mechanisms:
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;

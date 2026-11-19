@@ -18,8 +18,7 @@ impl<'h> Header<'h> {
     /// Constructs a new header. This method should be used rarely and only for
     /// non-standard headers. Instead, prefer to use the `Into<Header>`
     /// implementations of many types, including
-    /// [`ContentType`](crate::ContentType) and all of the headers in
-    /// [`http::hyper::header`](hyper::header).
+    /// [`ContentType`](crate::ContentType) and [`Accept`](crate::Accept).
     ///
     /// # Examples
     ///

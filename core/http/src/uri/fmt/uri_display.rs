@@ -222,7 +222,7 @@ use crate::uri::fmt::{Part, Path, Query, Formatter};
 /// existing implementations of `UriDisplay` as much as possible. In the example
 /// below, for instance, `Name`'s implementation defers to `String`'s
 /// implementation. To percent-encode a string, use
-/// [`Uri::percent_encode()`](crate::uri::Uri::percent_encode()).
+/// [`RawStr::percent_encode()`](crate::RawStr::percent_encode()).
 ///
 /// ## Example
 ///
