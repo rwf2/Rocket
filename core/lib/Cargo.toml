@@ -24,7 +24,7 @@ workspace = true
 
 [features]
 default = ["http2", "tokio-macros", "trace"]
-http2 = ["hyper/http2", "hyper-util/http2"]
+http2 = ["hyper/http2", "hyper-util/http2", "dep:h2"]
 http3-preview = ["quinn", "h3", "h3-quinn", "tls"]
 secrets = ["cookie/private", "cookie/key-expansion"]
 json = ["serde_json"]
@@ -47,10 +47,12 @@ uuid_ = { package = "uuid", version = "1", optional = true, features = ["serde"]
 x509-parser = { version = "0.18", optional = true }
 
 # Hyper dependencies
-http = "1"
-bytes = "1.4"
-hyper = { version = "1.1", default-features = false, features = ["http1", "server"] }
-hyper-util = { version = "0.1.3", default-features = false, features = ["http1", "server", "tokio"] }
+http = "1.1"
+# Require the fix for RUSTSEC-2026-0258.
+h2 = { version = "0.4.20", optional = true }
+bytes = "1.11.1"
+hyper = { version = "1.12", default-features = false, features = ["http1", "server"] }
+hyper-util = { version = "0.1.21", default-features = false, features = ["http1", "server", "tokio"] }
 
 # Non-optional, core dependencies from here on out.
 yansi = { version = "1.0.1", features = ["detect-tty"] }
