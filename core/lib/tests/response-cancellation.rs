@@ -29,6 +29,7 @@ struct Signals {
 struct StalledReader {
     signals: Arc<Signals>,
     started: bool,
+    sized: bool,
 }
 
 impl AsyncRead for StalledReader {
@@ -56,13 +57,18 @@ impl Drop for StalledReader {
 
 impl<'r> Responder<'r, 'static> for StalledReader {
     fn respond_to(self, _: &'r rocket::Request<'_>) -> rocket::response::Result<'static> {
-        Response::build().streamed_body(self).ok()
+        let mut response = Response::build();
+        if self.sized {
+            response.raw_header("Content-Length", "10");
+        }
+
+        response.streamed_body(self).ok()
     }
 }
 
-#[get("/")]
-fn stalled(signals: &rocket::State<Arc<Signals>>) -> StalledReader {
-    StalledReader { signals: signals.inner().clone(), started: false }
+#[get("/?<sized>")]
+fn stalled(sized: bool, signals: &rocket::State<Arc<Signals>>) -> StalledReader {
+    StalledReader { signals: signals.inner().clone(), started: false, sized }
 }
 
 #[get("/ready")]
@@ -70,7 +76,7 @@ fn ready() -> &'static str {
     "ready"
 }
 
-async fn check_cancellation(http2: bool) {
+async fn check_cancellation(http2: bool, sized: bool) {
     let signals = Arc::new(Signals::default());
     let (tx, rx) = oneshot::channel();
     let mut config = rocket::Config { port: 0, ..rocket::Config::debug_default() };
@@ -91,7 +97,8 @@ async fn check_cancellation(http2: bool) {
                 TokioExecutor::new(), TokioIo::new(tcp)
             ).await.unwrap();
             let connection = rocket::tokio::spawn(connection);
-            let request = hyper::Request::builder().uri("http://localhost/")
+            let uri = format!("http://localhost/?sized={sized}");
+            let request = hyper::Request::builder().uri(uri)
                 .body(Empty::<Bytes>::new()).unwrap();
             let mut response = client.send_request(request).await.unwrap();
             assert_eq!(response.version(), hyper::Version::HTTP_2);
@@ -112,7 +119,8 @@ async fn check_cancellation(http2: bool) {
         #[cfg(not(feature = "http2"))]
         unreachable!();
     } else {
-        tcp.write_all(b"GET / HTTP/1.1\r\nHost: localhost\r\n\r\n").await.unwrap();
+        let request = format!("GET /?sized={sized} HTTP/1.1\r\nHost: localhost\r\n\r\n");
+        tcp.write_all(request.as_bytes()).await.unwrap();
         let mut bytes = Vec::new();
         while !bytes.windows(5).any(|window| window == b"hello") {
             let mut buf = [0; 1024];
@@ -134,11 +142,15 @@ async fn check_cancellation(http2: bool) {
 
 #[rocket::async_test]
 async fn http1_disconnect_drops_stalled_reader() {
-    timeout(Duration::from_secs(10), check_cancellation(false)).await.unwrap();
+    for sized in [false, true] {
+        timeout(Duration::from_secs(10), check_cancellation(false, sized)).await.unwrap();
+    }
 }
 
 #[cfg(feature = "http2")]
 #[rocket::async_test]
 async fn http2_reset_drops_stalled_reader() {
-    timeout(Duration::from_secs(10), check_cancellation(true)).await.unwrap();
+    for sized in [false, true] {
+        timeout(Duration::from_secs(10), check_cancellation(true, sized)).await.unwrap();
+    }
 }
