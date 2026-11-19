@@ -364,6 +364,7 @@ are:
   * [`Flash`] - Sets a "flash" cookie that is removed when accessed.
   * [`Json`] - Automatically serializes values into JSON.
   * [`MsgPack`] - Automatically serializes values into MessagePack.
+  * [`Xml`] - Automatically serializes values into XML.
   * [`Template`] - Renders a dynamic template using Handlebars, Tera or MiniJinja.
 
 [`status`]: @api/master/rocket/response/status/
@@ -373,6 +374,7 @@ are:
 [`Redirect`]: @api/master/rocket/response/struct.Redirect.html
 [`Flash`]: @api/master/rocket/response/struct.Flash.html
 [`MsgPack`]: @api/master/rocket/serde/msgpack/struct.MsgPack.html
+[`Xml`]: @api/master/rocket/serde/xml/struct.Xml.html
 [`Template`]: @api/master/rocket_dyn_templates/struct.Template.html
 
 ### Async Streams

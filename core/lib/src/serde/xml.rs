@@ -49,16 +49,25 @@ pub use quick_xml;
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
-/// # type User = usize;
-/// use rocket::serde::xml::Xml;
+/// use rocket::serde::{Serialize, xml::Xml};
+///
+/// #[derive(Serialize)]
+/// #[serde(crate = "rocket::serde")]
+/// struct User {
+///     id: usize,
+/// }
 ///
 /// #[get("/users/<id>")]
 /// fn user(id: usize) -> Xml<User> {
-///     let user_from_id = User::from(id);
+///     let user_from_id = User { id };
 ///     /* ... */
 ///     Xml(user_from_id)
 /// }
 /// ```
+///
+/// XML requires a root element, so `T` must serialize as a named element, such
+/// as a struct or enum. Values without a name, like integers, strings,
+/// sequences, and tuples, fail to serialize, resulting in a `500` response.
 ///
 /// ## Receiving XML
 ///
@@ -72,7 +81,10 @@ pub use quick_xml;
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
-/// # type User = usize;
+/// # use rocket::serde::Deserialize;
+/// # #[derive(Deserialize)]
+/// # #[serde(crate = "rocket::serde")]
+/// # struct User { id: usize }
 /// use rocket::serde::xml::Xml;
 ///
 /// #[post("/user", format = "xml", data = "<user>")]
@@ -80,6 +92,9 @@ pub use quick_xml;
 ///     /* ... */
 /// }
 /// ```
+///
+/// The name of the root element is not checked: `<Other>...</Other>`
+/// deserializes into a `User` just as `<User>...</User>` does.
 ///
 /// You don't _need_ to use `format = "xml"`, but it _may_ be what you want.
 /// Using `format = xml` means that any request that doesn't specify
@@ -93,7 +108,10 @@ pub use quick_xml;
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
-/// # type Metadata = usize;
+/// # use rocket::serde::Deserialize;
+/// # #[derive(Deserialize)]
+/// # #[serde(crate = "rocket::serde")]
+/// # struct Metadata { version: usize }
 /// use rocket::form::{Form, FromForm};
 /// use rocket::serde::xml::Xml;
 ///

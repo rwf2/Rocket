@@ -64,7 +64,7 @@
 //! | `tls`           | No       | Support for [TLS] encrypted connections.                |
 //! | `mtls`          | No       | Support for verified clients via [mutual TLS].          |
 //! | `json`          | No       | Support for [JSON (de)serialization].                   |
-//! | `xml`          |  No       | Support for [XML (de)serialization].                   |
+//! | `xml`           | No       | Support for [XML (de)serialization].                    |
 //! | `msgpack`       | No       | Support for [MessagePack (de)serialization].            |
 //! | `uuid`          | No       | Support for [UUID value parsing and (de)serialization]. |
 //! | `tokio-macros`  | No       | Enables the `macros` feature in the exported `tokio`    |

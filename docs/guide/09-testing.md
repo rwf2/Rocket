@@ -75,6 +75,7 @@ a few below:
   * [`into_bytes`]: reads the body data into a `Vec<u8>`.
   * [`into_json`]: deserializes the body data on-the-fly as JSON.
   * [`into_msgpack`]: deserializes the body data on-the-fly as MessagePack.
+  * [`into_xml`]: deserializes the body data on-the-fly as XML.
 
 [`LocalResponse`]: @api/master/rocket/local/blocking/struct.LocalResponse.html
 [`status`]: @api/master/rocket/local/blocking/struct.LocalResponse.html#method.status
@@ -84,6 +85,7 @@ a few below:
 [`into_bytes`]: @api/master/rocket/local/blocking/struct.LocalResponse.html#method.into_bytes
 [`into_json`]: @api/master/rocket/local/blocking/struct.LocalResponse.html#method.into_json
 [`into_msgpack`]: @api/master/rocket/local/blocking/struct.LocalResponse.html#method.into_msgpack
+[`into_xml`]: @api/master/rocket/local/blocking/struct.LocalResponse.html#method.into_xml
 
 These methods are typically used in combination with the `assert_eq!` or
 `assert!` macros as follows:

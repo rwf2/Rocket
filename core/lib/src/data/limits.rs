@@ -62,10 +62,12 @@ use crate::http::uncased::Uncased;
 /// | `bytes`           | 8KiB    | [`Vec<u8>`]  | data guard                            |
 /// | `bytes`           | 8KiB    | [`&[u8]`]    | data guard or form field              |
 /// | `json`            | 1MiB    | [`Json`]     | JSON data and form payloads           |
+/// | `xml`             | 1MiB    | [`Xml`]      | XML data and form payloads            |
 /// | `msgpack`         | 1MiB    | [`MsgPack`]  | MessagePack data and form payloads    |
 ///
 /// [`TempFile`]: crate::fs::TempFile
 /// [`Json`]: crate::serde::json::Json
+/// [`Xml`]: crate::serde::xml::Xml
 /// [`MsgPack`]: crate::serde::msgpack::MsgPack
 ///
 /// # Usage
