@@ -230,7 +230,7 @@ impl Rocket<Orbit> {
                 let remote = Endpoint::Quic(conn.remote_address()).assume_tls();
                 let (certs, sni) = (quic::certificates(&conn), quic::server_name(&conn));
                 let meta = ConnectionMeta::new(Ok(remote), certs, sni.as_deref());
-                let mut h3 = quic::Connection::new(h3_quinn::Connection::new(conn))
+                let mut h3 = quic::Connection::new(h3_quinn::Connection::new(conn.clone()))
                     .map_err(io::Error::other)
                     .await?;
 
@@ -249,7 +249,7 @@ impl Rocket<Orbit> {
                         }
                     };
 
-                    let (rocket, meta) = (rocket.clone(), meta.clone());
+                    let (rocket, meta, conn) = (rocket.clone(), meta.clone(), conn.clone());
                     spawn_inspect(|e: &io::Error| log_server_error(e), async move {
                         let (req, stream) = resolver.resolve_request()
                             .map_err(io::Error::other)
@@ -265,8 +265,10 @@ impl Rocket<Orbit> {
                             .race_io(rocket.shutdown.mercy.clone())
                             .await?;
 
-                        let grace = rocket.shutdown.grace.clone();
-                        let response = quic::send_response(&mut tx, response).race(grace).await;
+                        // A body may wait indefinitely for data, so stop waiting when
+                        // the connection closes or the grace period ends.
+                        let stop = rocket.shutdown.grace.clone().race(conn.closed());
+                        let response = quic::send_response(&mut tx, response).race(stop).await;
                         response.left().unwrap_or(Ok(()))
                     });
                 }

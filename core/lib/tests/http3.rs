@@ -5,7 +5,9 @@
 use std::future::poll_fn;
 use std::io;
 use std::net::{Ipv4Addr, SocketAddr};
+use std::pin::Pin;
 use std::sync::Arc;
+use std::task::{Context, Poll};
 use std::time::Duration;
 
 use bytes::{Buf, Bytes};
@@ -16,6 +18,7 @@ use rocket::figment::Figment;
 use rocket::futures::{stream, StreamExt};
 use rocket::response::{Responder, Response as RocketResponse};
 use rocket::tls::TlsConfig;
+use rocket::tokio::io::{AsyncRead, ReadBuf};
 use rocket::tokio::sync::{oneshot, Notify};
 use rocket::tokio::task::JoinHandle;
 use rocket::tokio::time::timeout;
@@ -285,5 +288,94 @@ async fn check_stream_error(known_length: bool) {
 async fn stream_errors() {
     for known_length in [false, true] {
         timeout(Duration::from_secs(10), check_stream_error(known_length)).await.unwrap();
+    }
+}
+
+#[derive(Default)]
+struct Signals {
+    stalled: Notify,
+    dropped: Notify,
+}
+
+struct StalledReader {
+    signals: Arc<Signals>,
+    started: bool,
+}
+
+impl AsyncRead for StalledReader {
+    fn poll_read(
+        mut self: Pin<&mut Self>,
+        _: &mut Context<'_>,
+        buf: &mut ReadBuf<'_>
+    ) -> Poll<io::Result<()>> {
+        if !self.started {
+            self.started = true;
+            buf.put_slice(b"hello");
+            return Poll::Ready(Ok(()));
+        }
+
+        self.signals.stalled.notify_one();
+        Poll::Pending
+    }
+}
+
+impl Drop for StalledReader {
+    fn drop(&mut self) {
+        self.signals.dropped.notify_one();
+    }
+}
+
+#[get("/stalled?<sized>")]
+fn stalled(sized: bool, signals: &rocket::State<Arc<Signals>>) -> RawResponse {
+    let reader = StalledReader { signals: signals.inner().clone(), started: false };
+    let mut response = RocketResponse::build();
+    if sized {
+        response.raw_header("Content-Length", "10");
+    }
+
+    RawResponse(response.streamed_body(reader).finalize())
+}
+
+#[get("/ready")]
+fn ready() -> &'static str {
+    "ready"
+}
+
+async fn check_cancellation(reset: bool, sized: bool) {
+    let signals = Arc::new(Signals::default());
+    let rocket = rocket().manage(signals.clone()).mount("/", routes![stalled, ready]);
+    let server = Server::launch(rocket).await;
+    let mut client = Client::connect(server.addr).await;
+    let mut response = client.get(&format!("/stalled?sized={sized}")).await;
+    assert_eq!(response.status(), 200);
+    assert_eq!(response.chunk().await.unwrap(), "hello");
+    signals.stalled.notified().await;
+    if reset {
+        // Dropping a response stream stops it. `h3_quinn` panics on an explicit
+        // `stop_sending()` while a read is pending, as one is here. The server
+        // cannot observe the stop, so the reader lives until the connection
+        // closes, but other requests on the connection are unaffected.
+        drop(response);
+        assert_eq!(client.get("/ready").await.into_string().await, "ready");
+    }
+
+    client.close().await;
+    timeout(Duration::from_secs(2), signals.dropped.notified()).await
+        .expect("stalled reader not dropped after HTTP/3 connection was closed");
+
+    server.shutdown().await;
+}
+
+#[rocket::async_test]
+async fn close_drops_stalled_reader() {
+    for sized in [false, true] {
+        timeout(Duration::from_secs(10), check_cancellation(false, sized)).await.unwrap();
+    }
+}
+
+#[rocket::async_test]
+async fn reset_then_close_drops_stalled_reader() {
+    for sized in [false, true] {
+        timeout(Duration::from_secs(10), check_cancellation(true, sized)).await.unwrap();
     }
 }
