@@ -399,3 +399,17 @@ mod serde_impl {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::Status;
+
+    #[test]
+    fn constants_in_patterns() {
+        assert!(matches!(Status::new(200), Status::Ok));
+        assert!(matches!(Status::new(401), Status::Unauthorized));
+        assert_eq!(Status::new(599), Status { code: 599 });
+        assert!(Status::new(599) > Status::InternalServerError);
+        assert!(Status::Ok < Status::Created);
+    }
+}
