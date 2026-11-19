@@ -1,3 +1,25 @@
+# Version 0.5.4 (Nov 19, 2026)
+
+This release contains the following crate updates:
+
+  - `rocket` `0.5.4`
+
+## [`rocket`](https://api.rocket.rs/v0.5/rocket/) `0.5.4`
+
+### General Improvements
+
+  * **(fix [#3022] via [#3023])** A response body is now dropped as soon as the
+    client disconnects.
+
+    Previously, Rocket detected a disconnected client only when it sent the
+    next part of the body. A body that produced no further data, for instance,
+    a stream waiting on a stalled source, was retained and polled until the
+    server shut down. Rocket now stops reading and drops the body when the
+    HTTP/1.1 connection closes or the HTTP/2 stream is reset.
+
+[#3022]: https://github.com/rwf2/Rocket/issues/3022
+[#3023]: https://github.com/rwf2/Rocket/pull/3023
+
 # Version 0.5.3 (Nov 18, 2026)
 
 This release contains the following crate updates:
