@@ -45,7 +45,7 @@ struct LogsDbConn(diesel::SqliteConnection);
 
 #[get("/logs/<id>")]
 async fn get_logs(conn: LogsDbConn, id: usize) -> Result<Logs> {
-    conn.run(|c| Logs::by_id(c, id)).await
+    conn.run(move |c| Logs::by_id(c, id)).await
 }
 
 #[launch]
