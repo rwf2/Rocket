@@ -603,6 +603,77 @@ async fn shutdown_cancels_responses_after_grace() {
     server.task.await.unwrap();
 }
 
+#[catch(400)]
+fn bad_request() -> &'static str {
+    "bad request"
+}
+
+#[rocket::async_test]
+async fn bad_requests_are_answered() {
+    let server = Server::launch(rocket().register("/", catchers![bad_request])).await;
+    let client = Client::connect(server.addr).await;
+
+    // A request without a path is answered by the 400 catcher. h3's client
+    // sends CONNECT with a path, so the request is written directly.
+    let (mut send, mut recv) = client.raw().await;
+    let request = [(":method", "CONNECT"), (":authority", "example.com:443")];
+    send.write_all(&headers_frame(&request)).await.unwrap();
+    send.finish().unwrap();
+
+    // The QPACK block starts with `:status` 400, static table entry 67.
+    let frames = timeout(Duration::from_secs(5), raw_frames(&mut recv)).await.unwrap().unwrap();
+    assert!(frames[0].0 == 0x01 && frames[0].1.starts_with(&[0, 0, 0xff, 0x04]));
+    assert_eq!(frames[1..], [(0x00, b"bad request".to_vec())]);
+
+    client.close().await;
+    server.shutdown().await;
+}
+
+#[post("/", data = "<data>")]
+async fn read_body(mut data: rocket::Data<'_>, entered: &rocket::State<Arc<Notify>>) -> String {
+    use rocket::data::ToByteUnit;
+    use rocket::tokio::io::AsyncReadExt;
+
+    // quinn discards unread data once a stream is reset, so the body is read
+    // before the client resets it. A failed peek must then not make the
+    // following read end without an error.
+    data.peek(5).await;
+    entered.notify_one();
+    data.peek(512).await;
+    let mut body = vec![];
+    let result = data.open(1.mebibytes()).read_to_end(&mut body).await;
+    format!("{}:{}", String::from_utf8_lossy(&body), result.is_ok())
+}
+
+#[rocket::async_test]
+async fn request_body_errors_are_not_eof() {
+    let entered = Arc::new(Notify::new());
+    let rocket = rocket().manage(entered.clone()).mount("/", routes![read_body]);
+    let server = Server::launch(rocket).await;
+    let mut client = Client::connect(server.addr).await;
+    for reset in [false, true] {
+        let request = http::Request::builder()
+            .method("POST")
+            .uri("https://localhost/")
+            .body(()).unwrap();
+
+        let mut stream = client.requests.send_request(request).await.unwrap();
+        stream.send_data(Bytes::from_static(b"hello")).await.unwrap();
+        entered.notified().await;
+        match reset {
+            true => stream.stop_stream(Code::H3_REQUEST_CANCELLED),
+            false => stream.finish().await.unwrap(),
+        }
+
+        let head = stream.recv_response().await.unwrap();
+        let body = Response { head, stream }.into_string().await;
+        assert_eq!(body, format!("hello:{}", !reset));
+    }
+
+    client.close().await;
+    server.shutdown().await;
+}
+
 // Waits for the server's 15 second header read timeout.
 #[ignore = "takes 15 seconds"]
 #[rocket::async_test]
