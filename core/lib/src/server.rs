@@ -217,7 +217,7 @@ impl Rocket<Orbit> {
     async fn serve3(self: Arc<Self>, endpoint: quinn::Endpoint) -> Result<()> {
         use std::future::IntoFuture;
         use either::Either;
-        use crate::listener::{Endpoint, quic::{self, QuicRx}};
+        use crate::listener::{Endpoint, quic::{self, QuicRx, QuicTx}};
 
         while let Some(Some(incoming)) = endpoint.accept().race(self.shutdown()).await.left() {
             let rocket = self.clone();
@@ -256,7 +256,8 @@ impl Rocket<Orbit> {
                             .race_io(rocket.shutdown())
                             .await?;
 
-                        let (mut tx, rx) = stream.split();
+                        let (tx, rx) = stream.split();
+                        let mut tx = QuicTx::new(tx, rocket.shutdown.grace.clone());
                         let rx = QuicRx(rx).cancellable(rocket.shutdown.clone());
                         let response = rocket.clone()
                             .service(req.into_parts().0, rx, None, meta)
@@ -265,10 +266,8 @@ impl Rocket<Orbit> {
                             .await?;
 
                         let grace = rocket.shutdown.grace.clone();
-                        match quic::send_response(&mut tx, response).race(grace).await.left() {
-                            Some(result) => result,
-                            None => Ok(tx.stop_stream(h3::error::Code::H3_REQUEST_CANCELLED)),
-                        }
+                        let response = quic::send_response(&mut tx, response).race(grace).await;
+                        response.left().unwrap_or(Ok(()))
                     });
                 }
 

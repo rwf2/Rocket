@@ -34,6 +34,7 @@ use quinn::crypto::rustls::QuicServerConfig;
 
 use crate::tls::{TlsConfig, Error};
 use crate::listener::{AsyncCancel, Certificates};
+use crate::shutdown::Shutdown;
 
 pub(crate) type Connection = h3::server::Connection<h3_quinn::Connection, Bytes>;
 
@@ -41,7 +42,14 @@ pub(crate) type Connection = h3::server::Connection<h3_quinn::Connection, Bytes>
 pub struct QuicRx(pub(crate) RequestStream<h3_quinn::RecvStream, Bytes>);
 
 /// The sending half of an HTTP/3 request stream: the response.
-pub(crate) type QuicTx = RequestStream<h3_quinn::SendStream<Bytes>, Bytes>;
+///
+/// Dropping a `QuicTx` before the response is complete resets the stream so
+/// that the client cannot mistake a truncated response for a complete one.
+pub(crate) struct QuicTx {
+    stream: RequestStream<h3_quinn::SendStream<Bytes>, Bytes>,
+    grace: Shutdown,
+    done: bool,
+}
 
 /// Binds a QUIC endpoint to `addr` using Rocket's TLS configuration `tls`.
 pub(crate) async fn bind(addr: SocketAddr, tls: &TlsConfig) -> Result<quinn::Endpoint, Error> {
@@ -81,14 +89,41 @@ pub(crate) async fn send_response<S>(tx: &mut QuicTx, response: http::Response<S
     where S: Stream<Item = io::Result<Bytes>>
 {
     let (parts, body) = response.into_parts();
-    tx.send_response(http::Response::from_parts(parts, ())).await.map_err(io::Error::other)?;
+    let stream = &mut tx.stream;
+    stream.send_response(http::Response::from_parts(parts, ())).await.map_err(io::Error::other)?;
 
     let mut body = pin!(body);
     while let Some(chunk) = body.next().await {
-        tx.send_data(chunk?).await.map_err(io::Error::other)?;
+        stream.send_data(chunk?).await.map_err(io::Error::other)?;
     }
 
-    tx.finish().await.map_err(io::Error::other)
+    stream.finish().await.map_err(io::Error::other)?;
+    tx.done = true;
+    Ok(())
+}
+
+impl QuicTx {
+    /// Wraps the sending half of a request stream. A response that is cut
+    /// short once `grace` has elapsed is reset as cancelled.
+    pub(crate) fn new(
+        stream: RequestStream<h3_quinn::SendStream<Bytes>, Bytes>,
+        grace: Shutdown,
+    ) -> Self {
+        QuicTx { stream, grace, done: false }
+    }
+}
+
+impl Drop for QuicTx {
+    fn drop(&mut self) {
+        if !self.done {
+            let code = match self.grace.notified() {
+                true => h3::error::Code::H3_REQUEST_CANCELLED,
+                false => h3::error::Code::H3_INTERNAL_ERROR,
+            };
+
+            self.stream.stop_stream(code);
+        }
+    }
 }
 
 impl Stream for QuicRx {

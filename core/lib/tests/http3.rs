@@ -3,6 +3,7 @@
 #[macro_use] extern crate rocket;
 
 use std::future::poll_fn;
+use std::io;
 use std::net::{Ipv4Addr, SocketAddr};
 use std::sync::Arc;
 use std::time::Duration;
@@ -12,8 +13,10 @@ use h3::error::{Code, StreamError};
 use rocket::{Build, Rocket, Shutdown};
 use rocket::fairing::AdHoc;
 use rocket::figment::Figment;
+use rocket::futures::{stream, StreamExt};
+use rocket::response::{Responder, Response as RocketResponse};
 use rocket::tls::TlsConfig;
-use rocket::tokio::sync::oneshot;
+use rocket::tokio::sync::{oneshot, Notify};
 use rocket::tokio::task::JoinHandle;
 use rocket::tokio::time::timeout;
 use rustls::crypto::ring;
@@ -104,8 +107,8 @@ impl Client {
         Client { endpoint, conn, requests, driver }
     }
 
-    /// Sends a request with `body`, if any, and waits for the response head.
-    async fn send(&mut self, method: &str, path: &str, body: Option<&[u8]>) -> Response {
+    /// Sends a request with `body`, if any.
+    async fn request(&mut self, method: &str, path: &str, body: Option<&[u8]>) -> RequestStream {
         let request = http::Request::builder()
             .method(method)
             .uri(format!("https://localhost{path}"))
@@ -117,6 +120,12 @@ impl Client {
         }
 
         stream.finish().await.unwrap();
+        stream
+    }
+
+    /// Sends a request with `body`, if any, and waits for the response head.
+    async fn send(&mut self, method: &str, path: &str, body: Option<&[u8]>) -> Response {
+        let mut stream = self.request(method, path, body).await;
         let head = stream.recv_response().await.unwrap();
         Response { head, stream }
     }
@@ -211,4 +220,70 @@ async fn round_trip() {
 
     client.close().await;
     timeout(Duration::from_secs(5), server.shutdown()).await.unwrap();
+}
+
+struct RawResponse(RocketResponse<'static>);
+
+impl<'r> Responder<'r, 'static> for RawResponse {
+    fn respond_to(self, _: &'r rocket::Request<'_>) -> rocket::response::Result<'static> {
+        Ok(self.0)
+    }
+}
+
+#[get("/failed-stream")]
+fn failed_stream(release: &rocket::State<Arc<Notify>>) -> RawResponse {
+    let release = release.inner().clone();
+    let stream = stream::once(async { Ok::<_, io::Error>(Bytes::from_static(b"hello")) })
+        .chain(stream::once(async move {
+            release.notified().await;
+            Err(io::Error::other("response reader failed"))
+        }));
+
+    let reader = tokio_util::io::StreamReader::new(Box::pin(stream));
+    RawResponse(RocketResponse::build().streamed_body(reader).finalize())
+}
+
+#[get("/bad-header")]
+fn bad_header() -> RawResponse {
+    RawResponse(RocketResponse::build().raw_header("X-Bad", "a\nb").finalize())
+}
+
+async fn check_stream_error(known_length: bool) {
+    let release = Arc::new(Notify::new());
+    let rocket = rocket().manage(release.clone())
+        .mount("/", routes![failed_stream, bad_header])
+        .attach(AdHoc::on_response("Optional Length", move |_, response| Box::pin(async move {
+            if known_length {
+                response.set_raw_header("Content-Length", "10");
+            }
+        })));
+
+    let server = Server::launch(rocket).await;
+    let mut client = Client::connect(server.addr).await;
+    let mut response = client.get("/failed-stream").await;
+    assert_eq!(response.status(), 200);
+    assert_eq!(response.header("content-length").is_some(), known_length);
+    assert_eq!(response.chunk().await.unwrap(), "hello");
+    release.notify_one();
+    let (rest, end) = response.body().await;
+    assert!(rest.is_empty());
+    assert_eq!(end, End::Reset(Code::H3_INTERNAL_ERROR.value()),
+        "failed reader must not produce a successful truncated response");
+
+    // A response that cannot be sent at all is also reset.
+    let mut stream = client.request("GET", "/bad-header", None).await;
+    match stream.recv_response().await {
+        Err(StreamError::RemoteTerminate { code, .. }) => assert_eq!(code, Code::H3_INTERNAL_ERROR),
+        result => panic!("expected a reset, found {result:?}"),
+    }
+
+    client.close().await;
+    server.shutdown().await;
+}
+
+#[rocket::async_test]
+async fn stream_errors() {
+    for known_length in [false, true] {
+        timeout(Duration::from_secs(10), check_stream_error(known_length)).await.unwrap();
+    }
 }
