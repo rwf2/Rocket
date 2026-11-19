@@ -202,10 +202,10 @@ impl Rocket<Orbit> {
         // Go through all matching routes until we fail or succeed or run out of
         // routes to try, in which case we forward with the last status.
         let mut status = Status::NotFound;
-        for route in self.router.route(request) {
+        for (id, route) in self.router.route(request) {
             // Retrieve and set the requests parameters.
             route.trace_info();
-            request.set_route(route);
+            request.set_route(id);
 
             let name = route.name.as_deref();
             let outcome = catch_handle(name, || route.handler.handle(request, data)).await

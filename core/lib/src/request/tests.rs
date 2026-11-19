@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 
-use crate::request::{Request, ConnectionMeta};
+use crate::request::{Request, ConnectionMeta, AtomicMethod};
 use crate::local::blocking::Client;
+use crate::http::Method;
 
 macro_rules! assert_headers {
     ($($key:expr => [$($value:expr),+]),+) => ({
@@ -46,4 +47,26 @@ fn test_multiple_headers_merge_into_one_from_hyp() {
     assert_headers!("friend" => ["alice"], "friend" => ["bob"]);
     assert_headers!("friend" => ["alice"], "friend" => ["bob"], "friend" => ["carol"]);
     assert_headers!("friend" => ["alice"], "friend" => ["bob"], "enemy" => ["carol"]);
+}
+
+#[test]
+fn ensure_is_covariant() {
+    fn _covariant<'x: 'y, 'y>(request: Request<'x>) -> Request<'y> { request }
+}
+
+#[test]
+fn ensure_is_send_sync() {
+    fn is_send_sync<T: Send + Sync>() {}
+    is_send_sync::<Request<'_>>();
+}
+
+#[test]
+fn test_atomic_method_round_trip() {
+    let atomic = AtomicMethod::new(Method::Get);
+    for &method in Method::ALL_VARIANTS {
+        atomic.store(method);
+        assert_eq!(atomic.load(), method);
+        assert_eq!(atomic.clone().load(), method);
+        assert_eq!(AtomicMethod::new(method).load(), method);
+    }
 }

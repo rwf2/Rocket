@@ -1,6 +1,6 @@
 use std::{io, fmt};
 use std::ops::RangeFrom;
-use std::sync::{Arc, atomic::Ordering};
+use std::sync::Arc;
 use std::borrow::Cow;
 use std::str::FromStr;
 use std::future::Future;
@@ -10,12 +10,12 @@ use http::Version;
 use rocket_http::HttpVersion;
 use state::{TypeMap, InitCell};
 use futures::future::BoxFuture;
-use ref_swap::OptionRefSwap;
 
 use crate::{Rocket, Route, Orbit};
 use crate::request::{FromParam, FromSegments, FromRequest, Outcome, AtomicMethod};
 use crate::form::{self, ValueField, FromForm};
 use crate::data::Limits;
+use crate::router::{RouteId, AtomicRouteId};
 
 use crate::http::ProxyProto;
 use crate::http::{Method, Header, HeaderMap, ContentType, Accept, MediaType, CookieJar, Cookie};
@@ -65,7 +65,7 @@ impl ConnectionMeta {
 /// Information derived from the request.
 pub(crate) struct RequestState<'r> {
     pub rocket: &'r Rocket<Orbit>,
-    pub route: OptionRefSwap<'r, Route>,
+    pub route: AtomicRouteId,
     pub cookies: CookieJar<'r>,
     pub accept: InitCell<Option<Accept>>,
     pub content_type: InitCell<Option<ContentType>>,
@@ -77,7 +77,7 @@ impl Clone for RequestState<'_> {
     fn clone(&self) -> Self {
         RequestState {
             rocket: self.rocket,
-            route: OptionRefSwap::new(self.route.load(Ordering::Acquire)),
+            route: self.route.clone(),
             cookies: self.cookies.clone(),
             accept: self.accept.clone(),
             content_type: self.content_type.clone(),
@@ -105,7 +105,7 @@ impl<'r> Request<'r> {
             connection: ConnectionMeta::default(),
             state: RequestState {
                 rocket,
-                route: OptionRefSwap::new(None),
+                route: AtomicRouteId::default(),
                 cookies: CookieJar::new(None, rocket),
                 accept: InitCell::new(),
                 content_type: InitCell::new(),
@@ -827,7 +827,7 @@ impl<'r> Request<'r> {
     /// ```
     #[inline(always)]
     pub fn route(&self) -> Option<&'r Route> {
-        self.state.route.load(Ordering::Acquire)
+        self.state.route.load().and_then(|id| self.rocket().router.get(id))
     }
 
     /// Invokes the request guard implementation for `T`, returning its outcome.
@@ -1112,8 +1112,8 @@ impl<'r> Request<'r> {
     /// Set `self`'s parameters given that the route used to reach this request
     /// was `route`. Use during routing when attempting a given route.
     #[inline(always)]
-    pub(crate) fn set_route(&self, route: &'r Route) {
-        self.state.route.store(Some(route), Ordering::Release)
+    pub(crate) fn set_route(&self, route: RouteId) {
+        self.state.route.store(route)
     }
 
     #[inline(always)]

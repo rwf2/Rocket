@@ -1,16 +1,18 @@
+use std::sync::atomic::{AtomicU8, Ordering};
+
 use crate::http::Method;
 
-pub struct AtomicMethod(ref_swap::RefSwap<'static, Method>);
+pub struct AtomicMethod(AtomicU8);
 
 impl AtomicMethod {
     #[inline]
     pub fn new(value: Method) -> Self {
-        Self(ref_swap::RefSwap::new(value.as_ref()))
+        Self(AtomicU8::new(value as u8))
     }
 
     #[inline]
     pub fn load(&self) -> Method {
-        *self.0.load(std::sync::atomic::Ordering::Acquire)
+        Method::ALL_VARIANTS[self.0.load(Ordering::Acquire) as usize]
     }
 
     #[inline]
@@ -20,13 +22,12 @@ impl AtomicMethod {
 
     #[inline]
     pub fn store(&self, new: Method) {
-        self.0.store(new.as_ref(), std::sync::atomic::Ordering::Release)
+        self.0.store(new as u8, Ordering::Release)
     }
 }
 
 impl Clone for AtomicMethod {
     fn clone(&self) -> Self {
-        let inner = self.0.load(std::sync::atomic::Ordering::Acquire);
-        Self(ref_swap::RefSwap::new(inner))
+        Self(AtomicU8::new(self.0.load(Ordering::Acquire)))
     }
 }

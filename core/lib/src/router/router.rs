@@ -1,5 +1,6 @@
 use std::ops::{Deref, DerefMut};
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use crate::request::Request;
 use crate::http::{Method, Status};
@@ -19,9 +20,17 @@ pub struct Pending {
 pub struct Finalized {
     pub routes: Vec<Route>,
     pub catchers: Vec<Catcher>,
-    route_map: HashMap<Method, Vec<usize>>,
+    route_map: HashMap<Method, Vec<RouteId>>,
     catcher_map: HashMap<Option<u16>, Vec<usize>>,
 }
+
+/// Identifies a route in a finalized router. Only `finalize()` creates these.
+#[derive(Debug, Copy, Clone)]
+pub(crate) struct RouteId(usize);
+
+/// An optional `RouteId` that can be set through a shared reference.
+#[derive(Debug, Default)]
+pub(crate) struct AtomicRouteId(AtomicUsize);
 
 pub type Pair<T> = (T, T);
 
@@ -56,12 +65,12 @@ impl Router<Pending> {
         }
 
         // create the route map
-        let mut route_map: HashMap<Method, Vec<usize>> = HashMap::new();
+        let mut route_map: HashMap<Method, Vec<RouteId>> = HashMap::new();
         for (i, route) in self.routes.iter().enumerate() {
             match route.method {
-                Some(method) => route_map.entry(method).or_default().push(i),
+                Some(method) => route_map.entry(method).or_default().push(RouteId(i)),
                 None => for method in Method::ALL_VARIANTS {
-                    route_map.entry(*method).or_default().push(i);
+                    route_map.entry(*method).or_default().push(RouteId(i));
                 }
             }
         }
@@ -74,7 +83,7 @@ impl Router<Pending> {
 
         // sort routes by rank
         for routes in route_map.values_mut() {
-            routes.sort_by_key(|&i| &self.routes[i].rank);
+            routes.sort_by_key(|&RouteId(i)| &self.routes[i].rank);
         }
 
         // sort catchers by rank
@@ -95,13 +104,17 @@ impl Router<Finalized> {
     pub fn route<'r, 'a: 'r>(
         &'a self,
         req: &'r Request<'r>
-    ) -> impl Iterator<Item = &'a Route> + 'r {
+    ) -> impl Iterator<Item = (RouteId, &'a Route)> + 'r {
         // Note that routes are presorted by ascending rank on each `add` and
         // that all routes with `None` methods have been cloned into all methods.
         self.route_map.get(&req.method())
             .into_iter()
-            .flat_map(move |routes| routes.iter().map(move |&i| &self.routes[i]))
-            .filter(move |r| r.matches(req))
+            .flat_map(move |routes| routes.iter().map(move |&id| (id, &self.routes[id.0])))
+            .filter(move |(_, r)| r.matches(req))
+    }
+
+    pub fn get(&self, id: RouteId) -> Option<&Route> {
+        self.routes.get(id.0)
     }
 
     // For many catchers, using aho-corasick or similar should be much faster.
@@ -122,6 +135,22 @@ impl Router<Finalized> {
             (Some(a), Some(b)) if a.rank <= b.rank => Some(a),
             (Some(_), Some(b)) => Some(b),
         }
+    }
+}
+
+impl AtomicRouteId {
+    pub fn load(&self) -> Option<RouteId> {
+        self.0.load(Ordering::Acquire).checked_sub(1).map(RouteId)
+    }
+
+    pub fn store(&self, id: RouteId) {
+        self.0.store(id.0 + 1, Ordering::Release)
+    }
+}
+
+impl Clone for AtomicRouteId {
+    fn clone(&self) -> Self {
+        AtomicRouteId(AtomicUsize::new(self.0.load(Ordering::Acquire)))
     }
 }
 
@@ -313,7 +342,7 @@ mod test {
     fn matches<'a>(router: &'a Router<Finalized>, method: Method, uri: &'a str) -> Vec<&'a Route> {
         let client = Client::debug_with(vec![]).expect("client");
         let request = client.req(method, Origin::parse(uri).unwrap());
-        router.route(&request).collect()
+        router.route(&request).map(|(_, route)| route).collect()
     }
 
     #[track_caller]
