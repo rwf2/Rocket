@@ -22,13 +22,13 @@ postgres_pool = ["postgres", "r2d2_postgres"]
 memcache_pool = ["memcache"]
 
 [dependencies]
-r2d2 = "0.8"
-tokio = { version = "1.6.1", features = ["rt", "rt-multi-thread"] }
+r2d2 = "0.8.9"
+tokio = { version = "1.54.1", features = ["rt", "rt-multi-thread"] }
 serde = { version = "1.0", features = ["derive"] }
 
-diesel = { version = "2.0.0", default-features = false, optional = true }
+diesel = { version = "2.3.10", default-features = false, optional = true }
 
-postgres = { version = "0.19", optional = true }
+postgres = { version = "0.19.14", optional = true }
 r2d2_postgres = { version = "0.18", optional = true }
 
 rusqlite = { version = "0.39", optional = true }
