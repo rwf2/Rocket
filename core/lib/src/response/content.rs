@@ -74,7 +74,7 @@ ctrs! {
     RawHtml: HTML, "HTML", "text/html",
     RawText: Text, "plain text", "text/plain",
     RawCss: CSS, "CSS", "text/css",
-    RawJavaScript: JavaScript, "JavaScript", "application/javascript"
+    RawJavaScript: JavaScript, "JavaScript", "text/javascript"
 }
 
 impl<'r, 'o: 'r, R: Responder<'r, 'o>> Responder<'r, 'o> for (ContentType, R) {

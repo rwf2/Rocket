@@ -45,7 +45,7 @@ pub use quick_xml;
 ///
 /// To respond with serialized XML data, return a `Xml<T>` type, where `T`
 /// implements [`Serialize`] from [`serde`]. The content type of the response is
-/// set to `application/xml` automatically.
+/// set to `text/xml; charset=utf-8` automatically.
 ///
 /// ```rust
 /// # #[macro_use] extern crate rocket;
@@ -98,8 +98,9 @@ pub use quick_xml;
 ///
 /// You don't _need_ to use `format = "xml"`, but it _may_ be what you want.
 /// Using `format = xml` means that any request that doesn't specify
-/// "application/xml" as its `Content-Type` header value will not be routed to
-/// the handler.
+/// "text/xml" as its `Content-Type` header value will not be routed to
+/// the handler. Use `format = "*/xml"` to accept both `text/xml` and
+/// `application/xml`.
 ///
 /// ### Form Guard
 ///
