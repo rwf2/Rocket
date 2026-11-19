@@ -179,6 +179,37 @@
 //! ROCKET_DATABASES='{my_db={url="db.sqlite"},my_pg_db={url="postgres://root:root@localhost/my_pg_db"}}'
 //! ```
 //!
+//! ### Memcache
+//!
+//! The Memcache driver accepts two additional options in the `url` key:
+//!
+//!   * `connect_timeout` - max number of seconds to wait for a connection from
+//!     the driver's internal pool (defaults to `30`)
+//!   * `timeout` - max number of seconds for a TCP/TLS socket read or write
+//!     (unset by default; ignored for UDP and Unix sockets)
+//!
+//! For example, to set both options:
+//!
+//! ```toml
+//! [default.databases.cache]
+//! url = "memcache://localhost:11211?timeout=0.5&connect_timeout=2"
+//! pool_size = 16
+//! timeout = 5
+//! ```
+//!
+//! The `timeout` key outside of `url` configures Rocket's pool initialization
+//! and connection waits. It defaults to `5` seconds.
+//!
+//! Both URL options accept positive, finite numbers, including fractions.
+//! Invalid values, including values that round to zero or overflow, abort
+//! initialization. If an option is repeated, the first value is used.
+//!
+//! **Note:** Socket timeouts apply to individual reads and writes, and pool
+//! timeouts cannot interrupt synchronous driver calls. Neither URL option
+//! limits the time spent resolving DNS or establishing a TCP connection. As
+//! such, these options do not limit the total time spent executing a command
+//! or cancel commands.
+//!
 //! ## Guard Types
 //!
 //! Once a database has been configured, the `#[database]` attribute can be used
@@ -381,6 +412,8 @@ mod error;
 mod connection;
 
 pub use self::poolable::{Poolable, PoolResult};
+#[cfg(feature = "memcache_pool")]
+pub use self::poolable::memcache_pool::MemcacheConnectionManager;
 pub use self::config::Config;
 pub use self::error::Error;
 
