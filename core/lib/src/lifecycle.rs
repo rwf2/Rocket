@@ -139,11 +139,15 @@ impl Rocket<Orbit> {
             response.strip_body();
         }
 
-        // If the response status is 204, strip the body and its size (no
-        // content-length header). Otherwise, check if the body is sized and use
-        // that size to set the content-length headr appropriately.
+        // A 204 response has no body and neither framing header. Otherwise,
+        // content-length must not be sent with transfer-encoding; without the
+        // latter, use the body's size, if known, to set content-length.
         if response.status() == Status::NoContent {
+            response.remove_header("Content-Length");
+            response.remove_header("Transfer-Encoding");
             *response.body_mut() = crate::response::Body::unsized_none();
+        } else if response.headers().contains("Transfer-Encoding") {
+            response.remove_header("Content-Length");
         } else if let Some(size) = response.body_mut().size().await {
             response.set_raw_header("Content-Length", size.to_string());
         }

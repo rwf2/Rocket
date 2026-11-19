@@ -35,6 +35,7 @@ impl Rocket<Orbit> {
         connection: ConnectionMeta,
     ) -> Result<hyper::Response<ReaderStream<ErasedResponse>>, http::Error> {
         connection.trace_debug();
+        let version = parts.version;
         let request = ErasedRequest::new(self, parts, |rocket, parts| {
             Request::from_hyp(rocket, parts, connection).unwrap_or_else(|e| e)
         });
@@ -65,6 +66,13 @@ impl Rocket<Orbit> {
         builder = builder.status(response.inner().status().code);
         for header in response.inner().headers().iter() {
             builder = builder.header(header.name().as_str(), header.value());
+        }
+
+        // Send an empty HTTP/2 response as headers alone: h2 rejects a 304 with
+        // a nonzero content-length followed by an empty DATA frame. HTTP/1
+        // takes the body path because hyper otherwise drops that header.
+        if version == http::Version::HTTP_2 && response.inner().body().is_empty() {
+            return builder.body(ReaderStream::empty(response));
         }
 
         let chunk_size = response.inner().body().max_chunk_size();

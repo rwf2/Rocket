@@ -69,6 +69,11 @@ impl<R: AsyncRead> ReaderStream<R> {
             done: false,
         }
     }
+
+    /// Creates a stream that ends immediately without reading from `reader`.
+    pub fn empty(reader: R) -> Self {
+        ReaderStream { reader, buf: BytesMut::new(), capacity: 0, done: true }
+    }
 }
 
 impl<R: AsyncRead> Stream for ReaderStream<R> {
@@ -120,5 +125,9 @@ impl<R: AsyncRead> hyper::body::Body for ReaderStream<R> {
         cx: &mut Context<'_>,
     ) -> Poll<Option<Result<hyper::body::Frame<Self::Data>, Self::Error>>> {
         self.poll_next(cx).map_ok(hyper::body::Frame::data)
+    }
+
+    fn is_end_stream(&self) -> bool {
+        self.done
     }
 }

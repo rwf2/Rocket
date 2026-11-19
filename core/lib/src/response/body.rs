@@ -139,6 +139,11 @@ impl<'r> Body<'r> {
         self.max_chunk = max_chunk;
     }
 
+    // Returns `true` if the body is unset or has been stripped.
+    pub(crate) fn is_empty(&self) -> bool {
+        matches!(self.inner, Inner::None | Inner::Phantom(_))
+    }
+
     pub(crate) fn strip(&mut self) {
         let body = std::mem::take(self);
         *self = match body.inner {
@@ -147,7 +152,7 @@ impl<'r> Body<'r> {
                 inner: Inner::Phantom(b),
                 max_chunk: body.max_chunk,
             },
-            Inner::Unsized(_) | Inner::None => Body::default()
+            Inner::Unsized(_) | Inner::None => Body::unsized_none()
         };
     }
 
