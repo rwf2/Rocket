@@ -225,7 +225,10 @@ impl<'r> FromRequest<'r> for WebSocket {
             .any(|h| h.split(',').any(|v| eq(v.trim(), "websocket")));
 
         let is_13 = headers.get_one("Sec-WebSocket-Version").map_or(false, |v| v == "13");
-        let key = headers.get_one("Sec-WebSocket-Key").map(|k| derive_accept_key(k.as_bytes()));
+        let key = headers.get_one("Sec-WebSocket-Key").filter(|key| {
+            key.len() == 24 && data_encoding::BASE64.decode(key.as_bytes())
+                .is_ok_and(|bytes| bytes.len() == 16)
+        }).map(|key| derive_accept_key(key.as_bytes()));
         match key {
             Some(key) if is_upgrade && is_ws && is_13 => {
                 Outcome::Success(WebSocket { key, config: Config::default() })
