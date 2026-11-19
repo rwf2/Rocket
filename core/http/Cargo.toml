@@ -25,20 +25,20 @@ uuid = ["dep:uuid"]
 
 [dependencies]
 tinyvec = { version = "1.6", features = ["std", "rustc_1_57"] }
-percent-encoding = "2"
+percent-encoding = "2.3.2"
 time = { version = "0.3.47", features = ["formatting", "macros"] }
 indexmap = "2"
 ref-cast = "1.0"
 uncased = "0.9.10"
-either = "1"
+either = "1.6.1"
 pear = "0.3"
-memchr = "2"
+memchr = "2.6"
 stable-pattern = "0.1"
 cookie = { version = "0.18", features = ["percent-encode"] }
 state = "0.6"
 
 [dependencies.serde]
-version = "1.0"
+version = "1.0.220"
 optional = true
 default-features = false
 features = ["std"]

@@ -20,20 +20,20 @@ proc-macro = true
 
 [dependencies]
 indexmap = "2"
-quote = "1.0"
-syn = { version = "3.0", features = ["full", "visit", "visit-mut", "extra-traits"] }
-proc-macro2 = "1.0.60"
+quote = "1.0.47"
+syn = { version = "3.0.6", features = ["full", "visit", "visit-mut", "extra-traits"] }
+proc-macro2 = "1.0.107"
 devise = "0.5"
 proc-macro2-diagnostics = { version = "0.11", features = ["nightly"] }
 rocket_http = { version = "0.6.0-dev", path = "../http/" }
 percent-encoding = "2.3.2"
 unicode-xid = "0.2"
-version_check = "0.9"
+version_check = "0.9.4"
 glob = "0.3"
 
 [dev-dependencies]
 rocket = { path = "../lib", features = ["json", "msgpack"] }
-time = { version =  "0.3", features = ["macros"] }
+time = { version =  "0.3.47", features = ["macros"] }
 pretty_assertions = "1"
-version_check = "0.9"
+version_check = "0.9.4"
 trybuild = "1.0"

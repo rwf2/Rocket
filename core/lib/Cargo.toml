@@ -38,7 +38,7 @@ trace = ["tracing-subscriber", "tinyvec", "thread_local", "rustls?/logging", "to
 
 [dependencies]
 # Optional serialization dependencies.
-serde_json = { version = "1.0.26", optional = true }
+serde_json = { version = "1.0.33", optional = true }
 quick-xml = { version = "0.42", optional = true, features = ["serialize"] }
 rmp-serde = { version = "1", optional = true }
 uuid_ = { package = "uuid", version = "1", optional = true, features = ["serde"] }
@@ -58,19 +58,19 @@ hyper-util = { version = "0.1.21", default-features = false, features = ["http1"
 yansi = { version = "1.0.1", features = ["detect-tty"] }
 num_cpus = "1.0"
 time = { version = "0.3.47", features = ["macros", "parsing"] }
-memchr = "2" # TODO: Use pear instead.
+memchr = "2.6" # TODO: Use pear instead.
 binascii = "0.1"
 ref-cast = "1.0"
 parking_lot = "0.13"
 ubyte = {version = "0.10.2", features = ["serde"] }
-serde = { version = "1.0", features = ["derive"] }
+serde = { version = "1.0.220", features = ["derive"] }
 figment = { version = "0.10.17", features = ["toml", "env"] }
-either = "1"
-pin-project-lite = "0.2"
+either = "1.6.1"
+pin-project-lite = "0.2.11"
 indexmap = { version = "2", features = ["serde"] }
-tempfile = "3"
+tempfile = "3.4.0"
 async-trait = "0.1.43"
-async-stream = "0.3.2"
+async-stream = "0.3.3"
 multer = { version = "3.1.0", features = ["tokio-io"] }
 tokio-stream = { version = "0.1.6", features = ["signal", "time"] }
 cookie = { version = "0.18", features = ["percent-encode"] }
@@ -78,9 +78,9 @@ futures = { version = "0.3.30", default-features = false, features = ["std"] }
 state = "0.6"
 
 # tracing
-tracing = { version = "0.1.40", default-features = false, features = ["std", "attributes"] }
+tracing = { version = "0.1.41", default-features = false, features = ["std", "attributes"] }
 tinyvec = { version = "1.6", optional = true, features = ["std", "rustc_1_57"] }
-thread_local = { version = "1.1", optional = true }
+thread_local = { version = "1.1.4", optional = true }
 
 [dependencies.tracing-subscriber]
 version = "0.3.20"
@@ -102,7 +102,7 @@ version = "1.54.1"
 features = ["rt-multi-thread", "net", "io-util", "fs", "time", "sync", "signal", "parking_lot"]
 
 [dependencies.tokio-util]
-version = "0.7"
+version = "0.7.9"
 default-features = false
 features = ["io"]
 
@@ -138,12 +138,12 @@ version = "0.0.10"
 optional = true
 
 [target.'cfg(unix)'.dependencies]
-libc = "0.2.149"
+libc = "0.2.191"
 
 [build-dependencies]
-version_check = "0.9.1"
+version_check = "0.9.4"
 
 [dev-dependencies]
-tokio = { version = "1", features = ["macros", "io-std"] }
+tokio = { version = "1.54.1", features = ["macros", "io-std"] }
 figment = { version = "0.10.17", features = ["test"] }
 pretty_assertions = "1"
