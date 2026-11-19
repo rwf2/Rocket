@@ -26,7 +26,7 @@ uuid = ["dep:uuid"]
 [dependencies]
 tinyvec = { version = "1.6", features = ["std", "rustc_1_57"] }
 percent-encoding = "2"
-time = { version = "0.3", features = ["formatting", "macros"] }
+time = { version = "0.3.47", features = ["formatting", "macros"] }
 indexmap = "2"
 ref-cast = "1.0"
 uncased = "0.9.10"
