@@ -1,6 +1,7 @@
 use std::io;
 use std::pin::pin;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use hyper::service::service_fn;
@@ -12,7 +13,7 @@ use tokio::io::{AsyncRead, AsyncWrite};
 use crate::{Ignite, Orbit, Request, Rocket};
 use crate::request::ConnectionMeta;
 use crate::erased::{ErasedRequest, ErasedResponse, ErasedIoHandler};
-use crate::listener::{Listener, Connection, BouncedExt, CancellableExt};
+use crate::listener::{Listener, Connection, BouncedExt, CancellableExt, Lingering};
 use crate::error::log_server_error;
 use crate::data::{IoStream, RawStream};
 use crate::util::{spawn_inspect, FutureExt, ReaderStream};
@@ -175,6 +176,7 @@ impl Rocket<Orbit> {
             }
         }
 
+        let linger = Duration::from_secs(self.config.linger.into());
         let (listener, server) = (Arc::new(listener.bounced()), Arc::new(builder));
         while let Some(accept) = listener.accept().race(self.shutdown()).await.left().transpose()? {
             let (listener, rocket, server) = (listener.clone(), self.clone(), server.clone());
@@ -185,13 +187,25 @@ impl Rocket<Orbit> {
                     conn.certificates(),
                     conn.server_name()
                 );
+
+                // A connection upgraded by a `101` response belongs to its I/O
+                // handler, which may shut down writes and keep reading, so it
+                // must not linger.
+                let upgraded = Arc::new(AtomicBool::new(false));
                 let service = service_fn(|mut req| {
                     let upgrade = hyper::upgrade::on(&mut req);
                     let (parts, incoming) = req.into_parts();
+                    let upgraded = upgraded.clone();
                     rocket.clone().service(parts, incoming, Some(upgrade), meta.clone())
+                        .inspect_ok(move |response| {
+                            if response.status() == http::StatusCode::SWITCHING_PROTOCOLS {
+                                upgraded.store(true, Ordering::Release);
+                            }
+                        })
                 });
 
-                let io = TokioIo::new(conn.cancellable(rocket.shutdown.clone()));
+                let io = conn.cancellable(rocket.shutdown.clone());
+                let io = TokioIo::new(Lingering::new(io, linger, upgraded.clone()));
                 let mut server = pin!(server.serve_connection_with_upgrades(io, service));
                 match server.as_mut().race(rocket.shutdown()).await.left() {
                     Some(result) => result,

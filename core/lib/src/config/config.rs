@@ -151,6 +151,26 @@ pub struct Config {
     pub temp_dir: RelativePathBuf,
     /// Keep-alive timeout in seconds; disabled when `0`. **(default: `5`)**
     pub keep_alive: u32,
+    /// Linger time in seconds; disabled when `0`. **(default: `10`)**
+    ///
+    /// When closing a connection, Rocket shuts down writes and then reads and
+    /// discards incoming data for at most `linger` seconds or until the client
+    /// closes the connection. This prevents a TCP reset from discarding a
+    /// response the client has yet to read, as can happen when the client is
+    /// still sending data, such as the rest of a request body Rocket didn't
+    /// read. See [RFC 9112 §9.6] for details. This is equivalent to nginx's
+    /// `lingering_time` and is unrelated to the `SO_LINGER` socket option.
+    ///
+    /// When disabled, Rocket closes connections immediately, and a client still
+    /// sending data may receive a reset instead of a response. Lingering always
+    /// ends when the shutdown grace period elapses.
+    ///
+    /// Upgraded connections, such as WebSocket connections, never linger: once
+    /// a connection is upgraded, its I/O handler decides when to stop reading.
+    ///
+    /// [RFC 9112 §9.6]: https://www.rfc-editor.org/rfc/rfc9112#section-9.6
+    #[serde(default = "default_linger")]
+    pub linger: u32,
     /// The secret key for signing and encrypting. **(default: `0`)**
     ///
     /// _**Note:** This field _always_ serializes as a 256-bit array of `0`s to
@@ -232,6 +252,7 @@ impl Config {
             limits: Limits::default(),
             temp_dir: std::env::temp_dir().into(),
             keep_alive: 5,
+            linger: default_linger(),
             #[cfg(feature = "secrets")]
             secret_key: SecretKey::zero(),
             shutdown: ShutdownConfig::default(),
@@ -386,6 +407,9 @@ impl Config {
     /// The stringy parameter name for setting/extracting [`Config::keep_alive`].
     pub const KEEP_ALIVE: &'static str = "keep_alive";
 
+    /// The stringy parameter name for setting/extracting [`Config::linger`].
+    pub const LINGER: &'static str = "linger";
+
     /// The stringy parameter name for setting/extracting [`Config::ident`].
     pub const IDENT: &'static str = "ident";
 
@@ -418,8 +442,8 @@ impl Config {
 
     /// An array of all of the stringy parameter names.
     pub const PARAMETERS: &'static [&'static str] = &[
-        Self::WORKERS, Self::MAX_BLOCKING, Self::WAKE_INTERVAL, Self::KEEP_ALIVE, Self::IDENT,
-        Self::IP_HEADER, Self::PROXY_PROTO_HEADER, Self::LIMITS,
+        Self::WORKERS, Self::MAX_BLOCKING, Self::WAKE_INTERVAL, Self::KEEP_ALIVE, Self::LINGER,
+        Self::IDENT, Self::IP_HEADER, Self::PROXY_PROTO_HEADER, Self::LIMITS,
         Self::SECRET_KEY, Self::TEMP_DIR, Self::LOG_LEVEL, Self::LOG_FORMAT,
         Self::SHUTDOWN, Self::CLI_COLORS,
     ];
@@ -440,6 +464,10 @@ impl Config {
     pub(crate) const KNOWN_SECRET_KEYS: &'static [&'static str] = &[
         "hPRYyVRiMyxpw5sBB1XeCMN1kFsDCqKvBi2QJxBVHQk="
     ];
+}
+
+fn default_linger() -> u32 {
+    10
 }
 
 impl Provider for Config {

@@ -93,6 +93,7 @@ impl Trace for Config {
                 .finish()),
             temp_dir = %self.temp_dir.relative().display(),
             keep_alive = (self.keep_alive != 0).then_some(self.keep_alive),
+            linger = (self.linger != 0).then_some(self.linger),
             shutdown.ctrlc = self.shutdown.ctrlc,
             shutdown.signals = %{
                 #[cfg(not(unix))] {

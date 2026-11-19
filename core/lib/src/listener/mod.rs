@@ -1,4 +1,5 @@
 mod cancellable;
+mod lingering;
 mod bounced;
 mod listener;
 mod endpoint;
@@ -20,4 +21,5 @@ pub use bind::*;
 pub use default::*;
 
 pub(crate) use cancellable::*;
+pub(crate) use lingering::*;
 pub(crate) use bounced::*;

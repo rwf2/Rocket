@@ -32,6 +32,7 @@ values:
 | `ip_header`          | `string`, `false`  | IP header to inspect to get [client's real IP]. | `"X-Real-IP"`                 |
 | `proxy_proto_header` | `string`, `false`  | Header identifying [client to proxy protocol].  | `None`                        |
 | `keep_alive`         | `u32`              | Keep-alive timeout seconds; disabled when `0`.  | `5`                           |
+| `linger`             | `u32`              | Linger time seconds; disabled when `0`.         | `10`                          |
 | `log_level`          | [`LogLevel`]       | Max level to log. (off/normal/debug/critical)   | `normal`/`critical`           |
 | `cli_colors`         | [`CliColors`]      | Whether to use colors and emoji when logging.   | `"auto"`                      |
 | `secret_key`         | [`SecretKey`]      | Secret key for signing and encrypting values.   | `None`                        |
@@ -158,6 +159,7 @@ workers = 16
 max_blocking = 512
 wake_interval = 250
 keep_alive = 5
+linger = 10
 ident = "Rocket"
 ip_header = "X-Real-IP" # set to `false` to disable
 proxy_proto_header = false # set to `false` (the default) to disable

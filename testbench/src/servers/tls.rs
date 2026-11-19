@@ -3,7 +3,9 @@ use crate::prelude::*;
 use std::net::{Ipv4Addr, SocketAddr};
 
 use rocket::tokio::net::TcpListener;
-use rocket::{get, routes, Rocket};
+use rocket::{get, post, routes, Rocket};
+use rocket::data::Data;
+use rocket::http::Status;
 use rocket::listener::Endpoint;
 use rocket::tls::TlsListener;
 
@@ -55,4 +57,23 @@ fn test_tls_works() -> Result<()> {
     Ok(())
 }
 
+#[post("/", data = "<_data>")]
+fn too_large(_data: Data<'_>) -> Status {
+    Status::PayloadTooLarge
+}
+
+// The client is still sending the body when the response arrives. Closing the
+// connection with unread data would reset it and discard the response.
+fn test_tls_response_survives_unread_body() -> Result<()> {
+    let server = spawn! {
+        Rocket::tls_default().mount("/", routes![too_large])
+    }?;
+
+    let client: Client = Client::build().http1_only().try_into()?;
+    let response = client.post(&server, "/")?.body(vec![b'a'; 16 << 20]).send()?;
+    assert_eq!(response.status(), 413);
+    Ok(())
+}
+
 register!(test_tls_works);
+register!(test_tls_response_survives_unread_body);
