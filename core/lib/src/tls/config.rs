@@ -781,6 +781,64 @@ mod tests {
     }
 
     #[test]
+    fn private_key_files_hold_exactly_one_key() {
+        let keys: [&[u8]; 3] = [
+            include_bytes!(tls_example_private_pem!("ca_key.pem")),
+            include_bytes!(tls_example_private_pem!("ed25519_key.pem")),
+            include_bytes!(tls_example_private_pem!("ecdsa_nistp256_sha256_key_sec1.pem")),
+        ];
+
+        let load_key = |pem: &[u8]| TlsConfig::from_bytes(&[], pem).load_key();
+        let cert = include_bytes!(tls_example_private_pem!("ca_cert.pem"));
+        for (i, first) in keys.iter().enumerate() {
+            load_key(first).unwrap();
+
+            let mut pem = cert.to_vec();
+            pem.extend_from_slice(first);
+            for other in keys.iter().cycle().skip(i + 1).take(2) {
+                pem.extend_from_slice(other);
+            }
+
+            pem.extend_from_slice(cert);
+            let error = load_key(&pem).unwrap_err();
+            assert!(matches!(error, Error::PrivKey(KeyError::BadItem(SectionKind::Certificate))));
+
+            pem.extend_from_slice(first);
+            let error = load_key(&pem).unwrap_err();
+            assert!(matches!(error, Error::PrivKey(KeyError::BadItem(SectionKind::Certificate))));
+
+            let pem = [*first, *first].concat();
+            let error = load_key(&pem).unwrap_err();
+            assert!(matches!(error, Error::PrivKey(KeyError::BadKeyCount(2))));
+        }
+
+        let error = load_key(&keys.concat()).unwrap_err();
+        assert!(matches!(error, Error::PrivKey(KeyError::BadKeyCount(3))));
+    }
+
+    #[test]
+    fn private_key_errors() {
+        let key = include_bytes!(tls_example_private_pem!("ed25519_key.pem"));
+        let load_key = |pem: &[u8]| TlsConfig::from_bytes(&[], pem).load_key();
+        let malformed = b"-----BEGIN CERTIFICATE-----\n?\n-----END CERTIFICATE-----\n";
+        let mut pem = malformed.to_vec();
+        pem.extend_from_slice(key);
+        let error = load_key(&pem).unwrap_err();
+        assert!(matches!(error, Error::PrivKey(KeyError::Pem(_))));
+
+        pem.extend_from_slice(malformed);
+        let error = load_key(&pem).unwrap_err();
+        assert!(matches!(error, Error::PrivKey(KeyError::Pem(_))));
+
+        let pem = b"-----BEGIN PRIVATE KEY-----\n?\n-----END PRIVATE KEY-----\n";
+        let error = load_key(pem).unwrap_err();
+        assert!(matches!(error, Error::PrivKey(KeyError::Pem(_))));
+
+        let error = load_key(malformed).unwrap_err();
+        assert!(matches!(error, Error::PrivKey(KeyError::Pem(_))));
+    }
+
+    #[test]
     fn verify_load_certs_of_different_types() -> Result<()> {
         let cert_paths = [
             tls_example_private_pem!("rsa_sha256_cert.pem"),

@@ -167,3 +167,4 @@ hyper = { version = "1.12", default-features = false, features = ["client", "htt
 http-body-util = "0.1.5"
 figment = { version = "0.10.17", features = ["test"] }
 pretty_assertions = "1"
+rustls = { version = "0.23.46", default-features = false, features = ["ring", "std", "tls12"] }
