@@ -704,11 +704,13 @@ impl Rocket<Orbit> {
     /// finished processing requests without respect for ongoing responses. That
     /// is, `server` resolves even when there are running tasks that are
     /// generating a response. So, `server` resolving implies little to nothing
-    /// about the state of connections. As a result, we depend on the timing of
-    /// grace + mercy + some buffer to determine when all connections should be
-    /// closed, thus all tasks should be complete, thus all references to
-    /// `Arc<Rocket>` should be dropped and we can get back a unique reference.
+    /// about the state of connections. As a result, we wait until all tasks are
+    /// complete, thus all references to `Arc<Rocket>` are dropped and we can
+    /// get back a unique reference. Since all connections should be closed
+    /// after grace + mercy, we wait at most grace + mercy + some buffer.
     async fn try_wait_shutdown(self: Arc<Self>) -> Result<Rocket<Ignite>, Arc<Self>> {
+        use tokio::time::{sleep_until, Instant};
+
         info!("Shutting down. Waiting for shutdown fairings and pending I/O...");
         tokio::spawn({
             let rocket = self.clone();
@@ -716,10 +718,12 @@ impl Rocket<Orbit> {
         });
 
         let config = &self.config.shutdown;
-        let wait = Duration::from_micros(250);
-        for period in [wait, config.grace(), wait, config.mercy(), wait * 4] {
-            if Arc::strong_count(&self) == 1 { break }
-            tokio::time::sleep(period).await;
+        let buffer = Duration::from_micros(1500);
+        let deadline = Instant::now() + config.grace() + config.mercy() + buffer;
+        let mut wait = Duration::from_micros(250);
+        while Arc::strong_count(&self) != 1 && Instant::now() < deadline {
+            sleep_until((Instant::now() + wait).min(deadline)).await;
+            wait = Duration::from_millis(10);
         }
 
         match Arc::try_unwrap(self) {
