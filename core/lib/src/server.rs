@@ -230,7 +230,10 @@ impl Rocket<Orbit> {
                 let remote = Endpoint::Quic(conn.remote_address()).assume_tls();
                 let (certs, sni) = (quic::certificates(&conn), quic::server_name(&conn));
                 let meta = ConnectionMeta::new(Ok(remote), certs, sni.as_deref());
-                let mut h3 = quic::Connection::new(h3_quinn::Connection::new(conn.clone()))
+                // Accept request headers as large as hyper accepts for HTTP/2.
+                let mut h3: quic::Connection = h3::server::builder()
+                    .max_field_section_size(16 * 1024)
+                    .build(h3_quinn::Connection::new(conn.clone()))
                     .map_err(io::Error::other)
                     .await?;
 
@@ -251,8 +254,11 @@ impl Rocket<Orbit> {
 
                     let (rocket, meta, conn) = (rocket.clone(), meta.clone(), conn.clone());
                     spawn_inspect(|e: &io::Error| log_server_error(e), async move {
-                        let (req, stream) = resolver.resolve_request()
-                            .map_err(io::Error::other)
+                        // Limit the time to read headers as `serve12` does for HTTP/1.
+                        let headers = resolver.resolve_request().map_err(io::Error::other);
+                        let (req, stream) = tokio::time::timeout(Duration::from_secs(15), headers)
+                            .map_err(io::Error::from)
+                            .and_then(futures::future::ready)
                             .race_io(rocket.shutdown())
                             .await?;
 

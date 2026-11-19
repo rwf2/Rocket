@@ -7,6 +7,7 @@ use std::io;
 use std::net::{Ipv4Addr, SocketAddr};
 use std::pin::Pin;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::task::{Context, Poll};
 use std::time::Duration;
 
@@ -135,6 +136,11 @@ impl Client {
 
     async fn get(&mut self, path: &str) -> Response {
         self.send("GET", path, None).await
+    }
+
+    /// Opens a request stream to write HTTP/3 frames to directly.
+    async fn raw(&self) -> (quinn::SendStream, quinn::RecvStream) {
+        self.conn.open_bi().await.unwrap()
     }
 
     /// Closes the connection with `H3_NO_ERROR` and waits until it is closed.
@@ -378,4 +384,144 @@ async fn reset_then_close_drops_stalled_reader() {
     for sized in [false, true] {
         timeout(Duration::from_secs(10), check_cancellation(true, sized)).await.unwrap();
     }
+}
+
+/// Appends `value` to `buf` as a QUIC variable-length integer.
+fn varint(buf: &mut Vec<u8>, value: usize) {
+    match value {
+        0..64 => buf.push(value as u8),
+        64..16384 => buf.extend_from_slice(&(value as u16 | 0x4000).to_be_bytes()),
+        _ => buf.extend_from_slice(&(value as u32 | 0x8000_0000).to_be_bytes()),
+    }
+}
+
+/// Appends `value` to `buf` as a QPACK integer with an `n`-bit prefix.
+fn prefixed(buf: &mut Vec<u8>, flags: u8, n: u32, value: usize) {
+    let max = (1 << n) - 1;
+    if value < max {
+        return buf.push(flags | value as u8);
+    }
+
+    buf.push(flags | max as u8);
+    let mut rest = value - max;
+    while rest >= 128 {
+        buf.push(rest as u8 | 128);
+        rest >>= 7;
+    }
+
+    buf.push(rest as u8);
+}
+
+/// A HEADERS frame carrying `fields` as QPACK literals.
+fn headers_frame(fields: &[(&str, &str)]) -> Vec<u8> {
+    let mut block = vec![0, 0];
+    for (name, value) in fields {
+        prefixed(&mut block, 0b0010_0000, 3, name.len());
+        block.extend_from_slice(name.as_bytes());
+        prefixed(&mut block, 0, 7, value.len());
+        block.extend_from_slice(value.as_bytes());
+    }
+
+    let mut frame = vec![0x01];
+    varint(&mut frame, block.len());
+    frame.extend(block);
+    frame
+}
+
+/// Reads the DATA (0x0) and HEADERS (0x1) frames of a response, as `(type,
+/// payload)`, until the stream ends. Other frames, like GREASE, are skipped.
+async fn raw_frames(recv: &mut quinn::RecvStream) -> Result<Vec<(usize, Vec<u8>)>, String> {
+    fn varint(bytes: &mut &[u8]) -> usize {
+        let (int, rest) = bytes.split_at(1 << (bytes[0] >> 6));
+        *bytes = rest;
+        int[1..].iter().fold(int[0] as usize & 0x3f, |acc, &b| acc << 8 | b as usize)
+    }
+
+    let data = recv.read_to_end(1 << 20).await.map_err(|e| e.to_string())?;
+    let (mut bytes, mut frames) = (&data[..], vec![]);
+    while !bytes.is_empty() {
+        let kind = varint(&mut bytes);
+        let len = varint(&mut bytes);
+        let (payload, rest) = bytes.split_at(len);
+        if kind <= 1 {
+            frames.push((kind, payload.to_vec()));
+        }
+
+        bytes = rest;
+    }
+
+    Ok(frames)
+}
+
+fn counted(rocket: Rocket<Build>) -> (Rocket<Build>, Arc<AtomicUsize>) {
+    let count = Arc::new(AtomicUsize::new(0));
+    let counter = count.clone();
+    let rocket = rocket.attach(AdHoc::on_request("Count", move |_, _| {
+        counter.fetch_add(1, Ordering::SeqCst);
+        Box::pin(async {})
+    }));
+
+    (rocket, count)
+}
+
+#[rocket::async_test]
+async fn oversized_headers_are_refused() {
+    let (rocket, count) = counted(rocket().mount("/", routes![ready]));
+    let server = Server::launch(rocket).await;
+    let client = Client::connect(server.addr).await;
+    let (mut send, mut recv) = client.raw().await;
+    let large = "a".repeat(16 * 1024);
+    let request = [
+        (":method", "GET"), (":scheme", "https"), (":authority", "localhost"),
+        (":path", "/ready"), ("x-large", &large),
+    ];
+
+    send.write_all(&headers_frame(&request)).await.unwrap();
+    send.finish().unwrap();
+
+    // A QPACK block with only `:status: 431`, which h3 sends as a static name
+    // reference and a Huffman-coded value.
+    let status_431 = vec![0, 0, 0x5f, 0x09, 0x83, 0x69, 0x90, 0xff];
+    let frames = timeout(Duration::from_secs(5), raw_frames(&mut recv)).await.unwrap();
+    assert_eq!(frames, Ok(vec![(0x01, status_431)]));
+    assert_eq!(count.load(Ordering::SeqCst), 0);
+
+    // Headers within the limit are accepted on the same connection.
+    let (mut send, mut recv) = client.raw().await;
+    let small = "a".repeat(15 * 1024);
+    let request = [
+        (":method", "GET"), (":scheme", "https"), (":authority", "localhost"),
+        (":path", "/ready"), ("x-large", &small),
+    ];
+
+    send.write_all(&headers_frame(&request)).await.unwrap();
+    send.finish().unwrap();
+    let frames = timeout(Duration::from_secs(5), raw_frames(&mut recv)).await.unwrap().unwrap();
+    assert_eq!(frames.last(), Some(&(0x00, b"ready".to_vec())));
+    assert_eq!(count.load(Ordering::SeqCst), 1);
+
+    client.close().await;
+    server.shutdown().await;
+}
+
+// Waits for the server's 15 second header read timeout.
+#[ignore = "takes 15 seconds"]
+#[rocket::async_test]
+async fn unfinished_headers_time_out() {
+    let (rocket, count) = counted(rocket().mount("/", routes![ready]));
+    let server = Server::launch(rocket).await;
+    let client = Client::connect(server.addr).await;
+    let (mut send, mut recv) = client.raw().await;
+    let request = [(":method", "GET"), (":scheme", "https"), (":path", "/ready")];
+    let frame = headers_frame(&request);
+    send.write_all(&frame[..frame.len() / 2]).await.unwrap();
+
+    let start = std::time::Instant::now();
+    let frames = timeout(Duration::from_secs(20), raw_frames(&mut recv)).await.unwrap();
+    assert!(start.elapsed() > Duration::from_secs(14), "cut off after {:?}", start.elapsed());
+    assert_eq!(frames, Ok(vec![]));
+    assert_eq!(count.load(Ordering::SeqCst), 0);
+
+    client.close().await;
+    server.shutdown().await;
 }
