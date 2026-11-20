@@ -657,6 +657,32 @@ async fn shutdown_waits_for_requests_in_flight() {
 }
 
 #[rocket::async_test]
+async fn shutdown_fairings_run_with_requests_in_flight() {
+    let state = Arc::new(Slow::default());
+    let fairing_ran = Arc::new(Notify::new());
+    let rocket = rocket().manage(state.clone()).mount("/", routes![slow])
+        .attach(AdHoc::on_shutdown("Notify", {
+            let fairing_ran = fairing_ran.clone();
+            move |_| Box::pin(async move { fairing_ran.notify_one(); })
+        }));
+
+    let server = Server::launch(rocket).await;
+    let mut client = Client::connect(server.addr).await;
+    let mut stream = client.request("GET", "/slow", None).await;
+    state.entered.notified().await;
+
+    server.shutdown.notify();
+    timeout(Duration::from_millis(500), fairing_ran.notified()).await
+        .expect("shutdown fairing did not run while a request was in flight");
+
+    state.release.notify_one();
+    let head = stream.recv_response().await.unwrap();
+    assert_eq!(Response { head, stream }.into_string().await, "slow");
+    client.close().await;
+    timeout(Duration::from_secs(5), server.task).await.unwrap().unwrap();
+}
+
+#[rocket::async_test]
 async fn goaway_allows_requests_in_flight() {
     let state = Arc::new(Slow::default());
     let server = Server::launch(rocket().manage(state.clone()).mount("/", routes![slow])).await;

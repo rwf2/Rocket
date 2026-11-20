@@ -302,8 +302,13 @@ impl Rocket<Orbit> {
         }
 
         // Refuse new connections and give existing ones a chance to close.
+        // Waiting in a task lets shutdown fairings start now. The task holds
+        // on to `self`, so `try_wait_shutdown()` still waits for it.
         endpoint.set_server_config(None);
-        endpoint.wait_idle().race(self.shutdown.mercy.clone()).await;
+        tokio::spawn(async move {
+            endpoint.wait_idle().race(self.shutdown.mercy.clone()).await;
+        });
+
         Ok(())
     }
 }
