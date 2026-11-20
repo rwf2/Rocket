@@ -510,6 +510,8 @@ fn connection_headers() -> RawResponse {
         .raw_header("Transfer-Encoding", "chunked")
         .raw_header("Connection", "close, x-hop")
         .raw_header("X-Hop", "1")
+        .raw_header_adjoin("Connection", "x-hop-2")
+        .raw_header("X-Hop-2", "1")
         .raw_header("Keep-Alive", "timeout=5")
         .raw_header("Proxy-Connection", "keep-alive")
         .raw_header("Upgrade", "websocket")
@@ -527,14 +529,15 @@ async fn connection_headers_are_not_sent() {
     let response = local.get("/connection-headers").dispatch().await;
     assert_eq!(response.headers().get_one("Transfer-Encoding"), Some("chunked"));
     assert_eq!(response.headers().get_one("X-Hop"), Some("1"));
+    assert_eq!(response.headers().get("Connection").count(), 2);
 
     let server = Server::launch(rocket().mount("/", routes![connection_headers])).await;
     let mut client = Client::connect(server.addr).await;
     let response = client.get("/connection-headers").await;
     assert_eq!(response.status(), 200);
     for name in [
-        "transfer-encoding", "connection", "x-hop", "keep-alive", "proxy-connection",
-        "upgrade", "te",
+        "transfer-encoding", "connection", "x-hop", "x-hop-2", "keep-alive",
+        "proxy-connection", "upgrade", "te",
     ] {
         assert_eq!(response.header(name), None, "{name}");
     }

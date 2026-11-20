@@ -115,10 +115,15 @@ fn strip_connection_headers(headers: &mut http::HeaderMap) {
     }
 
     // `Connection` may name other headers that are specific to the connection.
-    if let Some(names) = headers.remove(CONNECTION) {
-        for name in names.to_str().unwrap_or_default().split(',') {
-            headers.remove(name.trim());
-        }
+    let names: Vec<_> = headers.get_all(CONNECTION).iter()
+        .filter_map(|names| names.to_str().ok())
+        .flat_map(|names| names.split(','))
+        .map(|name| name.trim().to_string())
+        .collect();
+
+    headers.remove(CONNECTION);
+    for name in names {
+        headers.remove(name);
     }
 }
 
