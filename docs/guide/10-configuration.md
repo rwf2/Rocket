@@ -304,6 +304,13 @@ ciphers = [
 ]
 ```
 
+! note: HTTP/3 requires the `TLS_AES_128_GCM_SHA256` cipher suite.
+
+  When the `http3-preview` feature is enabled, the enabled cipher suites must
+  include `TLS_AES_128_GCM_SHA256`, which QUIC requires. Otherwise, Rocket fails
+  to launch. This applies both to the configured `ciphers` and to the cipher
+  suites of an installed [`CryptoProvider`](#crypto-providers).
+
 ### Mutual TLS
 
 Rocket supports mutual TLS client authentication. Configuration works in concert
@@ -334,7 +341,7 @@ enabled and support configured via the `tls.mutual` config parameter:
    ```
 
 The `tls.mutual` parameter is expected to be a dictionary that deserializes into a
-[`MutualTls`] structure:
+[`MtlsConfig`] structure:
 
 | key         | required  | type                                                        |
 |-------------|-----------|-------------------------------------------------------------|
@@ -430,7 +437,16 @@ fn rocket() -> _ {
 
 Rocket will use the installed default whenever TLS is operational.
 
+! note: An installed `CryptoProvider` replaces the configured `ciphers`.
+
+  Rocket uses an installed provider as is and does not apply `ciphers`. Clients
+  negotiate from the provider's cipher suites, and `prefer_server_cipher_order`
+  applies to the provider's order. To apply the configured `ciphers` with a
+  custom provider, read them via [`TlsConfig::ciphers()`] and build the provider
+  from them.
+
 [`rustls`]: @rustls
+[`TlsConfig::ciphers()`]: @api/master/rocket/tls/struct.TlsConfig.html#method.ciphers
 [`CryptoProvider`]: @rustls/crypto/struct.CryptoProvider.html
 [`ring`]: @rustls/crypto/ring/index.html
 [installing]: @rustls/crypto/struct.CryptoProvider.html#method.install_default
