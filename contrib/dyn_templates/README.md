@@ -30,12 +30,12 @@ and automatically reloads templates when compiled in debug mode. It supports [Ha
      the configurable `template_dir` directory (default:
      `{rocket_root}/templates`).
 
-  2. Attach `Template::fairing()` and return a `Template` using
+  2. Attach `Templating::new()` and return a `Template` using
      `Template::render()`, supplying the name of the template file **minus the
      last two extensions**:
 
      ```rust
-     use rocket_dyn_templates::{Template, context};
+     use rocket_dyn_templates::{Template, Templating, context};
 
      #[get("/")]
      fn index() -> Template {
@@ -44,7 +44,7 @@ and automatically reloads templates when compiled in debug mode. It supports [Ha
 
      #[launch]
      fn rocket() -> _ {
-         rocket::build().attach(Template::fairing())
+         rocket::build().attach(Templating::new())
      }
      ```
 

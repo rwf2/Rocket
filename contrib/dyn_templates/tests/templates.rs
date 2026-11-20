@@ -6,7 +6,7 @@ use rocket::{Rocket, Build};
 use rocket::config::Config;
 use rocket::figment::value::Value;
 use rocket::serde::{Serialize, Deserialize};
-use rocket_dyn_templates::{Template, Metadata, context};
+use rocket_dyn_templates::{Template, Templating, Metadata, context};
 
 #[get("/<engine>/<name>")]
 fn template_check(md: Metadata<'_>, engine: &str, name: &str) -> Option<()> {
@@ -24,7 +24,7 @@ fn template_root() -> PathBuf {
 
 fn rocket() -> Rocket<Build> {
     rocket::custom(Config::figment().merge(("template_dir", template_root())))
-        .attach(Template::fairing())
+        .attach(Templating::new())
         .mount("/", routes![template_check, is_reloading])
 }
 
@@ -32,14 +32,20 @@ fn rocket() -> Rocket<Build> {
 fn test_callback_error() {
     use rocket::{local::blocking::Client, error::ErrorKind::FailedFairings};
 
-    let rocket = rocket::build().attach(Template::try_custom(|_| {
-        Err("error reloading templates!".into())
-    }));
-
-    let error = Client::debug(rocket).expect_err("client failure");
-    match error.kind() {
-        FailedFairings(failures) => assert_eq!(failures[0].name, "Templating"),
-        _ => panic!("Wrong kind of launch error"),
+    let dir = tempfile::tempdir().expect("template directory");
+    for templating in [
+        Templating::try_init(|_| Err("error initializing templates!".into()))
+            .on_load(|_| panic!("loading after failed initialization")),
+        Templating::new()
+            .try_on_load(|_| Err("error loading templates!".into())),
+    ] {
+        let rocket = rocket::custom(Config::figment().merge(("template_dir", dir.path())))
+            .attach(templating);
+        let error = Client::debug(rocket).expect_err("client failure");
+        match error.kind() {
+            FailedFairings(failures) => assert_eq!(failures[0].name, "Templating"),
+            _ => panic!("Wrong kind of launch error"),
+        }
     }
 }
 
@@ -239,6 +245,49 @@ mod tera_tests {
     }
 
     #[async_test]
+    async fn test_tera_hooks() {
+        use rocket::local::asynchronous::Client;
+        use rocket_dyn_templates::tera::{Kwargs, State};
+
+        let dir = tempfile::tempdir().expect("template directory");
+        std::fs::write(
+            dir.path().join("base.html.tera"),
+            "{{ value | double }}:{% block content %}base{% endblock %}",
+        ).expect("write template");
+
+        let templating = Templating::new()
+            .try_on_init(|_| Err("replaced initialization hook".into()))
+            .on_load(|_| panic!("replaced loading hook"))
+            .try_on_load(|engines| {
+                engines.tera.add_raw_template("child.html", concat!(
+                    "{% extends \"base\" %}",
+                    "{% block content %}child{% endblock %}",
+                ))?;
+
+                Ok(())
+            })
+            .on_init(|engines| {
+                engines.tera.register_filter("double", |x: i64, _: Kwargs, _: &State<'_>| x * 2);
+            });
+
+        let rocket = rocket::custom(Config::figment().merge(("template_dir", dir.path())))
+            .attach(templating);
+        let client = Client::debug(rocket).await.unwrap();
+        let req = client.get("/");
+        let metadata = Metadata::from_request(&req).await.unwrap();
+
+        assert_eq!(
+            metadata.render("base", context! { value: 21 }),
+            Some((ContentType::HTML, "42:base".into()))
+        );
+
+        assert_eq!(
+            metadata.render("child.html", context! { value: 21 }),
+            Some((ContentType::HTML, "42:child".into()))
+        );
+    }
+
+    #[async_test]
     async fn test_globby_paths() {
         use rocket::local::asynchronous::Client;
 
@@ -261,7 +310,7 @@ mod tera_tests {
 
         let figment = Config::figment().merge(("template_dir", root.path()));
         let rocket = rocket::custom(figment)
-            .attach(Template::custom(|engines| {
+            .attach(Templating::new().on_load(|engines| {
                 engines.tera.add_raw_template("raw.html", "{{ v }}").unwrap();
                 engines.tera.add_raw_template("raw", "{{ v }}").unwrap();
             }));

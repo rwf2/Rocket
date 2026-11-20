@@ -9,7 +9,7 @@ mod tera;
 mod tests;
 
 use rocket::response::content::RawHtml;
-use rocket_dyn_templates::Template;
+use rocket_dyn_templates::Templating;
 
 #[get("/")]
 fn index() -> RawHtml<&'static str> {
@@ -33,7 +33,7 @@ fn rocket() -> _ {
         .register("/hbs", catchers![hbs::not_found])
         .register("/tera", catchers![tera::not_found])
         .register("/minijinja", catchers![minijinja::not_found])
-        .attach(Template::custom(|engines| {
+        .attach(Templating::new().on_load(|engines| {
             hbs::customize(&mut engines.handlebars);
             tera::customize(&mut engines.tera);
             minijinja::customize(&mut engines.minijinja);

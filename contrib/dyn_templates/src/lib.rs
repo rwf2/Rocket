@@ -32,13 +32,13 @@
 //!      [Handlebars]: https://docs.rs/crate/handlebars/6
 //!      [MiniJinja]: https://docs.rs/minijinja/2
 //!
-//!   3. Attach `Template::fairing()` and return a [`Template`] from your routes
+//!   3. Attach `Templating::new()` and return a [`Template`] from your routes
 //!      via [`Template::render()`], supplying the name of the template file
 //!      **minus the last two extensions**:
 //!
 //!      ```rust
 //!      # #[macro_use] extern crate rocket;
-//!      use rocket_dyn_templates::{Template, context};
+//!      use rocket_dyn_templates::{Template, Templating, context};
 //!
 //!      #[get("/")]
 //!      fn index() -> Template {
@@ -47,7 +47,7 @@
 //!
 //!      #[launch]
 //!      fn rocket() -> _ {
-//!          rocket::build().attach(Template::fairing())
+//!          rocket::build().attach(Templating::new())
 //!      }
 //!      ```
 //!
@@ -152,14 +152,14 @@
 //!
 //! ### Discovery, Automatic Reloads, and Engine Customization
 //!
-//! As long as one of [`Template::fairing()`], [`Template::custom()`], or
-//! [`Template::try_custom()`] is [attached], any file in the configured
-//! `template_dir` ending with a known engine extension (as described in the
-//! [usage section](#usage)) can be rendered. The latter two fairings allow
-//! customizations such as registering helpers and templates from strings.
+//! As long as a [`Templating`] fairing is [attached], any file in the
+//! configured `template_dir` ending with a known engine extension (as described
+//! in the [usage section](#usage)) can be rendered. The fairing also allows
+//! customizing the templating engines, for instance, to register helpers or
+//! templates from strings. See [`Templating`] for details.
 //!
-//! _**Note:** Templates that are registered directly via [`Template::custom()`],
-//! use whatever name provided during that registration; no extensions are
+//! _**Note:** Templates that are registered directly with an engine use
+//! whatever name is provided during registration; no extensions are
 //! automatically removed._
 //!
 //! In debug mode (without the `--release` flag passed to `cargo`), templates
@@ -207,5 +207,6 @@ mod metadata;
 mod template;
 
 pub use engine::Engines;
+pub use fairing::Templating;
 pub use metadata::Metadata;
 pub use template::Template;
