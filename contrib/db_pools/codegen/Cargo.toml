@@ -19,10 +19,10 @@ workspace = true
 [dependencies]
 devise = "0.5"
 proc-macro2-diagnostics = { version = "0.11", features = ["nightly"] }
-quote = "1"
+quote = "1.0.47"
 
 [dev-dependencies]
 rocket = { path = "../../../core/lib", default-features = false }
 rocket_db_pools = { path = "../lib", features = ["deadpool_postgres"] }
 trybuild = "1.0"
-version_check = "0.9"
+version_check = "0.9.4"

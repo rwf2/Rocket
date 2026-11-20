@@ -40,7 +40,10 @@ diesel_sqlite = [
   "dep:libsqlite3-sys",
 ]
 # mongodb features
-mongodb = ["dep:mongodb", "dep:rustls", "dep:rustls-webpki", "dep:webpki-roots"]
+mongodb = [
+  "dep:mongodb", "dep:rustls", "dep:rustls-webpki", "dep:webpki-roots",
+  "dep:tokio-util",
+]
 
 # postgres features
 postgres_rustls_native_certs = [
@@ -79,6 +82,12 @@ optional = true
 version = "3.9.1"
 default-features = false
 features = ["compat-3-0-0", "rustls-tls", "dns-resolver"]
+optional = true
+
+[dependencies.tokio-util]
+# MongoDB permits versions that lack the `TaskTracker` it uses.
+version = "0.7.10"
+default-features = false
 optional = true
 
 [dependencies.diesel-async]
@@ -144,12 +153,12 @@ version = "1.0.10"
 optional = true
 
 [dependencies.rustls-native-certs]
-version = "0.8"
+version = "0.8.1"
 default-features = false
 optional = true
 
 [dependencies.log]
-version = "0.4"
+version = "0.4.18"
 default-features = false
 optional = true
 
