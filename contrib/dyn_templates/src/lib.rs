@@ -179,6 +179,12 @@
 #![doc(html_favicon_url = "https://rocket.rs/images/favicon.ico")]
 #![doc(html_logo_url = "https://rocket.rs/images/logo-boxed.png")]
 
+// Without an engine, the engine plumbing is unused.
+#![cfg_attr(
+    not(any(feature = "tera", feature = "handlebars", feature = "minijinja")),
+    allow(dead_code, unused_variables)
+)]
+
 #[macro_use] extern crate rocket;
 
 #[doc(inline)]

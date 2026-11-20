@@ -1,3 +1,9 @@
+// Without an engine, the shared test helpers are unused.
+#![cfg_attr(
+    not(any(feature = "tera", feature = "handlebars", feature = "minijinja")),
+    allow(dead_code)
+)]
+
 #[macro_use] extern crate rocket;
 
 use std::path::{Path, PathBuf};
