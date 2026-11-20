@@ -2,7 +2,7 @@ use std::pin::Pin;
 use std::task::{Context, Poll};
 
 use rocket::data::IoStream;
-use rocket::futures::{StreamExt, SinkExt, Sink};
+use rocket::futures::{ready, StreamExt, SinkExt, Sink};
 use rocket::futures::stream::{Stream, FusedStream};
 
 use crate::frame::{Message, CloseFrame};
@@ -33,15 +33,17 @@ use crate::result::{Result, Error};
 ///
 /// [`StreamExt`]: rocket::futures::StreamExt
 /// [`SinkExt`]: rocket::futures::SinkExt
-pub struct DuplexStream(tokio_tungstenite::WebSocketStream<IoStream>);
+pub struct DuplexStream(tokio_tungstenite::WebSocketStream<IoStream>, bool);
 
 impl DuplexStream {
-    pub(crate) async fn new(stream: IoStream, config: crate::Config) -> Self {
+    /// If `await_close` is `true`, closing the sink also waits for the peer's
+    /// `Close`, discarding any other messages.
+    pub(crate) async fn new(stream: IoStream, config: crate::Config, await_close: bool) -> Self {
         use tokio_tungstenite::WebSocketStream;
         use crate::tungstenite::protocol::Role;
 
         let inner = WebSocketStream::from_raw_socket(stream, Role::Server, Some(config));
-        DuplexStream(inner.await)
+        DuplexStream(inner.await, await_close)
     }
 
     /// Close the stream now. This does not typically need to be called.
@@ -84,6 +86,17 @@ impl Sink<Message> for DuplexStream {
     }
 
     fn poll_close(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        self.get_mut().0.poll_close_unpin(cx)
+        let this = self.get_mut();
+        ready!(this.0.poll_close_unpin(cx))?;
+        while this.1 {
+            match ready!(this.0.poll_next_unpin(cx)) {
+                Some(Ok(message)) if message.is_close() => break,
+                Some(Ok(_)) => continue,
+                Some(Err(e)) => return Poll::Ready(Err(e)),
+                None => break,
+            }
+        }
+
+        Poll::Ready(Ok(()))
     }
 }

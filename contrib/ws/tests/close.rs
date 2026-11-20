@@ -14,6 +14,7 @@ use rocket::tokio::sync::oneshot;
 use rocket::tokio::task::JoinHandle;
 use rocket::tokio::time::timeout;
 use rocket_ws as ws;
+use tokio_tungstenite::MaybeTlsStream;
 use ws::frame::{CloseCode, CloseFrame};
 
 struct Output {
@@ -44,6 +45,13 @@ fn server_close(
         output.resumed = true;
         yield "after close".into();
         drop(output);
+    }
+}
+
+#[get("/finite")]
+fn finite(_socket: ws::WebSocket) -> ws::Stream!['static] {
+    ws::Stream! { _socket =>
+        yield "hello".into();
     }
 }
 
@@ -127,6 +135,36 @@ async fn server_close_stops_output() {
         .await.expect("server close").unwrap().unwrap();
     assert_eq!(message, ws::Message::Close(Some(close_frame())));
     assert!(!timeout(Duration::from_secs(3), resumed).await.expect("stream drop").unwrap());
+
+    // The client has read the Close but hasn't replied: the server waits.
+    let mut byte = [0u8; 1];
+    let MaybeTlsStream::Plain(tcp) = client.get_mut() else { unreachable!() };
+    let open = timeout(Duration::from_millis(500), tcp.peek(&mut byte)).await;
+    assert!(open.is_err(), "server closed before the reply: {open:?}");
+
+    // Once the client replies, the server closes the connection.
+    timeout(Duration::from_secs(3), client.flush()).await.expect("client reply").unwrap();
+    let MaybeTlsStream::Plain(tcp) = client.get_mut() else { unreachable!() };
+    let eof = timeout(Duration::from_secs(1), tcp.peek(&mut byte)).await.expect("server eof");
+    assert_eq!(eof.unwrap(), 0);
+    server.stop().await;
+}
+
+#[async_test]
+async fn stream_end_sends_close() {
+    let (port, server) = serve(rocket::build().mount("/", routes![finite])).await;
+    let url = format!("ws://127.0.0.1:{port}/finite");
+    let (mut client, _) = timeout(Duration::from_secs(3), tokio_tungstenite::connect_async(url))
+        .await.expect("client connection").unwrap();
+
+    let message = timeout(Duration::from_secs(3), client.next())
+        .await.expect("message").unwrap().unwrap();
+    assert_eq!(message, ws::Message::Text("hello".into()));
+
+    let message = timeout(Duration::from_secs(3), client.next())
+        .await.expect("server close").unwrap().unwrap();
+    assert_eq!(message, ws::Message::Close(None));
+    assert!(timeout(Duration::from_secs(3), client.next()).await.expect("close").is_none());
     server.stop().await;
 }
 

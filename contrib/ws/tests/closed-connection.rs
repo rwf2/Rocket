@@ -4,18 +4,20 @@
 
 use std::fmt;
 use std::net::{Ipv4Addr, SocketAddr};
-use std::sync::Mutex;
+use std::sync::{Mutex, Once};
 use std::time::Duration;
 
 use rocket::fairing::AdHoc;
 use rocket::futures::{SinkExt, StreamExt};
 use rocket::listener::tcp::TcpListener;
+use rocket::tokio::io::AsyncWriteExt;
 use rocket::tokio::sync::oneshot;
 use rocket::tokio::time::{sleep, timeout};
 use rocket::tracing::{Event, Level, Metadata, Subscriber};
 use rocket::tracing::field::{Field, Visit};
 use rocket::tracing::span::{Attributes, Id, Record};
 use rocket_ws as ws;
+use tokio_tungstenite::MaybeTlsStream;
 use ws::frame::{CloseCode, CloseFrame};
 
 static WARNINGS: Mutex<Vec<String>> = Mutex::new(Vec::new());
@@ -57,6 +59,13 @@ impl Subscriber for Capture {
     fn exit(&self, _: &Id) {}
 }
 
+fn capture_warnings() {
+    static CAPTURE: Once = Once::new();
+
+    // Rocket doesn't install its subscriber if another one is installed.
+    CAPTURE.call_once(|| rocket::tracing::subscriber::set_global_default(Capture).unwrap());
+}
+
 #[get("/goodbye")]
 fn goodbye(socket: ws::WebSocket) -> ws::Stream!['static] {
     ws::Stream! { socket =>
@@ -68,13 +77,19 @@ fn goodbye(socket: ws::WebSocket) -> ws::Stream!['static] {
     }
 }
 
+#[get("/close")]
+fn close(_socket: ws::WebSocket) -> ws::Stream!['static] {
+    ws::Stream! { _socket =>
+        yield ws::Message::Close(None);
+    }
+}
+
 // The stream reads past the peer's Close frame, which completes the closing
 // handshake, and then yields a Close frame of its own. The connection is
 // already closed as requested, so this is not an error.
 #[async_test]
 async fn close_after_closed_connection_is_not_reported() {
-    // Rocket doesn't install its subscriber if another one is installed.
-    rocket::tracing::subscriber::set_global_default(Capture).unwrap();
+    capture_warnings();
 
     let mut config = rocket::Config::debug_default();
     config.shutdown.ctrlc = false;
@@ -103,6 +118,50 @@ async fn close_after_closed_connection_is_not_reported() {
         .await.expect("close reply").unwrap().unwrap();
     assert_eq!(message, ws::Message::Close(Some(close)));
     assert!(timeout(Duration::from_secs(3), client.next()).await.expect("close").is_none());
+
+    shutdown.notify();
+    server.await.unwrap().unwrap();
+    sleep(Duration::from_millis(100)).await;
+
+    let warnings = WARNINGS.lock().unwrap();
+    assert!(!warnings.iter().any(|w| w.contains("i/o handler")), "{warnings:?}");
+}
+
+// The client reads the server's Close frame and closes its connection without
+// replying. The server stops waiting for the reply at once, without error.
+#[async_test]
+async fn missing_close_reply_is_not_reported() {
+    capture_warnings();
+
+    let mut config = rocket::Config::debug_default();
+    config.shutdown.ctrlc = false;
+
+    let (tx, rx) = oneshot::channel();
+    let rocket = rocket::custom(config)
+        .mount("/", routes![close])
+        .attach(AdHoc::on_liftoff("Send Port and Shutdown", |rocket| Box::pin(async move {
+            let port = rocket.endpoints().find_map(|e| e.tcp()).unwrap().port();
+            tx.send((port, rocket.shutdown())).unwrap();
+        })));
+
+    let addr = SocketAddr::from((Ipv4Addr::LOCALHOST, 0));
+    let server = rocket::tokio::spawn(rocket.try_launch_on(TcpListener::bind(addr)));
+    let (port, shutdown) = rx.await.unwrap();
+
+    let url = format!("ws://127.0.0.1:{port}/close");
+    let (mut client, _) = timeout(Duration::from_secs(3), tokio_tungstenite::connect_async(url))
+        .await.expect("client connection").unwrap();
+
+    let message = timeout(Duration::from_secs(3), client.next())
+        .await.expect("server close").unwrap().unwrap();
+    assert_eq!(message, ws::Message::Close(None));
+
+    // Close our half of the connection and wait for the server to close its own.
+    let mut byte = [0u8; 1];
+    let MaybeTlsStream::Plain(tcp) = client.get_mut() else { unreachable!() };
+    timeout(Duration::from_secs(3), tcp.shutdown()).await.expect("client shutdown").unwrap();
+    let eof = timeout(Duration::from_secs(1), tcp.peek(&mut byte)).await.expect("server eof");
+    assert_eq!(eof.unwrap(), 0);
 
     shutdown.notify();
     server.await.unwrap().unwrap();

@@ -1,4 +1,5 @@
 use std::io;
+use std::time::Duration;
 
 use rocket::data::{IoHandler, IoStream};
 use rocket::futures::{self, StreamExt, SinkExt, future::BoxFuture, stream::SplitStream};
@@ -9,6 +10,10 @@ use rocket::http::Status;
 use crate::{Config, Message};
 use crate::stream::DuplexStream;
 use crate::result::{Result, Error};
+use crate::tungstenite::error::ProtocolError::{SendAfterClosing, ResetWithoutClosingHandshake};
+
+/// How long to wait to send a `Close` and receive the peer's reply.
+const CLOSE_TIMEOUT: Duration = Duration::from_secs(5);
 
 /// A request guard identifying WebSocket requests. Converts into a [`Channel`]
 /// or [`MessageStream`].
@@ -140,6 +145,10 @@ impl WebSocket {
     /// that are `Ok(Message)` are sent to the client while items of type
     /// `Err(Error)` result in the connection being closed and the remainder of
     /// the stream discarded.
+    ///
+    /// A stream that ends sends the client a [`Message::Close`]; a yielded
+    /// `Close` ends the stream with that message. The server then waits
+    /// briefly for the client's reply before closing the connection.
     ///
     /// # Example
     ///
@@ -277,7 +286,7 @@ impl<'r, 'o: 'r, S> Responder<'r, 'o> for MessageStream<'o, S>
 #[rocket::async_trait]
 impl IoHandler for Channel<'_> {
     async fn io(self: Box<Self>, io: IoStream) -> io::Result<()> {
-        let stream = DuplexStream::new(io, self.ws.config).await;
+        let stream = DuplexStream::new(io, self.ws.config, false).await;
         let result = (self.handler)(stream).await;
         handle_result(result).map(|_| ())
     }
@@ -288,39 +297,44 @@ impl<'r, S> IoHandler for MessageStream<'r, S>
     where S: futures::Stream<Item = Result<Message>> + Send + 'r
 {
     async fn io(self: Box<Self>, io: IoStream) -> io::Result<()> {
-        let (mut sink, source) = DuplexStream::new(io, self.ws.config).await.split();
-        let stream = (self.handler)(source);
-        rocket::tokio::pin!(stream);
-        while let Some(msg) = stream.next().await {
-            let result = match msg {
-                Ok(msg) if msg.is_close() => {
-                    use crate::tungstenite::error::ProtocolError::SendAfterClosing;
+        let (mut sink, source) = DuplexStream::new(io, self.ws.config, true).await.split();
 
-                    let result = match sink.send(msg).await {
-                        // Reading Close queues a reply and closes the sink.
-                        // Flush that reply before returning.
-                        Err(Error::Protocol(SendAfterClosing)) => sink.flush().await,
-                        // The closing handshake has already completed.
-                        Err(Error::AlreadyClosed) => Ok(()),
-                        result => result,
-                    };
+        // Drop the stream as soon as it yields a `Close` or ends.
+        let close = {
+            let stream = (self.handler)(source);
+            rocket::tokio::pin!(stream);
+            loop {
+                let result = match stream.next().await {
+                    Some(Ok(msg)) if msg.is_close() => break msg,
+                    Some(Ok(msg)) => sink.send(msg).await,
+                    Some(Err(e)) => Err(e),
+                    None => break Message::Close(None),
+                };
 
-                    return handle_result(result).map(|_| ());
+                if !handle_result(result)? {
+                    return Ok(());
                 }
-                Ok(msg) => sink.send(msg).await,
-                Err(e) => Err(e)
-            };
-
-            if !handle_result(result)? {
-                return Ok(());
             }
-        }
+        };
 
-        // A broken pipe means the connection is gone, for instance because
-        // graceful shutdown cancelled it. There's no reply left to deliver.
-        match sink.flush().await {
-            Err(Error::Io(e)) if e.kind() == io::ErrorKind::BrokenPipe => Ok(()),
-            result => handle_result(result).map(|_| ()),
+        let closing = async {
+            match sink.send(close).await {
+                // Wait for the peer's reply.
+                Ok(()) => sink.close().await,
+                // The peer closed first. Flush the queued reply.
+                Err(Error::Protocol(SendAfterClosing)) => sink.flush().await,
+                // The closing handshake has already completed.
+                Err(Error::AlreadyClosed) => Ok(()),
+                Err(e) => Err(e),
+            }
+        };
+
+        // The stream has ended. A peer that's gone, I/O cancelled by shutdown,
+        // or a peer that doesn't reply in time ends the connection normally.
+        match rocket::tokio::time::timeout(CLOSE_TIMEOUT, closing).await {
+            Ok(Err(Error::Protocol(ResetWithoutClosingHandshake) | Error::Io(_))) => Ok(()),
+            Ok(result) => handle_result(result).map(|_| ()),
+            Err(_) => Ok(()),
         }
     }
 }
