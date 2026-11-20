@@ -23,7 +23,7 @@ supports [Handlebars], [Tera], and [MiniJinja].
 
      ```toml
      [dependencies.rocket_dyn_templates]
-     version = "0.1.0"
+     version = "0.4.0-dev"
      features = ["handlebars", "tera", "minijinja"]
      ```
 
