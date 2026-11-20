@@ -97,6 +97,7 @@ pub struct Config {
     /// this setting.
     ///
     /// [`spawn_blocking`]: crate::tokio::task::spawn_blocking
+    #[serde(default = "default_wake_interval")]
     pub wake_interval: u32,
     /// How, if at all, to identify the server via the `Server` header.
     /// **(default: `"Rocket"`)**
@@ -245,7 +246,7 @@ impl Config {
             profile: Self::DEBUG_PROFILE,
             workers: num_cpus::get(),
             max_blocking: 512,
-            wake_interval: 250,
+            wake_interval: default_wake_interval(),
             ident: Ident::default(),
             ip_header: Some(Uncased::from_borrowed("X-Real-IP")),
             proxy_proto_header: None,
@@ -464,6 +465,10 @@ impl Config {
     pub(crate) const KNOWN_SECRET_KEYS: &'static [&'static str] = &[
         "hPRYyVRiMyxpw5sBB1XeCMN1kFsDCqKvBi2QJxBVHQk="
     ];
+}
+
+fn default_wake_interval() -> u32 {
+    250
 }
 
 fn default_linger() -> u32 {

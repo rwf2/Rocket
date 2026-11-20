@@ -44,6 +44,19 @@ fn test_missing_linger_is_default() {
 }
 
 #[test]
+fn test_missing_wake_interval_is_default() {
+    use figment::{Provider, providers::Serialized};
+
+    // A complete configuration from before `wake_interval` existed.
+    let data = Serialized::defaults(Config::default()).data().unwrap();
+    let mut dict = data[&Profile::Default].clone();
+    assert!(dict.remove(Config::WAKE_INTERVAL).is_some());
+
+    let config: Config = Figment::from(Serialized::defaults(dict)).extract().unwrap();
+    assert_eq!(config.wake_interval, 250);
+}
+
+#[test]
 fn test_profile_env() {
     figment::Jail::expect_with(|jail| {
         jail.set_env("ROCKET_PROFILE", "debug");
