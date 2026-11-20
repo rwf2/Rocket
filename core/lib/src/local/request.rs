@@ -287,7 +287,7 @@ macro_rules! pub_request_impl {
     /// [`ContentType::JSON`](crate::http::ContentType::JSON).
     ///
     /// If `value` fails to serialize, the body is set to empty. The
-    /// `Content-Type` header is _always_ set.
+    /// `Content-Type` header is _always_ set, replacing any existing one.
     ///
     /// # Examples
     ///
@@ -306,22 +306,23 @@ macro_rules! pub_request_impl {
     /// let task = Task { id: 10, complete: false };
     ///
     /// let request: LocalRequest = request;
-    /// let req = request.json(&task);
+    /// let req = request.header(ContentType::Plain).json(&task);
     /// assert_eq!(req.content_type(), Some(&ContentType::JSON));
     /// # });
     /// ```
     #[cfg(feature = "json")]
     #[cfg_attr(nightly, doc(cfg(feature = "json")))]
-    pub fn json<T: crate::serde::Serialize>(self, value: &T) -> Self {
+    pub fn json<T: crate::serde::Serialize>(mut self, value: &T) -> Self {
         let json = serde_json::to_vec(&value).unwrap_or_default();
-        self.header(crate::http::ContentType::JSON).body(json)
+        self._request_mut().replace_header(crate::http::ContentType::JSON);
+        self.body(json)
     }
 
     /// Sets the body to `value` serialized as XML with `Content-Type`
     /// [`ContentType::XML`](crate::http::ContentType::XML).
     ///
     /// If `value` fails to serialize, the body is set to empty. The
-    /// `Content-Type` header is _always_ set.
+    /// `Content-Type` header is _always_ set, replacing any existing one.
     ///
     /// # Examples
     ///
@@ -340,22 +341,23 @@ macro_rules! pub_request_impl {
     /// let task = Task { id: 10, complete: false };
     ///
     /// let request: LocalRequest = request;
-    /// let req = request.xml(&task);
+    /// let req = request.header(ContentType::Plain).xml(&task);
     /// assert_eq!(req.content_type(), Some(&ContentType::XML));
     /// # });
     /// ```
     #[cfg(feature = "xml")]
     #[cfg_attr(nightly, doc(cfg(feature = "xml")))]
-    pub fn xml<T: crate::serde::Serialize>(self, value: &T) -> Self {
+    pub fn xml<T: crate::serde::Serialize>(mut self, value: &T) -> Self {
         let xml = quick_xml::se::to_string(value).unwrap_or_default();
-        self.header(crate::http::ContentType::XML).body(xml)
+        self._request_mut().replace_header(crate::http::ContentType::XML);
+        self.body(xml)
     }
 
     /// Sets the body to `value` serialized as MessagePack with `Content-Type`
     /// [`ContentType::MsgPack`](crate::http::ContentType::MsgPack).
     ///
     /// If `value` fails to serialize, the body is set to empty. The
-    /// `Content-Type` header is _always_ set.
+    /// `Content-Type` header is _always_ set, replacing any existing one.
     ///
     /// # Examples
     ///
@@ -374,15 +376,16 @@ macro_rules! pub_request_impl {
     /// let task = Task { id: 10, complete: false };
     ///
     /// let request: LocalRequest = request;
-    /// let req = request.msgpack(&task);
+    /// let req = request.header(ContentType::Plain).msgpack(&task);
     /// assert_eq!(req.content_type(), Some(&ContentType::MsgPack));
     /// # });
     /// ```
     #[cfg(feature = "msgpack")]
     #[cfg_attr(nightly, doc(cfg(feature = "msgpack")))]
-    pub fn msgpack<T: crate::serde::Serialize>(self, value: &T) -> Self {
+    pub fn msgpack<T: crate::serde::Serialize>(mut self, value: &T) -> Self {
         let msgpack = rmp_serde::to_vec(value).unwrap_or_default();
-        self.header(crate::http::ContentType::MsgPack).body(msgpack)
+        self._request_mut().replace_header(crate::http::ContentType::MsgPack);
+        self.body(msgpack)
     }
 
     /// Set the body (data) of the request without consuming `self`.
