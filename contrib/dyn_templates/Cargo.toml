@@ -39,8 +39,8 @@ path = "../../core/lib"
 default-features = false
 
 [dev-dependencies]
-pretty_assertions = "1.4.1"
-tempfile = "3.27.0"
+pretty_assertions = "1"
+tempfile = "3.4.0"
 
 [package.metadata.docs.rs]
 all-features = true
