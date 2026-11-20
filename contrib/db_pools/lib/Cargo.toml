@@ -27,7 +27,7 @@ sqlx_sqlite = ["sqlx", "sqlx/sqlite", "log"]
 sqlx_macros = ["sqlx/macros"]
 # diesel features
 diesel_postgres = ["diesel-async/postgres", "diesel-async/deadpool", "deadpool", "diesel"]
-diesel_mysql = ["diesel-async/mysql", "diesel-async/deadpool", "deadpool", "diesel"]
+diesel_mysql = ["diesel-async/mysql", "diesel-async/deadpool", "deadpool", "diesel", "dep:lru"]
 diesel_sqlite = ["diesel-async/sqlite", "diesel-async/deadpool", "deadpool", "diesel"]
 # implicit features: mongodb
 
@@ -68,13 +68,19 @@ features = ["compat-3-0-0", "rustls-tls"]
 optional = true
 
 [dependencies.diesel-async]
-version = "0.9.2"
+version = "0.10.0"
 default-features = false
 features = ["async-connection-wrapper"]
 optional = true
 
 [dependencies.diesel]
-version = "2.3.12"
+version = "2.4.0"
+default-features = false
+optional = true
+
+[dependencies.lru]
+# Diesel's MySQL driver permits versions affected by RUSTSEC-2026-0253.
+version = "0.18.2"
 default-features = false
 optional = true
 

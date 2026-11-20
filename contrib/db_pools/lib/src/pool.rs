@@ -227,6 +227,7 @@ mod deadpool_postgres {
     #[cfg(feature = "diesel_postgres")]
     impl DeadManager for AsyncDieselConnectionManager<diesel_async::AsyncPgConnection> {
         fn new(config: &Config) -> Result<Self, Self::Error> {
+            #[cfg(feature = "postgres_rustls_native_certs")]
             use diesel_async::AsyncPgConnection;
             use diesel_async::pooled_connection::ManagerConfig;
 
@@ -235,7 +236,6 @@ mod deadpool_postgres {
             #[cfg(feature = "postgres_rustls_native_certs")]
             let diesel_config = {
                 let mut diesel_config = diesel_config;
-
                 let tls_provider = super::tokio_postgres_tls_provider();
 
                 diesel_config.custom_setup = Box::new(move |url| {
