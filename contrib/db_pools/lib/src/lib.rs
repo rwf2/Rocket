@@ -168,10 +168,15 @@
 //! features = ["diesel_postgres", "postgres_rustls_native_certs"]
 //! ```
 //!
-//! TLS is then used as directed by the `sslmode` parameter in the URL. The
-//! server's certificate is verified against the platform's native root
-//! certificates. To trust a private CA, as used by some hosted databases, set
-//! the `SSL_CERT_FILE` environment variable to a PEM bundle containing it.
+//! To require TLS, set `sslmode=require` in the database URL. With
+//! `sslmode=prefer`, a connection without TLS is allowed if the server does not
+//! support TLS. The server's certificate and hostname are verified using the
+//! platform's native root certificates.
+//!
+//! To trust a private CA, set `SSL_CERT_FILE` to a PEM certificate bundle or
+//! `SSL_CERT_DIR` to a directory of PEM certificates. These replace the native
+//! roots. Errors loading certificates are logged. If no root certificates can
+//! be loaded, TLS connections fail.
 //!
 //! The `sqlx_postgres` driver supports TLS without additional features.
 //!

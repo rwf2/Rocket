@@ -299,7 +299,7 @@ features enabled in `Cargo.toml`:
 
 ```toml
 [dependencies.sqlx]
-version = "0.7"
+version = "0.9"
 default-features = false
 features = ["macros", "migrate"]
 

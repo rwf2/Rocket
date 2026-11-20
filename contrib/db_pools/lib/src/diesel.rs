@@ -9,7 +9,7 @@
 //! ```toml
 //! [dependencies]
 //! rocket = "0.6.0-dev"
-//! diesel = "2"
+//! diesel = "2.4.0"
 //!
 //! [dependencies.rocket_db_pools]
 //! version = "0.1.0"
