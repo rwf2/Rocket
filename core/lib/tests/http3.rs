@@ -33,12 +33,30 @@ fn fixture(name: &str) -> Vec<u8> {
     std::fs::read(format!("{dir}/private/{name}.pem")).unwrap()
 }
 
-/// A Rocket instance that serves HTTP/3 on an ephemeral port.
+/// A Rocket instance that serves HTTP/3. `Server::launch()` sets its port.
 fn rocket() -> Rocket<Build> {
     let tls = TlsConfig::from_bytes(&fixture("rsa_sha256_cert"), &fixture("rsa_sha256_key"));
     let mut config = rocket::Config::debug_default();
     config.shutdown.ctrlc = false;
-    rocket::custom(Figment::from(config).merge(("port", 0)).merge(("tls", tls)))
+    rocket::custom(Figment::from(config).merge(("tls", tls)))
+}
+
+/// Held while sockets are bound so that a port found by `free_port()` is still
+/// free when Rocket binds to it.
+static BINDING: rocket::tokio::sync::Mutex<()> = rocket::tokio::sync::Mutex::const_new(());
+
+/// Returns a port that's free for TCP and UDP: Rocket serves HTTP/3 on the UDP
+/// port with the same number as its TCP port.
+fn free_port() -> u16 {
+    use std::net::{TcpListener, UdpSocket};
+
+    loop {
+        let udp = UdpSocket::bind((Ipv4Addr::LOCALHOST, 0)).unwrap();
+        let port = udp.local_addr().unwrap().port();
+        if TcpListener::bind((Ipv4Addr::LOCALHOST, port)).is_ok() {
+            return port;
+        }
+    }
 }
 
 struct Server {
@@ -49,7 +67,10 @@ struct Server {
 
 impl Server {
     async fn launch(rocket: Rocket<Build>) -> Server {
+        let _binding = BINDING.lock().await;
+        let figment = rocket.figment().clone().merge(("port", free_port()));
         let (tx, rx) = oneshot::channel();
+        let rocket = rocket.reconfigure(figment);
         let rocket = rocket.attach(AdHoc::on_liftoff("Send Address", |rocket| {
             Box::pin(async move {
                 let addr = rocket.endpoints().find_map(|e| e.quic()).unwrap();
@@ -91,7 +112,11 @@ async fn quic_connect(addr: SocketAddr) -> (quinn::Endpoint, quinn::Connection) 
     tls.alpn_protocols = vec![b"h3".to_vec()];
     let quic = quinn::crypto::rustls::QuicClientConfig::try_from(tls).unwrap();
     let local = SocketAddr::from((Ipv4Addr::LOCALHOST, 0));
-    let mut endpoint = quinn::Endpoint::client(local).unwrap();
+    let mut endpoint = {
+        let _binding = BINDING.lock().await;
+        quinn::Endpoint::client(local).unwrap()
+    };
+
     endpoint.set_default_client_config(quinn::ClientConfig::new(Arc::new(quic)));
     let conn = endpoint.connect(addr, "localhost").unwrap().await.unwrap();
     (endpoint, conn)
@@ -129,7 +154,11 @@ impl Client {
             stream.send_data(Bytes::copy_from_slice(body)).await.unwrap();
         }
 
-        stream.finish().await.unwrap();
+        // The server may respond, and stop reading, before the request ends.
+        if let Err(e) = stream.finish().await {
+            assert!(matches!(e, StreamError::RemoteTerminate { .. }), "{e}");
+        }
+
         stream
     }
 
