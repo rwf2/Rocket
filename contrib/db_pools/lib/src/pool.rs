@@ -121,12 +121,12 @@ pub trait Pool: Sized + Send + 'static {
     /// The error type returned by [`Self::init()`] and [`Self::get()`].
     type Error: std::error::Error;
 
-    /// Constructs a pool from a [Value](rocket::figment::value::Value).
+    /// Constructs a pool from the configuration in `figment`.
     ///
     /// It is up to each implementor of `Pool` to define its accepted
-    /// configuration value(s) via the `Config` associated type.  Most
-    /// integrations provided in `rocket_db_pools` use [`Config`], which
-    /// accepts a (required) `url` and an (optional) `pool_size`.
+    /// configuration values. Integrations provided in `rocket_db_pools` use
+    /// [`Config`], which requires a `url` and accepts optional pool settings
+    /// such as `max_connections` and `connect_timeout`.
     ///
     /// ## Errors
     ///
@@ -150,6 +150,37 @@ pub trait Pool: Sized + Send + 'static {
     /// The returned future may either resolve when all connections are known to
     /// have closed or at any point prior. Details are implementation specific.
     async fn close(&self);
+}
+
+/// A [`Pool`] that supports customization during initialization.
+///
+/// This trait enables [`Database::custom()`](crate::Database::custom()) and
+/// [`Database::try_custom()`](crate::Database::try_custom()). It is implemented
+/// for SQLx pools and MongoDB clients.
+#[rocket::async_trait]
+pub trait Configurable: Pool {
+    /// The driver's configuration options.
+    ///
+    /// The configuration types for the supported drivers are:
+    ///
+    ///   * SQLx: `(sqlx::pool::PoolOptions<D>, ConnectOptions)`, where `D` is
+    ///     `Sqlite`, `Postgres`, or `MySql`, and `ConnectOptions` is
+    ///     `SqliteConnectOptions`, `PgConnectOptions`, or
+    ///     `MySqlConnectOptions`, respectively.
+    ///   * MongoDB: `mongodb::options::ClientOptions`.
+    type Options: Send;
+
+    /// Constructs a pool from `figment`, customizing its options with `f`.
+    ///
+    /// Implementations should extract [`Config`] from `figment` and apply its
+    /// values and the driver's defaults to [`Self::Options`]. The function `f`
+    /// is then called with the configuration and options. The returned options
+    /// are used to create the pool.
+    ///
+    /// Implementations should share this initialization path with
+    /// [`Pool::init()`]. Any error returned by `f` is returned to the caller.
+    async fn init_with<F>(figment: &Figment, f: F) -> Result<Self, Self::Error>
+        where F: FnOnce(&Config, Self::Options) -> Result<Self::Options, Self::Error> + Send;
 }
 
 /// Returns a TLS connector for `tokio-postgres` that verifies servers against
@@ -341,25 +372,26 @@ mod deadpool {
 #[cfg(feature = "sqlx")]
 mod sqlx {
     use sqlx::ConnectOptions;
+    use crate::Configurable;
     use super::{Duration, Error, Config, Figment};
     use rocket::tracing::level_filters::LevelFilter;
 
     type Options<D> = <<D as sqlx::Database>::Connection as sqlx::Connection>::Options;
 
     // Provide specialized configuration for particular databases.
-    fn specialize(__options: &mut dyn std::any::Any, __config: &Config) {
+    fn specialize(__options: &mut dyn std::any::Any, __config: &Config, __figment: &Figment) {
         #[cfg(feature = "sqlx_sqlite")]
         if let Some(o) = __options.downcast_mut::<sqlx::sqlite::SqliteConnectOptions>() {
             *o = std::mem::take(o)
                 .busy_timeout(Duration::from_secs(__config.connect_timeout))
                 .create_if_missing(true);
 
-            if let Some(ref exts) = __config.extensions {
-                for ext in exts {
-                    // SAFETY: Extensions are named by the application's
-                    // configuration, which is trusted.
-                    *o = unsafe { std::mem::take(o).extension(ext.clone()) };
-                }
+            if let Some(source) = __figment.find_metadata("extensions") {
+                rocket::warn!(
+                    %source.name,
+                    source.source = source.source.as_ref().map(rocket::tracing::field::display),
+                    "found value for deprecated SQLite config key `extensions`\n\
+                    key has no special meaning");
             }
         }
     }
@@ -371,9 +403,28 @@ mod sqlx {
         type Connection = sqlx::pool::PoolConnection<D>;
 
         async fn init(figment: &Figment) -> Result<Self, Self::Error> {
+            Self::init_with(figment, |_, opts| Ok(opts)).await
+        }
+
+        async fn get(&self) -> Result<Self::Connection, Self::Error> {
+            self.acquire().await.map_err(Error::Get)
+        }
+
+        async fn close(&self) {
+            <sqlx::Pool<D>>::close(self).await;
+        }
+    }
+
+    #[rocket::async_trait]
+    impl<D: sqlx::Database> Configurable for sqlx::Pool<D> {
+        type Options = (sqlx::pool::PoolOptions<D>, Options<D>);
+
+        async fn init_with<F>(figment: &Figment, f: F) -> Result<Self, Self::Error>
+            where F: FnOnce(&Config, Self::Options) -> Result<Self::Options, Self::Error> + Send
+        {
             let config = figment.extract::<Config>()?;
             let mut opts = config.url.parse::<Options<D>>().map_err(Error::Init)?;
-            specialize(&mut opts, &config);
+            specialize(&mut opts, &config, figment);
 
             opts = opts.disable_statement_logging();
             if let Ok(value) = figment.find_value(rocket::Config::LOG_LEVEL) {
@@ -392,20 +443,14 @@ mod sqlx {
                 }
             }
 
-            Ok(sqlx::pool::PoolOptions::new()
+            let pool = sqlx::pool::PoolOptions::new()
                 .max_connections(config.max_connections as u32)
                 .acquire_timeout(Duration::from_secs(config.connect_timeout))
                 .idle_timeout(config.idle_timeout.map(Duration::from_secs))
-                .min_connections(config.min_connections.unwrap_or_default())
-                .connect_lazy_with(opts))
-        }
+                .min_connections(config.min_connections.unwrap_or_default());
 
-        async fn get(&self) -> Result<Self::Connection, Self::Error> {
-            self.acquire().await.map_err(Error::Get)
-        }
-
-        async fn close(&self) {
-            <sqlx::Pool<D>>::close(self).await;
+            let (pool, opts) = f(&config, (pool, opts))?;
+            Ok(pool.connect_lazy_with(opts))
         }
     }
 }
@@ -413,6 +458,7 @@ mod sqlx {
 #[cfg(feature = "mongodb")]
 mod mongodb {
     use mongodb::{Client, options::ClientOptions};
+    use crate::Configurable;
     use super::{Duration, Error, Config, Figment};
 
     #[rocket::async_trait]
@@ -422,14 +468,7 @@ mod mongodb {
         type Connection = Client;
 
         async fn init(figment: &Figment) -> Result<Self, Self::Error> {
-            let config = figment.extract::<Config>()?;
-            let mut opts = ClientOptions::parse(&config.url).await.map_err(Error::Init)?;
-            opts.min_pool_size = config.min_connections;
-            opts.max_pool_size = Some(config.max_connections as u32);
-            opts.max_idle_time = config.idle_timeout.map(Duration::from_secs);
-            opts.connect_timeout = Some(Duration::from_secs(config.connect_timeout));
-            opts.server_selection_timeout = Some(Duration::from_secs(config.connect_timeout));
-            Client::with_options(opts).map_err(Error::Init)
+            Self::init_with(figment, |_, opts| Ok(opts)).await
         }
 
         async fn get(&self) -> Result<Self::Connection, Self::Error> {
@@ -438,6 +477,25 @@ mod mongodb {
 
         async fn close(&self) {
             // nothing to do for mongodb
+        }
+    }
+
+    #[rocket::async_trait]
+    impl Configurable for Client {
+        type Options = ClientOptions;
+
+        async fn init_with<F>(figment: &Figment, f: F) -> Result<Self, Self::Error>
+            where F: FnOnce(&Config, Self::Options) -> Result<Self::Options, Self::Error> + Send
+        {
+            let config = figment.extract::<Config>()?;
+            let mut opts = ClientOptions::parse(&config.url).await.map_err(Error::Init)?;
+            opts.min_pool_size = config.min_connections;
+            opts.max_pool_size = Some(config.max_connections as u32);
+            opts.max_idle_time = config.idle_timeout.map(Duration::from_secs);
+            opts.connect_timeout = Some(Duration::from_secs(config.connect_timeout));
+            opts.server_selection_timeout = Some(Duration::from_secs(config.connect_timeout));
+            let opts = f(&config, opts)?;
+            Client::with_options(opts).map_err(Error::Init)
         }
     }
 }

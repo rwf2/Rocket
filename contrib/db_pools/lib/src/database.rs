@@ -1,13 +1,12 @@
-use std::marker::PhantomData;
 use std::ops::{Deref, DerefMut};
 
 use rocket::{error, Build, Ignite, Phase, Rocket, Sentinel, Orbit};
 use rocket::fairing::{self, Fairing, Info, Kind};
 use rocket::request::{FromRequest, Outcome, Request};
-use rocket::figment::providers::Serialized;
+use rocket::figment::{Figment, providers::Serialized};
 use rocket::http::Status;
 
-use crate::Pool;
+use crate::{Pool, Config, Configurable};
 
 /// Derivable trait which ties a database [`Pool`] with a configuration name.
 ///
@@ -65,6 +64,67 @@ pub trait Database: From<Self::Pool> + DerefMut<Target = Self::Pool> + Send + Sy
     /// ```
     fn init() -> Initializer<Self> {
         Initializer::new()
+    }
+
+    /// Returns a fairing that initializes the database and its connection pool.
+    ///
+    /// Unlike [`Self::init()`], this method allows you to configure the
+    /// database driver via the function `f`. The pool must implement
+    /// [`Configurable`]. See [`Configurable::Options`] for the configuration
+    /// types used by each driver.
+    ///
+    /// The function `f` is called with a reference to the database's [`Config`]
+    /// and the driver's options after applying Rocket's configuration and
+    /// defaults. The returned options are used to create the pool, overriding
+    /// any previously configured values.
+    ///
+    /// This method does not allow the function `f` to fail. If `f` is fallible,
+    /// use [`Self::try_custom()`] instead.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # #[cfg(feature = "sqlx_sqlite")] mod _inner {
+    /// use std::time::Duration;
+    /// use rocket_db_pools::{sqlx, Database};
+    ///
+    /// #[derive(Database)]
+    /// #[database("sqlite_db")]
+    /// struct Db(sqlx::SqlitePool);
+    ///
+    /// fn main() {
+    ///     rocket::build().attach(Db::custom(|_config, (pool, connection)| {
+    ///         (pool, connection.busy_timeout(Duration::from_secs(10)))
+    ///     }));
+    /// }
+    /// # }
+    /// ```
+    fn custom<F>(f: F) -> Initializer<Self>
+        where Self::Pool: Configurable,
+              F: Fn(
+                  &Config,
+                  <Self::Pool as Configurable>::Options
+              ) -> <Self::Pool as Configurable>::Options + Send + Sync + 'static
+    {
+        Self::try_custom(move |config, options| Ok(f(config, options)))
+    }
+
+    /// Returns a fairing that initializes the database and its connection pool.
+    ///
+    /// This variant of [`Self::custom()`] allows a fallible `f`. The error type
+    /// is the pool's [`Pool::Error`]. If `f` returns an error during
+    /// initialization, it will cancel the launch.
+    fn try_custom<F>(f: F) -> Initializer<Self>
+        where Self::Pool: Configurable,
+              F: Fn(
+                  &Config,
+                  <Self::Pool as Configurable>::Options
+              ) -> Result<<Self::Pool as Configurable>::Options, <Self::Pool as Pool>::Error>
+                  + Send + Sync + 'static
+    {
+        let mut initializer = Self::init();
+        initializer.1 = Some(Box::new(f));
+        initializer
     }
 
     /// Returns a reference to the initialized database in `rocket`. The
@@ -131,18 +191,19 @@ pub trait Database: From<Self::Pool> + DerefMut<Target = Self::Pool> + Send + Sy
 /// A [`Fairing`] which initializes a [`Database`] and its connection pool.
 ///
 /// A value of this type can be created for any type `D` that implements
-/// [`Database`] via the [`Database::init()`] method on the type. Normally, a
-/// value of this type _never_ needs to be constructed directly. This
-/// documentation exists purely as a reference.
+/// [`Database`] via [`Database::init()`], [`Database::custom()`], or
+/// [`Database::try_custom()`]. Normally, a value of this type _never_ needs to
+/// be constructed directly. This documentation exists purely as a reference.
 ///
 /// This fairing initializes a database pool. Specifically, it:
 ///
-///   1. Reads the configuration at `database.db_name`, where `db_name` is
+///   1. Reads the configuration at `databases.db_name`, where `db_name` is
 ///      [`Database::NAME`].
 ///
 ///   2. Sets [`Config`](crate::Config) defaults on the configuration figment.
 ///
-///   3. Calls [`Pool::init()`].
+///   3. Calls [`Pool::init()`] or, when customized,
+///      [`Configurable::init_with()`].
 ///
 ///   4. Stores the database instance in managed storage, retrievable via
 ///      [`Database::fetch()`].
@@ -150,7 +211,7 @@ pub trait Database: From<Self::Pool> + DerefMut<Target = Self::Pool> + Send + Sy
 /// The name of the fairing itself is `Initializer<D>`, with `D` replaced with
 /// the type name `D` unless a name is explicitly provided via
 /// [`Self::with_name()`].
-pub struct Initializer<D: Database>(Option<&'static str>, PhantomData<fn() -> D>);
+pub struct Initializer<D: Database>(Option<&'static str>, Option<Box<dyn Initialize<D::Pool>>>);
 
 /// A request guard which retrieves a single connection to a [`Database`].
 ///
@@ -200,7 +261,7 @@ impl<D: Database> Initializer<D> {
     /// This method should never need to be called manually. See the [crate
     /// docs](crate) for usage information.
     pub fn new() -> Self {
-        Self(None, std::marker::PhantomData)
+        Self(None, None)
     }
 
     /// Returns a database initializer fairing for `D` with name `name`.
@@ -208,7 +269,7 @@ impl<D: Database> Initializer<D> {
     /// This method should never need to be called manually. See the [crate
     /// docs](crate) for usage information.
     pub fn with_name(name: &'static str) -> Self {
-        Self(Some(name), std::marker::PhantomData)
+        Self(Some(name), None)
     }
 }
 
@@ -244,6 +305,21 @@ impl<D: Database> Connection<D> {
 }
 
 #[rocket::async_trait]
+trait Initialize<P: Pool>: Send + Sync {
+    async fn init(&self, figment: &Figment) -> Result<P, P::Error>;
+}
+
+#[rocket::async_trait]
+impl<P, F> Initialize<P> for F
+    where P: Configurable,
+          F: Fn(&Config, P::Options) -> Result<P::Options, P::Error> + Send + Sync
+{
+    async fn init(&self, figment: &Figment) -> Result<P, P::Error> {
+        P::init_with(figment, self).await
+    }
+}
+
+#[rocket::async_trait]
 impl<D: Database> Fairing for Initializer<D> {
     fn info(&self) -> Info {
         Info {
@@ -262,7 +338,12 @@ impl<D: Database> Fairing for Initializer<D> {
             .join(Serialized::default("max_connections", workers * 4))
             .join(Serialized::default("connect_timeout", 5));
 
-        match <D::Pool>::init(&figment).await {
+        let result = match &self.1 {
+            Some(init) => init.init(&figment).await,
+            None => <D::Pool>::init(&figment).await,
+        };
+
+        match result {
             Ok(pool) => Ok(rocket.manage(D::from(pool))),
             Err(e) => {
                 error!("database initialization failed: {e}");

@@ -21,18 +21,25 @@ workspace = true
 deadpool_postgres = ["deadpool-postgres", "deadpool"]
 deadpool_redis = ["deadpool-redis", "deadpool"]
 # sqlx features
-sqlx_mysql = ["sqlx", "sqlx/mysql", "log"]
-sqlx_postgres = ["sqlx", "sqlx/postgres", "log"]
-sqlx_sqlite = ["sqlx", "sqlx/sqlite", "log"]
-sqlx_macros = ["sqlx/macros"]
+sqlx = ["dep:sqlx", "dep:log", "dep:rustls", "dep:rustls-webpki", "dep:webpki-roots"]
+sqlx_mysql = ["sqlx", "sqlx/mysql-rsa", "dep:rsa"]
+sqlx_postgres = ["sqlx", "sqlx/postgres"]
+sqlx_sqlite = ["sqlx", "sqlx/sqlite", "dep:libsqlite3-sys"]
+sqlx_macros = ["sqlx", "sqlx/macros"]
 # diesel features
 diesel_postgres = ["diesel-async/postgres", "diesel-async/deadpool", "deadpool", "diesel"]
 diesel_mysql = ["diesel-async/mysql", "diesel-async/deadpool", "deadpool", "diesel", "dep:lru"]
-diesel_sqlite = ["diesel-async/sqlite", "diesel-async/deadpool", "deadpool", "diesel"]
+diesel_sqlite = [
+  "diesel-async/sqlite", "diesel-async/deadpool", "deadpool", "diesel",
+  "dep:libsqlite3-sys",
+]
 # implicit features: mongodb
 
 # postgres features
-postgres_rustls_native_certs = ["tokio-postgres", "tokio-postgres-rustls", "rustls", "rustls-native-certs"]
+postgres_rustls_native_certs = [
+  "tokio-postgres", "dep:tokio-postgres-rustls",
+  "dep:rustls-native-certs", "dep:rustls", "dep:rustls-webpki",
+]
 
 [dependencies.rocket]
 path = "../../../core/lib"
@@ -85,9 +92,21 @@ default-features = false
 optional = true
 
 [dependencies.sqlx]
-version = "0.9"
+version = "0.9.1"
 default-features = false
-features = ["runtime-tokio", "tls-rustls"]
+features = ["runtime-tokio", "tls-rustls-ring"]
+optional = true
+
+[dependencies.libsqlite3-sys]
+# SQLx's wider range permits older bundles with known SQLite vulnerabilities.
+version = ">=0.39.0"
+default-features = false
+optional = true
+
+[dependencies.rsa]
+# SQLx's MySQL driver permits prereleases affected by RUSTSEC-2023-0071.
+version = "0.10.0"
+default-features = false
 optional = true
 
 [dependencies.tokio-postgres]
@@ -102,9 +121,18 @@ default-features = false
 optional = true
 
 [dependencies.rustls]
-version = "0.23"
+version = "0.23.46"
 default-features = false
 features = ["ring", "std", "tls12"]
+optional = true
+
+[dependencies.rustls-webpki]
+version = "0.103.16"
+default-features = false
+optional = true
+
+[dependencies.webpki-roots]
+version = "1.0.10"
 optional = true
 
 [dependencies.rustls-native-certs]

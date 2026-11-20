@@ -61,9 +61,13 @@ DATABASE_URL="db/diesel/db.sqlite" diesel migration --migration-dir db/diesel/mi
 
 sqlx migrations are found in `db/sqlx/migrations`. They are run automatically.
 
-Query metadata for offline checking was prepared with the following commands:
+Query metadata for offline checking uses SQLx 0.9.1 and bundled SQLite 3.54.1.
+To regenerate it from this directory with SQLx CLI, use a temporary database:
 
 ```sh
-cargo install sqlx-cli --no-default-features --features sqlite
-DATABASE_URL="sqlite:$(pwd)/db/sqlx/db.sqlite" cargo sqlx prepare
+cargo install sqlx-cli --version 0.9.1 --no-default-features --features sqlite
+export DATABASE_URL="sqlite:$(mktemp -d)/db.sqlite"
+cargo sqlx database create
+cargo sqlx migrate run --source db/sqlx/migrations
+cargo sqlx prepare
 ```
