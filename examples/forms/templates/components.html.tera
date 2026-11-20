@@ -26,7 +26,7 @@
 
 {% component checkbox(name, label, value = "yes", @values, @errors) %}
     <label {% if name in errors %} class="bd-error" {% endif %}>
-    <input type="checkbox" name="{{ name }}" value={{ value }}
+    <input type="checkbox" name="{{ name }}" value="{{ value }}"
     {% if name in values %}
         {% if values[name] is containing(pat=value) %}
             checked

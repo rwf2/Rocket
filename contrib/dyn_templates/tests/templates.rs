@@ -206,6 +206,79 @@ fn test_context_macro() {
     }
 }
 
+#[cfg(any(feature = "tera", feature = "minijinja"))]
+#[async_test]
+async fn test_template_names_and_escaping() {
+    use rocket::http::ContentType;
+    use rocket::local::asynchronous::Client;
+    use rocket::request::FromRequest;
+
+    let mut cases = Vec::new();
+    for (suffix, content_type) in [
+        ("html", ContentType::HTML),
+        ("htm", ContentType::HTML),
+        ("xml", ContentType::XML),
+        ("xhtml", ContentType::XHTML),
+        ("svg", ContentType::SVG),
+    ] {
+        for mask in 0..1 << suffix.len() {
+            let extension: String = suffix.bytes().enumerate()
+                .map(|(i, byte)| if mask & (1 << i) == 0 {
+                    byte as char
+                } else {
+                    byte.to_ascii_uppercase() as char
+                })
+                .collect();
+
+            let name = format!("case_{suffix}_{mask}.{extension}");
+            cases.push((name, content_type.clone(), true));
+        }
+    }
+
+    cases.extend([
+        ("plain".into(), ContentType::Text, false),
+        ("html".into(), ContentType::Text, false),
+        ("html.j2".into(), ContentType::Text, false),
+        ("same.html".into(), ContentType::HTML, true),
+        ("same.txt".into(), ContentType::Text, false),
+        ("nested.html.txt".into(), ContentType::Text, false),
+        ("nested.html.j2.jinja".into(), ContentType::Text, false),
+    ]);
+
+    let engines = [
+        #[cfg(feature = "tera")]
+        ("tera", "&lt;&gt;&amp;&quot;&#39;/"),
+        #[cfg(feature = "minijinja")]
+        ("j2", "&lt;&gt;&amp;&quot;&#x27;&#x2f;"),
+    ];
+
+    let content = "<>&\"'/";
+    for (engine, escaped) in engines {
+        let dir = tempfile::tempdir().expect("template directory");
+        for (name, _, _) in &cases {
+            let path = dir.path().join(format!("{name}.{engine}"));
+            std::fs::write(path, "{{ content }}").expect("write template");
+        }
+
+        let rocket = rocket::custom(Config::figment().merge(("template_dir", dir.path())))
+            .attach(Templating::new());
+        let client = Client::debug(rocket).await.unwrap();
+        let req = client.get("/");
+        let metadata = Metadata::from_request(&req).await.unwrap();
+
+        for (name, content_type, escape) in &cases {
+            let expected = if *escape { escaped } else { content };
+            assert_eq!(
+                metadata.render(name.clone(), context! { content }),
+                Some((content_type.clone(), expected.into())),
+                "{engine}: {name}"
+            );
+        }
+
+        assert!(!metadata.contains_template("same"));
+    }
+}
+
 #[cfg(feature = "tera")]
 mod tera_tests {
     use super::*;
@@ -232,14 +305,14 @@ mod tera_tests {
         map.insert("content", "<script />");
 
         // Test with a txt file, which shouldn't escape.
-        let template = Template::show(client.rocket(), "tera/txt_test", &map);
-        let md_rendered = metadata.render("tera/txt_test", &map);
+        let template = Template::show(client.rocket(), "tera/txt_test.txt", &map);
+        let md_rendered = metadata.render("tera/txt_test.txt", &map);
         assert_eq!(template, Some(UNESCAPED_EXPECTED.into()));
         assert_eq!(md_rendered, Some((ContentType::Text, UNESCAPED_EXPECTED.into())));
 
         // Now with an HTML file, which should escape.
-        let template = Template::show(client.rocket(), "tera/html_test", &map);
-        let md_rendered = metadata.render("tera/html_test", &map);
+        let template = Template::show(client.rocket(), "tera/html_test.html", &map);
+        let md_rendered = metadata.render("tera/html_test.html", &map);
         assert_eq!(template, Some(ESCAPED_EXPECTED.into()));
         assert_eq!(md_rendered, Some((ContentType::HTML, ESCAPED_EXPECTED.into())));
     }
@@ -260,7 +333,7 @@ mod tera_tests {
             .on_load(|_| panic!("replaced loading hook"))
             .try_on_load(|engines| {
                 engines.tera.add_raw_template("child.html", concat!(
-                    "{% extends \"base\" %}",
+                    "{% extends \"base.html\" %}",
                     "{% block content %}child{% endblock %}",
                 ))?;
 
@@ -277,7 +350,7 @@ mod tera_tests {
         let metadata = Metadata::from_request(&req).await.unwrap();
 
         assert_eq!(
-            metadata.render("base", context! { value: 21 }),
+            metadata.render("base.html", context! { value: 21 }),
             Some((ContentType::HTML, "42:base".into()))
         );
 
@@ -288,42 +361,91 @@ mod tera_tests {
     }
 
     #[async_test]
+    async fn test_tera_escaping() {
+        use rocket::local::asynchronous::Client;
+
+        let dir = tempfile::tempdir().expect("template directory");
+        let templating = Templating::new().try_on_load(|engines| {
+            engines.tera.add_raw_templates([
+                ("text.txt", "{{ content }}"),
+                ("html.HTML", "{{ content }}"),
+                ("include.HTML", r#"{% include "text.txt" %}"#),
+                ("include.txt", r#"{% include "html.HTML" %}"#),
+                ("capture.HTML", "{% set value %}{{ content }}{% endset %}{{ value }}"),
+                ("safe.HTML", "{{ content | safe }}"),
+                ("engine.html.tera", "{{ content }}"),
+                ("engine.XML.tera", "{{ content }}"),
+                ("engine.txt.tera", "{{ content }}"),
+            ])?;
+
+            Ok(())
+        });
+
+        let rocket = rocket::custom(Config::figment().merge(("template_dir", dir.path())))
+            .attach(templating);
+        let client = Client::debug(rocket).await.unwrap();
+        let req = client.get("/");
+        let metadata = Metadata::from_request(&req).await.unwrap();
+
+        for (name, content_type, expected) in [
+            ("include.HTML", ContentType::HTML, "&lt;b&gt;"),
+            ("include.txt", ContentType::Text, "<b>"),
+            ("capture.HTML", ContentType::HTML, "&lt;b&gt;"),
+            ("safe.HTML", ContentType::HTML, "<b>"),
+            ("engine.html.tera", ContentType::Text, "&lt;b&gt;"),
+            ("engine.XML.tera", ContentType::Text, "&lt;b&gt;"),
+            ("engine.txt.tera", ContentType::Text, "<b>"),
+        ] {
+            assert_eq!(
+                metadata.render(name, context! { content: "<b>" }),
+                Some((content_type, expected.into())),
+                "{name}"
+            );
+        }
+    }
+
+    #[async_test]
+    async fn test_tera_escaping_override() {
+        use rocket::local::asynchronous::Client;
+
+        let dir = tempfile::tempdir().expect("template directory");
+        for name in ["file.html.tera", "file.txt.tera"] {
+            std::fs::write(dir.path().join(name), "{{ content }}").expect("write template");
+        }
+
+        let templating = Templating::init(|engines| engines.tera.autoescape_on([".txt"]))
+            .try_on_load(|engines| {
+                engines.tera.add_raw_template("added.txt", "{{ content }}")?;
+                Ok(())
+            });
+
+        let rocket = rocket::custom(Config::figment().merge(("template_dir", dir.path())))
+            .attach(templating);
+        let client = Client::debug(rocket).await.unwrap();
+        let req = client.get("/");
+        let metadata = Metadata::from_request(&req).await.unwrap();
+
+        for (name, content_type, expected) in [
+            ("file.html", ContentType::HTML, "<b>"),
+            ("file.txt", ContentType::Text, "&lt;b&gt;"),
+            ("added.txt", ContentType::Text, "&lt;b&gt;"),
+        ] {
+            assert_eq!(
+                metadata.render(name, context! { content: "<b>" }),
+                Some((content_type, expected.into())),
+                "{name}"
+            );
+        }
+    }
+
+    #[async_test]
     async fn test_globby_paths() {
         use rocket::local::asynchronous::Client;
 
         let client = Client::debug(rocket()).await.unwrap();
         let req = client.get("/");
         let metadata = Metadata::from_request(&req).await.unwrap();
-        assert!(metadata.contains_template("tera/[test]/html_test"));
-    }
-
-    #[test]
-    fn test_tera_escaping() {
-        use rocket::local::blocking::Client;
-
-        let root = tempfile::tempdir().unwrap();
-        let dir = root.path().join("sub");
-        std::fs::create_dir(&dir).unwrap();
-        for file in ["a.html.tera", "b.xml.tera", "c.htm.tera", "d.txt.tera", "e.tera"] {
-            std::fs::write(dir.join(file), "{{ v }}").unwrap();
-        }
-
-        let figment = Config::figment().merge(("template_dir", root.path()));
-        let rocket = rocket::custom(figment)
-            .attach(Templating::new().on_load(|engines| {
-                engines.tera.add_raw_template("raw.html", "{{ v }}").unwrap();
-                engines.tera.add_raw_template("raw", "{{ v }}").unwrap();
-            }));
-
-        let client = Client::debug(rocket).unwrap();
-        let render = |name| Template::show(client.rocket(), name, context! { v: "<b>" });
-        for name in ["sub/a", "sub/b", "sub/c", "raw.html"] {
-            assert_eq!(render(name).unwrap(), "&lt;b&gt;", "{name} should be escaped");
-        }
-
-        for name in ["sub/d", "sub/e", "raw"] {
-            assert_eq!(render(name).unwrap(), "<b>", "{name} should not be escaped");
-        }
+        assert!(metadata.contains_template("tera/[test]/html_test.html"));
     }
 
     // u128 is not supported. enable when it is.
@@ -337,7 +459,8 @@ mod tera_tests {
     //     map.insert("title", 123);
     //     map.insert("number", 1u128 << 80);
     //
-    //     let template = Template::show(client.rocket(), "tera/txt_test", &map);
+    //     let template =
+    //         Template::show(client.rocket(), "tera/txt_test.txt", &map);
     //     assert_eq!(template, Some(EXPECTED.into()));
     // }
 
@@ -347,10 +470,10 @@ mod tera_tests {
 
         let client = Client::debug(rocket()).unwrap();
 
-        let response = client.get("/tera/txt_test").dispatch();
+        let response = client.get("/tera/txt_test.txt").dispatch();
         assert_eq!(response.status(), Status::Ok);
 
-        let response = client.get("/tera/html_test").dispatch();
+        let response = client.get("/tera/html_test.html").dispatch();
         assert_eq!(response.status(), Status::Ok);
 
         let response = client.get("/tera/not_existing").dispatch();
@@ -385,8 +508,8 @@ mod handlebars_tests {
         map.insert("content", "<script /> hi");
 
         // Test with a txt file, which shouldn't escape.
-        let template = Template::show(client.rocket(), "hbs/test", &map);
-        let md_rendered = metadata.render("hbs/test", &map);
+        let template = Template::show(client.rocket(), "hbs/test.html", &map);
+        let md_rendered = metadata.render("hbs/test.html", &map);
         assert_eq!(template, Some(EXPECTED.into()));
         assert_eq!(md_rendered, Some((ContentType::HTML, EXPECTED.into())));
     }
@@ -402,7 +525,8 @@ mod handlebars_tests {
     //     map.insert("title", 123);
     //     map.insert("number", 1u128 << 80);
     //
-    //     let template = Template::show(client.rocket(), "hbs/test", &map);
+    //     let template =
+    //         Template::show(client.rocket(), "hbs/test.html", &map);
     //     assert_eq!(template, Some(EXPECTED.into()));
     // }
 
@@ -412,7 +536,7 @@ mod handlebars_tests {
 
         let client = Client::debug(rocket()).unwrap();
 
-        let response = client.get("/hbs/test").dispatch();
+        let response = client.get("/hbs/test.html").dispatch();
         assert_eq!(response.status(), Status::Ok);
 
         let response = client.get("/hbs/not_existing").dispatch();
@@ -431,7 +555,7 @@ mod handlebars_tests {
 
         use rocket::local::blocking::Client;
 
-        const RELOAD_TEMPLATE: &str = "hbs/reload";
+        const RELOAD_TEMPLATE: &str = "hbs/reload.txt";
         const INITIAL_TEXT: &str = "initial";
         const NEW_TEXT: &str = "reload";
 
@@ -505,16 +629,153 @@ mod j2_tests {
         map.insert("content", "<script />");
 
         // Test with a txt file, which shouldn't escape.
-        let template = Template::show(client.rocket(), "j2/txt_test", &map);
-        let md_rendered = (&metadata).render("j2/txt_test", &map);
+        let template = Template::show(client.rocket(), "j2/txt_test.txt", &map);
+        let md_rendered = (&metadata).render("j2/txt_test.txt", &map);
         assert_eq!(template, Some(UNESCAPED_EXPECTED.into()));
         assert_eq!(md_rendered, Some((ContentType::Text, UNESCAPED_EXPECTED.into())));
 
         // Now with an HTML file, which should escaped.
-        let template = Template::show(client.rocket(), "j2/html_test", &map);
-        let md_rendered = metadata.render("j2/html_test", &map);
+        let template = Template::show(client.rocket(), "j2/html_test.html", &map);
+        let md_rendered = metadata.render("j2/html_test.html", &map);
         assert_eq!(template, Some(ESCAPED_EXPECTED.into()));
         assert_eq!(md_rendered, Some((ContentType::HTML, ESCAPED_EXPECTED.into())));
+    }
+
+    #[async_test]
+    async fn test_j2_escaping() {
+        use rocket::local::asynchronous::Client;
+
+        let dir = tempfile::tempdir().expect("template directory");
+        let templating = Templating::new().try_on_load(|engines| {
+            for (name, source) in [
+                ("text.txt", "{{ content }}"),
+                ("html.HTML", "{{ content }}"),
+                ("include.HTML", r#"{% include "text.txt" %}"#),
+                ("include.txt", r#"{% include "html.HTML" %}"#),
+                ("capture.HTML", "{% set value %}{{ content }}{% endset %}{{ value }}"),
+                ("safe.HTML", "{{ content | safe }}"),
+            ] {
+                engines.minijinja.add_template(name, source)?;
+            }
+
+            Ok(())
+        });
+
+        let rocket = rocket::custom(Config::figment().merge(("template_dir", dir.path())))
+            .attach(templating);
+        let client = Client::debug(rocket).await.unwrap();
+        let req = client.get("/");
+        let metadata = Metadata::from_request(&req).await.unwrap();
+
+        for (name, content_type, expected) in [
+            ("include.HTML", ContentType::HTML, "<b>"),
+            ("include.txt", ContentType::Text, "&lt;b&gt;"),
+            ("capture.HTML", ContentType::HTML, "&lt;b&gt;"),
+            ("safe.HTML", ContentType::HTML, "<b>"),
+        ] {
+            assert_eq!(
+                metadata.render(name, context! { content: "<b>" }),
+                Some((content_type, expected.into())),
+                "{name}"
+            );
+        }
+    }
+
+    #[async_test]
+    async fn test_j2_escaping_override() {
+        use rocket::local::asynchronous::Client;
+        use rocket_dyn_templates::minijinja::AutoEscape;
+
+        let dir = tempfile::tempdir().expect("template directory");
+        std::fs::write(dir.path().join("file.html.j2"), "{{ content }}")
+            .expect("write template");
+
+        let templating = Templating::init(|engines| {
+            engines.minijinja.set_auto_escape_callback(|_| AutoEscape::None);
+        }).try_on_load(|engines| {
+            engines.minijinja.add_template("added.HTML", "{{ content }}")?;
+            Ok(())
+        });
+
+        let rocket = rocket::custom(Config::figment().merge(("template_dir", dir.path())))
+            .attach(templating);
+        let client = Client::debug(rocket).await.unwrap();
+        let req = client.get("/");
+        let metadata = Metadata::from_request(&req).await.unwrap();
+
+        for name in ["file.html", "added.HTML"] {
+            assert_eq!(
+                metadata.render(name, context! { content: "<b>" }),
+                Some((ContentType::HTML, "<b>".into())),
+                "{name}"
+            );
+        }
+    }
+
+    #[async_test]
+    async fn test_j2_json_escaping() {
+        use rocket::local::asynchronous::Client;
+
+        let dir = tempfile::tempdir().expect("template directory");
+        let content = "</script>&'";
+        let json = r#""</script>&'""#;
+        let cases = [
+            ("data.json", ContentType::JSON, json),
+            ("data.json.jinja", ContentType::Text, json),
+            ("upper.JSON", ContentType::JSON, content),
+            ("upper.json.JINJA", ContentType::Text, content),
+        ];
+
+        for (name, _, _) in &cases {
+            std::fs::write(dir.path().join(format!("{name}.j2")), "{{ content }}")
+                .expect("write template");
+        }
+
+        let rocket = rocket::custom(Config::figment().merge(("template_dir", dir.path())))
+            .attach(Templating::new());
+        let client = Client::debug(rocket).await.unwrap();
+        let req = client.get("/");
+        let metadata = Metadata::from_request(&req).await.unwrap();
+
+        for (name, content_type, expected) in cases {
+            assert_eq!(
+                metadata.render(name, context! { content }),
+                Some((content_type, expected.into())),
+                "{name}"
+            );
+        }
+
+        let content = context! { content, values: [1, 2] };
+        assert_eq!(
+            metadata.render("data.json", context! { content }),
+            Some((ContentType::JSON, r#"{"content":"</script>&'","values":[1,2]}"#.into()))
+        );
+    }
+
+    #[async_test]
+    async fn test_j2_tojson() {
+        use rocket::local::asynchronous::Client;
+
+        let dir = tempfile::tempdir().expect("template directory");
+        std::fs::write(
+            dir.path().join("script.html.j2"),
+            "<script>const data = {{ data | tojson }};</script>",
+        ).expect("write template");
+
+        let rocket = rocket::custom(Config::figment().merge(("template_dir", dir.path())))
+            .attach(Templating::new());
+        let client = Client::debug(rocket).await.unwrap();
+        let req = client.get("/");
+        let metadata = Metadata::from_request(&req).await.unwrap();
+        let data = context! { content: "</script>&'", values: [1, 2] };
+
+        assert_eq!(
+            metadata.render("script.html", context! { data }),
+            Some((ContentType::HTML, concat!(
+                r#"<script>const data = {"content": "\u003c/script\u003e\u0026\u0027", "#,
+                r#""values": [1, 2]};</script>"#,
+            ).into()))
+        );
     }
 
     #[async_test]
@@ -524,7 +785,7 @@ mod j2_tests {
         let client = Client::debug(rocket()).await.unwrap();
         let req = client.get("/");
         let metadata = Metadata::from_request(&req).await.unwrap();
-        assert!(metadata.contains_template("j2/[test]/html_test"));
+        assert!(metadata.contains_template("j2/[test]/html_test.html"));
     }
 
     #[test]
@@ -539,7 +800,7 @@ mod j2_tests {
         map.insert("title", 123);
         map.insert("content", 1u128 << 80);
 
-        let template = Template::show(client.rocket(), "j2/txt_test", &map);
+        let template = Template::show(client.rocket(), "j2/txt_test.txt", &map);
         assert_eq!(template, Some(EXPECTED.into()));
     }
 
@@ -549,10 +810,10 @@ mod j2_tests {
 
         let client = Client::debug(rocket()).unwrap();
 
-        let response = client.get("/j2/txt_test").dispatch();
+        let response = client.get("/j2/txt_test.txt").dispatch();
         assert_eq!(response.status(), Status::Ok);
 
-        let response = client.get("/j2/html_test").dispatch();
+        let response = client.get("/j2/html_test.html").dispatch();
         assert_eq!(response.status(), Status::Ok);
 
         let response = client.get("/j2/not_existing").dispatch();

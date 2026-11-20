@@ -6,43 +6,46 @@ use rocket::serde::Serialize;
 
 use crate::engine::Engine;
 
+/// Extensions of template names for which HTML escaping is enabled.
+const MARKUP_EXTENSIONS: &[&str] = &["html", "htm", "xml", "xhtml", "svg"];
+
+/// Returns the suffixes of template names for which HTML escaping is enabled:
+/// every ASCII case variant of each markup extension, on its own (`.HtMl`) and
+/// followed by the engine extension (`.HtMl.tera`).
+///
+/// Tera only matches suffixes exactly, so each variant is listed. The engine
+/// extension is included for templates registered directly with Tera under a
+/// name that ends with it, such as `email.html.tera`.
+fn autoescape_suffixes() -> Vec<String> {
+    let mut suffixes = vec![];
+    for ext in MARKUP_EXTENSIONS {
+        for mask in 0..1u32 << ext.len() {
+            let variant = ext.chars().enumerate()
+                .map(|(i, c)| if mask & (1 << i) != 0 { c.to_ascii_uppercase() } else { c })
+                .collect::<String>();
+
+            suffixes.push(format!(".{variant}.{}", Tera::EXT));
+            suffixes.push(format!(".{variant}"));
+        }
+    }
+
+    suffixes
+}
+
 impl Engine for Tera {
     const EXT: &'static str = "tera";
 
     fn init<'a>(_: impl Iterator<Item = (&'a str, &'a Path)>) -> Self {
         // Create the Tera instance.
         let mut tera = Tera::default();
-        tera.autoescape_on(vec![".html", ".htm", ".xml"]);
+        tera.autoescape_on(autoescape_suffixes());
         tera
     }
 
     fn load<'a>(&mut self, templates: impl Iterator<Item = (&'a str, &'a Path)>) -> Option<()> {
         // Collect into a tuple of (name, path) for Tera. If we register one at
         // a time, it will complain about unregistered base templates.
-        let files: Vec<_> = templates.map(|(name, path)| (path, Some(name))).collect();
-
-        // Tera autoescapes a template if its _name_ ends with a registered
-        // suffix, but the names of templates from files have no extension. To
-        // escape templates with an HTML or XML path, we register their names.
-        let escape = |path: &Path| path.to_str().is_some_and(|path| {
-            [".html.tera", ".htm.tera", ".xml.tera"].iter().any(|ext| path.ends_with(ext))
-        });
-
-        let mut suffixes = vec![".html", ".htm", ".xml"];
-        suffixes.extend(files.iter().filter(|(p, _)| escape(p)).filter_map(|(_, n)| *n));
-
-        // A suffix matches any name ending with it, so a template whose name
-        // ends with an escaped template's name is also escaped. This is safe
-        // but may be unexpected, so we warn about it.
-        for name in files.iter().filter(|(p, _)| !escape(p)).filter_map(|(_, n)| *n) {
-            if let Some(suffix) = suffixes.iter().find(|s| name.ends_with(**s)) {
-                warn!(template = name, suffix, "Tera template will be HTML escaped\n\
-                    its name ends with the name or extension of an HTML/XML template\n\
-                    rename the template to avoid escaping");
-            }
-        }
-
-        self.autoescape_on(suffixes.into_iter().map(String::from));
+        let files = templates.map(|(name, path)| (path, Some(name)));
 
         // Finally try to tell Tera about all of the templates.
         if let Err(e) = self.add_template_files(files) {

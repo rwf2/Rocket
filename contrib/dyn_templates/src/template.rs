@@ -52,7 +52,7 @@ impl Template {
     /// ```rust
     /// use rocket_dyn_templates::{Template, context};
     ///
-    /// let template = Template::render("index", context! {
+    /// let template = Template::render("index.html", context! {
     ///     foo: "Hello, world!",
     /// });
     /// ```
@@ -67,7 +67,7 @@ impl Template {
     /// let mut context = HashMap::new();
     /// context.insert("foo", "Hello, world!");
     ///
-    /// let template = Template::render("index", context);
+    /// let template = Template::render("index.html", context);
     /// ```
     #[inline]
     pub fn render<S, C>(name: S, context: C) -> Template
@@ -109,7 +109,8 @@ impl Template {
     ///     // Create a `context`. Here, just an empty `HashMap`.
     ///     let mut context = HashMap::new();
     ///     # context.insert("test", "test");
-    ///     let template = Template::show(client.rocket(), "index", context);
+    ///     let template =
+    ///         Template::show(client.rocket(), "index.html", context);
     /// }
     /// ```
     #[inline]
@@ -142,6 +143,10 @@ impl Template {
                 "requested template not found"
             );
 
+            for known in ts.iter().filter(|t| is_name_without_extension(template, t)) {
+                info!("Did you mean '{known}'? Names include the file type extension.");
+            }
+
             Status::InternalServerError
         })?;
 
@@ -157,6 +162,14 @@ impl Template {
 
         Ok((info.data_type.clone(), string))
     }
+}
+
+/// Returns `true` if `known` is `name` followed by a file type extension, as
+/// in `index` and `index.html`.
+fn is_name_without_extension(name: &str, known: &str) -> bool {
+    known.strip_prefix(name)
+        .and_then(|rest| rest.strip_prefix('.'))
+        .is_some_and(|ext| !ext.is_empty() && !ext.contains(['.', '/']))
 }
 
 /// Returns a response with the Content-Type derived from the template's
@@ -212,7 +225,7 @@ impl Sentinel for Template {
 /// # use rocket_dyn_templates::{Template, context};
 /// #[get("/<foo>")]
 /// fn render_index(foo: u64) -> Template {
-///     Template::render("index", context! {
+///     Template::render("index.html", context! {
 ///         // Note that shorthand field syntax is supported.
 ///         // This is equivalent to `foo: foo,`
 ///         foo,
@@ -237,7 +250,7 @@ impl Sentinel for Template {
 ///
 /// #[get("/<foo>")]
 /// fn render_index(foo: u64) -> Template {
-///     Template::render("index", IndexContext {
+///     Template::render("index.html", IndexContext {
 ///         foo,
 ///         bar: "Hello world",
 ///     })
@@ -297,4 +310,23 @@ macro_rules! context {
             $($key $(: $value)?),*
         }
     }};
+}
+
+#[cfg(test)]
+mod tests {
+    use super::is_name_without_extension;
+
+    #[test]
+    fn name_without_extension() {
+        assert!(is_name_without_extension("index", "index.html"));
+        assert!(is_name_without_extension("dir/index", "dir/index.html"));
+        assert!(is_name_without_extension("index.template", "index.template.html"));
+
+        assert!(!is_name_without_extension("index", "index"));
+        assert!(!is_name_without_extension("index", "index."));
+        assert!(!is_name_without_extension("index", "indexes.html"));
+        assert!(!is_name_without_extension("index", "index.template.html"));
+        assert!(!is_name_without_extension("index", "index.d/page"));
+        assert!(!is_name_without_extension("index.html", "index"));
+    }
 }

@@ -9,11 +9,12 @@
 
 This crate adds support for dynamic template rendering to Rocket. It
 automatically discovers templates, provides a `Responder` to render templates,
-and automatically reloads templates when compiled in debug mode. It supports [Handlebars], [Tera] and [MiniJinja].
+and automatically reloads templates when compiled in debug mode. At present, it
+supports [Handlebars], [Tera], and [MiniJinja].
 
-[Tera]: https://docs.rs/crate/tera/1
+[Tera]: https://docs.rs/crate/tera/2
 [Handlebars]: https://docs.rs/crate/handlebars/5
-[MiniJinja]: https://docs.rs/crate/minijinja/2.0.1
+[MiniJinja]: https://docs.rs/minijinja/3
 
 # Usage
 
@@ -26,20 +27,20 @@ and automatically reloads templates when compiled in debug mode. It supports [Ha
      features = ["handlebars", "tera", "minijinja"]
      ```
 
-  1. Write your template files in Handlebars (`.hbs`) and/or Tera (`.tera`) in
-     the configurable `template_dir` directory (default:
+  1. Write your template files in Handlebars (`.hbs`), Tera (`.tera`), or
+     MiniJinja (`.j2`) in the configurable `template_dir` directory (default:
      `{rocket_root}/templates`).
 
   2. Attach `Templating::new()` and return a `Template` using
      `Template::render()`, supplying the name of the template file **minus the
-     last two extensions**:
+     engine extension**:
 
      ```rust
      use rocket_dyn_templates::{Template, Templating, context};
 
      #[get("/")]
      fn index() -> Template {
-         Template::render("template-name", context! { field: "value" })
+         Template::render("template-name.html", context! { field: "value" })
      }
 
      #[launch]

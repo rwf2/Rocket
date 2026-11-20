@@ -1,5 +1,7 @@
 #[macro_use] extern crate rocket;
 
+#[cfg(test)] mod tests;
+
 use rocket::time::Date;
 use rocket::http::{Status, ContentType};
 use rocket::form::{Form, Contextual, FromForm, FromFormField, Context};
@@ -69,7 +71,7 @@ struct Submit<'v> {
 
 #[get("/")]
 fn index() -> Template {
-    Template::render("index", &Context::default())
+    Template::render("index.html", &Context::default())
 }
 
 // NOTE: We use `Contextual` here because we want to collect all submitted form
@@ -80,9 +82,9 @@ fn submit<'r>(form: Form<Contextual<'r, Submit<'r>>>) -> (Status, Template) {
     let template = match form.value {
         Some(ref submission) => {
             println!("submission: {:#?}", submission);
-            Template::render("success", &form.context)
+            Template::render("success.html", &form.context)
         }
-        None => Template::render("index", &form.context),
+        None => Template::render("index.html", &form.context),
     };
 
     (form.context.status(), template)

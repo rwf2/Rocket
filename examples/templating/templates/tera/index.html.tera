@@ -1,4 +1,4 @@
-{% extends "tera/base" %}
+{% extends "tera/base.html" %}
 
 {% block content %}
     <h1>Hi {{ name }}!</h1>

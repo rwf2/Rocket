@@ -107,14 +107,14 @@ impl Metadata<'_> {
     ///
     /// #[get("/")]
     /// fn raw_render(metadata: Metadata) -> Option<(ContentType, String)> {
-    ///     metadata.render("index", context! { field: "Hello, world!" })
+    ///     metadata.render("index.html", context! { field: "Hello, world!" })
     /// }
     ///
     /// // Prefer the following, however, which is nearly identical but pithier:
     ///
     /// #[get("/")]
     /// fn render() -> Template {
-    ///     Template::render("index", context! { field: "Hello, world!" })
+    ///     Template::render("index.html", context! { field: "Hello, world!" })
     /// }
     /// ```
     pub fn render<S, C>(&self, name: S, context: C) -> Option<(ContentType, String)>

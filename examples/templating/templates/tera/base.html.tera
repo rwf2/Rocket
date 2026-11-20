@@ -5,7 +5,7 @@
     <title>Tera Demo - {{ title }}</title>
   </head>
   <body>
-    {% include "tera/nav" %}
+    {% include "tera/nav.html" %}
 
     {% block content %}{% endblock content %}
 

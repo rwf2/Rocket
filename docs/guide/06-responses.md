@@ -517,7 +517,7 @@ The [serialization example] provides further illustration.
 
 Rocket has first-class templating support that works largely through a
 [`Template`] responder in the `rocket_dyn_templates` contrib library. To render
-a template named "index", for instance, you might return a value of type
+a template named "index.html", for instance, you might return a value of type
 `Template` as follows:
 
 ```rust
@@ -531,7 +531,7 @@ fn index() -> Template {
     # /*
     let context = /* object-like value */;
     # */ let context = ();
-    Template::render("index", &context)
+    Template::render("index.html", &context)
 }
 ```
 
@@ -552,7 +552,7 @@ use rocket_dyn_templates::Template;
 
 #[get("/")]
 fn index() -> Template {
-    Template::render("index", context! {
+    Template::render("index.html", context! {
         foo: 123,
     })
 }
@@ -580,14 +580,14 @@ fn rocket() -> _ {
 Rocket discovers templates in the [configurable] `template_dir` directory.
 Templating support in Rocket is engine agnostic. The engine used to render a
 template depends on the template file's extension. For example, if a file ends
-with `.hbs`, Handlebars is used, while if a file ends with `.tera`, Tera is
-used.
+with `.hbs`, Handlebars is used, `.tera` selects Tera, and `.j2` selects
+MiniJinja.
 
-! note: The name of the template _does not_ include its extension.
+! note: The name of the template _does not_ include its engine extension.
 
-  For a template file named `index.html.tera`, call `render("index")` and use
-  the name `"index"` in templates, i.e, `extends "index"` or `extends "base"`
-  for `base.html.tera`.
+  For a template file named `index.html.tera`, call `render("index.html")` and
+  use the name `"index.html"` in templates, i.e, `extends "index.html"` or
+  `extends "base.html"` for `base.html.tera`.
 
 [`context!`]: @api/master/rocket_dyn_templates/macro.context.html
 

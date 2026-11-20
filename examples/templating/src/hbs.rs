@@ -12,7 +12,7 @@ pub fn index() -> Redirect {
 
 #[get("/hello/<name>")]
 pub fn hello(name: &str) -> Template {
-    Template::render("hbs/index", context! {
+    Template::render("hbs/index.html", context! {
         title: "Hello",
         name: Some(name),
         items: vec!["One", "Two", "Three"],
@@ -23,13 +23,13 @@ pub fn hello(name: &str) -> Template {
 pub fn about() -> Template {
     Template::render("hbs/about.html", context! {
         title: "About",
-        parent: "hbs/layout",
+        parent: "hbs/layout.html",
     })
 }
 
 #[catch(404)]
 pub fn not_found(req: &Request<'_>) -> Template {
-    Template::render("hbs/error/404", context! {
+    Template::render("hbs/error/404.html", context! {
         uri: req.uri()
     })
 }
@@ -43,15 +43,18 @@ fn wow_helper(
 ) -> handlebars::HelperResult {
     if let Some(param) = h.param(0) {
         out.write("<b><i>")?;
-        out.write(&param.value().render())?;
-        out.write("</b></i>")?;
+        out.write(&handlebars::html_escape(&param.value().render()))?;
+        out.write("</i></b>")?;
     }
 
     Ok(())
 }
 
-pub fn customize(hbs: &mut Handlebars) {
+pub fn init(hbs: &mut Handlebars) {
     hbs.register_helper("wow", Box::new(wow_helper));
+}
+
+pub fn customize(hbs: &mut Handlebars) {
     hbs.register_template_string("hbs/about.html", r#"
         {{#*inline "page"}}
 
@@ -60,6 +63,6 @@ pub fn customize(hbs: &mut Handlebars) {
         </section>
 
         {{/inline}}
-        {{> hbs/layout}}
+        {{> hbs/layout.html}}
     "#).expect("valid HBS template");
 }

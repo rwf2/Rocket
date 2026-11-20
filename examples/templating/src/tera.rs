@@ -10,7 +10,7 @@ pub fn index() -> Redirect {
 
 #[get("/hello/<name>")]
 pub fn hello(name: &str) -> Template {
-    Template::render("tera/index", context! {
+    Template::render("tera/index.html", context! {
         title: "Hello",
         name: Some(name),
         items: vec!["One", "Two", "Three"],
@@ -26,14 +26,14 @@ pub fn about() -> Template {
 
 #[catch(404)]
 pub fn not_found(req: &Request<'_>) -> Template {
-    Template::render("tera/error/404", context! {
+    Template::render("tera/error/404.html", context! {
         uri: req.uri()
     })
 }
 
 pub fn customize(tera: &mut Tera) {
     tera.add_raw_template("tera/about.html", r#"
-        {% extends "tera/base" %}
+        {% extends "tera/base.html" %}
 
         {% block content %}
             <section id="about">

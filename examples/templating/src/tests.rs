@@ -2,7 +2,7 @@ use super::rocket;
 
 use rocket::http::{RawStr, Status, Method::*};
 use rocket::local::blocking::Client;
-use rocket_dyn_templates::{Template, context};
+use rocket_dyn_templates::{Template, Templating, context};
 
 fn test_root(kind: &str) {
     // Check that the redirect works.
@@ -19,7 +19,8 @@ fn test_root(kind: &str) {
     // Check that other request methods are not accepted (and instead caught).
     for method in &[Post, Put, Delete, Options, Trace, Connect, Patch] {
         let context = context! { uri: format!("/{}", kind) };
-        let expected = Template::show(client.rocket(), format!("{}/error/404", kind), &context);
+        let expected = Template::show(client.rocket(),
+            format!("{}/error/404.html", kind), &context);
 
         let response = client.req(*method, format!("/{}", kind)).dispatch();
         assert_eq!(response.status(), Status::NotFound);
@@ -91,4 +92,20 @@ fn minijinja() {
     test_name("minijinja");
     test_404("minijinja");
     test_about("minijinja");
+}
+
+#[test]
+fn hbs_helper_escaping() {
+    let templating = Templating::init(|engines| {
+        super::hbs::init(&mut engines.handlebars);
+        engines.handlebars.register_template_string("helper.html", "{{ wow value }}")
+            .expect("valid HBS template");
+    });
+
+    let client = Client::tracked(rocket::build().attach(templating)).unwrap();
+    let template = Template::show(client.rocket(), "helper.html", context! {
+        value: "<script>&</script>"
+    });
+
+    assert_eq!(template, Some("<b><i>&lt;script&gt;&amp;&lt;/script&gt;</i></b>".into()));
 }

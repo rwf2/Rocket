@@ -37,7 +37,7 @@ pub use session_uri as uri;
 
 #[get("/")]
 fn index(user: User) -> Template {
-    Template::render("session", context! {
+    Template::render("session.html", context! {
         user_id: user.0,
     })
 }
@@ -54,7 +54,7 @@ fn login(_user: User) -> Redirect {
 
 #[get("/login", rank = 2)]
 fn login_page(flash: Option<FlashMessage<'_>>) -> Template {
-    Template::render("login", flash)
+    Template::render("login.html", flash)
 }
 
 #[post("/login", data = "<login>")]

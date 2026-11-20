@@ -26,7 +26,7 @@ fn delete(cookies: &CookieJar<'_>) -> Redirect {
 fn index(cookies: &CookieJar<'_>) -> Template {
     let message = cookies.get("message").map(|c| c.value());
     let present = cookies.get("message").is_some();
-    Template::render("message", context! { present, message })
+    Template::render("message.html", context! { present, message })
 }
 
 pub fn routes() -> Vec<rocket::Route> {
