@@ -1,3 +1,727 @@
+# Version 0.5.4 (Nov 19, 2026)
+
+This release contains the following crate updates:
+
+  - `rocket` `0.5.4`
+
+## [`rocket`](https://api.rocket.rs/v0.5/rocket/) `0.5.4`
+
+### General Improvements
+
+  * **(fix [#3022] via [#3023])** A response body is now dropped as soon as the
+    client disconnects.
+
+    Previously, Rocket detected a disconnected client only when it sent the
+    next part of the body. A body that produced no further data, for instance,
+    a stream waiting on a stalled source, was retained and polled until the
+    server shut down. Rocket now stops reading and drops the body when the
+    HTTP/1.1 connection closes or the HTTP/2 stream is reset.
+
+[#3022]: https://github.com/rwf2/Rocket/issues/3022
+[#3023]: https://github.com/rwf2/Rocket/pull/3023
+
+# Version 0.5.3 (Nov 18, 2026)
+
+This release contains the following crate updates:
+
+  - `rocket` `0.5.3`
+  - `rocket_db_pools` `0.3.0`
+  - `rocket_dyn_templates` `0.3.0`
+  - `rocket_sync_db_pools` `0.2.0`
+  - `rocket_ws` `0.2.0`
+
+## [`rocket`](https://api.rocket.rs/v0.5/rocket/) `0.5.3`
+
+### General Improvements
+
+  * **(fix [#3004])** Connections now linger for up to 10 seconds after the
+    last response.
+
+    Previously, Rocket closed a connection immediately after the last response,
+    even if the client was still sending data, for instance, the rest of an
+    upload that exceeded a data limit. Closing a connection with unread data
+    causes TCP to send a reset, which can discard the response before the
+    client reads it. Rocket now closes connections in stages: it shuts down
+    writes, then reads and discards incoming data until the client closes the
+    connection, the linger time elapses, or the shutdown grace period ends.
+    Upgraded connections, such as WebSocket connections, do not linger.
+
+    As a result, connections may remain open for up to 10 seconds longer than
+    before. The linger time is configured via the new [`linger`] configuration
+    parameter. For the previous behavior, set `linger` to `0`.
+
+  * **(fix [#3018] via [#3019])** A response whose body fails to read is now
+    aborted.
+
+    Previously, clients received the part of the body read before the error as
+    a complete response. Rocket now closes the HTTP/1.1 connection or resets
+    the HTTP/2 stream, so clients see an incomplete response.
+
+  * A request body that fails to read now fails every subsequent read.
+
+    Previously, an error that occurred while Rocket peeked into the body was
+    lost, and handlers read a truncated or malformed body as complete.
+
+  * Graceful shutdown now completes as soon as all connections close.
+
+    Previously, Rocket waited for the entire grace period if any connection was
+    open when shutdown was requested, and often for the entire mercy period as
+    well.
+
+### Dependency Changes
+
+  * `bytes` was updated to `1.11.1`, fixing an integer overflow in
+    `BytesMut::reserve()` ([RUSTSEC-2026-0007]).
+
+  * `tempfile` was updated to `3.4.0`, which no longer depends on the vulnerable
+    `remove_dir_all` `0.5` ([RUSTSEC-2023-0018]).
+
+  * `async-stream` was updated to `0.3.3`, fixing compile errors in stream
+    macros when `yield` and `?` are used in the same expression, as in
+    `yield message?`.
+
+  * `ref-swap` was removed. Version `0.1.2` is unsound ([RUSTSEC-2026-0528]).
+    Only Rocket itself wrote through `ref-swap`, so the unsoundness was not
+    reachable through Rocket's API.
+
+## [`rocket_db_pools`](https://api.rocket.rs/v0.5/rocket_db_pools/) `0.3.0`
+
+### Breaking Changes
+
+This release includes many breaking changes, most of which are the result of
+updated database drivers. These changes are listed below along with a short
+note about how to handle the breaking change in existing applications.
+Applications that depend on a driver directly must update the dependency to
+match or use the driver reexported by `rocket_db_pools`.
+
+#### Silent Changes
+
+These changes are invisible to the compiler and will _not_ yield errors or
+warnings at compile-time. We **strongly** advise all application authors to
+review this list carefully.
+
+  * **Redis commands time out after 0.5 seconds by default.**
+
+    Previously, Redis commands had no response timeout. Commands that block by
+    design, such as `BLPOP`, now fail if they block for longer than the
+    timeout. Use the new `response_timeout` configuration option to set the
+    timeout in seconds. A value of `0` disables the timeout:
+
+    ```toml
+    [default.databases.redis]
+    url = "redis://localhost:6379"
+    response_timeout = 0
+    ```
+
+    A timeout does not cancel a command already executing on Redis.
+
+  * **The `extensions` configuration option is ignored.**
+
+    Loading a SQLite extension requires an `unsafe` call in SQLx `0.9`. As
+    such, `Config::extensions` was removed, and a warning is emitted if
+    `extensions` is configured for `sqlx_sqlite`. To load extensions, call
+    SQLx's `SqliteConnectOptions::extension()` method from a
+    [`Database::custom()`] callback:
+
+    ```rust
+    rocket::build().attach(Db::custom(|_config, (pool, connection)| {
+        // SAFETY: this library is trusted for the pool's lifetime.
+        let connection = unsafe { connection.extension("rot13") };
+        (pool, connection)
+    }))
+    ```
+
+    The extension library _must_ be trusted whenever a connection is created.
+
+#### General
+
+The following changes are likely to cause compile-time errors.
+
+  * **`sqlx` was updated to `0.9`.**
+
+    Notable changes include:
+
+    - Custom `Encode` implementations return `Result<IsNull, BoxDynError>`.
+    - `HasArguments<'q>` projections were replaced with
+      `<DB as Database>::ArgumentBuffer`. Argument types no longer take a
+      lifetime parameter.
+    - Dynamic SQL requires `sqlx::AssertSqlSafe(sql)`. This does not sanitize
+      SQL.
+    - The `runtime-tokio-rustls` feature was replaced with `runtime-tokio` and
+      `tls-rustls-ring`.
+
+    Regenerate offline query metadata with `cargo sqlx prepare` using SQLx CLI
+    `0.9`. This update fixes protocol length overflows ([RUSTSEC-2024-0363])
+    and PostgreSQL build failures on newer compilers.
+
+  * **`mongodb` was updated to `3`.**
+
+    Operations are now configured with builders. Remove `None` option arguments
+    and pass options via `with_options()`:
+
+    ```diff
+    - collection.find_one(filter, None).await?
+    + collection.find_one(filter).await?
+
+    - collection.find_one(filter, options).await?
+    + collection.find_one(filter).with_options(options).await?
+    ```
+
+    BSON `2` and `mongodb+srv` URLs remain supported.
+
+  * **`diesel` was updated to `2.4` and `diesel-async` to `0.10`.**
+
+    Transactions take `async` closures instead of boxed futures:
+
+    ```diff
+    - db.transaction(|mut conn| Box::pin(async move {
+    + db.transaction(async |mut conn| {
+          ...
+    - })).await?;
+    + }).await?;
+    ```
+
+    Use `diesel::define_sql_function!` in place of `diesel::sql_function!`.
+    Applications using Diesel migrations should also update `diesel_migrations`
+    to `2.4`.
+
+    This update fixes PostgreSQL protocol length overflows
+    ([RUSTSEC-2024-0365]) and undefined behavior when serializing or
+    deserializing MySQL date/time values ([RUSTSEC-2026-0134],
+    [RUSTSEC-2026-0138]).
+
+  * **`deadpool-postgres` was updated to `0.14` and `deadpool-redis` to `0.23`,
+    with `redis` `1`.**
+
+    Postgres, Redis, and Diesel pools now use `deadpool` `0.13`. Notable changes
+    include:
+
+    - `deadpool::Runtime` methods are now free functions in `deadpool-runtime`
+      `0.3`, taking the runtime as the first argument. `Runtime` is now
+      non-exhaustive, and `SpawnBlockingError` is no longer reexported.
+    - The error type of Diesel pools, also returned by the `Connection`
+      request guard, is now `Error<PoolError<E>>`. It was previously
+      `Error<BuildError<E>, PoolError<E>>`.
+    - `query_async::<_, T>()` is now `query_async::<T>()`.
+    - Redis iterators yield `Result`s.
+    - Use `mget` and `mset`, not `get` and `set`, for multiple keys or
+      key/value pairs.
+    - `FromRedisValue::from_redis_value()` takes an owned `Value` and returns
+      `Result<Self, ParsingError>`. Use `from_redis_value_ref()` for borrowed
+      values.
+    - The `Value` variants `Data`, `Bulk`, and `Status` were renamed to
+      `BulkString`, `Array`, and `SimpleString`, respectively.
+    - Public Redis enums are non-exhaustive.
+
+### New Features
+
+  * Introduced [`Database::custom()`] and [`Database::try_custom()`] for
+    configuring SQLx pools and MongoDB clients during initialization. Other
+    pools can support customization by implementing [`Configurable`].
+
+  * TLS connections are now supported by `deadpool_postgres` and
+    `diesel_postgres` via the new `postgres_rustls_native_certs` feature. Set
+    `sslmode=require` in the database URL to require TLS.
+
+    The server's certificate and hostname are verified using the platform's
+    native root certificates. To use a private CA, set `SSL_CERT_FILE` or
+    `SSL_CERT_DIR`. If no root certificates can be loaded, TLS connections fail.
+
+### General Improvements
+
+  * `Config::default()` now sets `max_connections` to the default number of
+    workers * 4 and `connect_timeout` to `5`, matching the documented defaults.
+    Both values were previously `0`. Configuration defaults are unchanged.
+
+  * The documentation for `idle_timeout` now describes its effect for each
+    driver. For Deadpool and Diesel pools, it limits the time allowed to
+    recycle a connection, including health checks, and does not close idle
+    connections.
+
+### Dependency Changes
+
+  * `rustls` was updated to `0.23.46`, `rustls-webpki` to `0.103.16`, and
+    `webpki-roots` to `1.0.10`, fixing [RUSTSEC-2026-0382] and
+    [RUSTSEC-2026-0381]. Distrusted intermediate certificates are rejected, and
+    the affected emSign root was removed from the bundled trust store.
+
+  * `tokio-postgres` was updated to `0.7.18` for `deadpool_postgres` and
+    `diesel_postgres`, fixing denial of service from malformed rows, `hstore`
+    values, and SCRAM iteration counts ([RUSTSEC-2026-0178],
+    [RUSTSEC-2026-0179], [RUSTSEC-2026-0180]).
+
+  * `sqlx` was updated to `0.9.1`, and `libsqlite3-sys` to `0.39.0` for
+    `sqlx_sqlite`, bundling SQLite `3.54.0` and fixing [RUSTSEC-2026-0459].
+
+  * `rsa` was updated to `0.10.0` for `sqlx_mysql`, fixing [RUSTSEC-2023-0071].
+
+  * `lru` was updated to `0.18.2` for `diesel_mysql`, fixing a use-after-free
+    ([RUSTSEC-2026-0253]).
+
+## [`rocket_dyn_templates`](https://api.rocket.rs/v0.5/rocket_dyn_templates/) `0.3.0`
+
+### Breaking Changes
+
+This release includes many breaking changes, most of which are the result of
+updated templating engines. These changes are listed below along with a short
+note about how to handle the breaking change in existing applications.
+
+#### Silent Changes
+
+These changes are invisible to the compiler and will _not_ yield errors or
+warnings at compile-time. We **strongly** advise all application authors to
+review this list carefully.
+
+  * **Template names include the file type extension.**
+
+    A template in a file named `index.html.tera` was previously named `index`.
+    It is now named `index.html`. Change the names in `Template::render()`
+    calls and in templates, including in inheritance, includes, and partials:
+
+    ```diff
+    - Template::render("index", context! { .. })
+    + Template::render("index.html", context! { .. })
+    ```
+
+    ```diff
+    - {% extends "base" %}
+    + {% extends "base.html" %}
+    ```
+
+    The names of templates registered directly with an engine are unchanged.
+
+  * **HTML escaping is determined by template names alone.**
+
+    Tera and MiniJinja templates with names ending in `.html`, `.htm`, `.xml`,
+    `.xhtml`, or `.svg`, regardless of case, are now escaped. This includes
+    templates registered in callbacks. For Tera, the extension may be followed
+    by `.tera`, as in `email.html.tera`. To render a value without escaping,
+    mark it as safe. To change these defaults, configure the engine's escaping
+    in [`Templating::init()`].
+
+    Previously, Tera considered a template's file path. A Tera template added
+    from a file under a different name, as with
+    `add_template_file(path, Some(name))`, was escaped according to the file's
+    extension. It is now escaped only if `name` ends in one of the extensions
+    above.
+
+    **Note:** In Tera, an included template uses the escaping policy of the
+    template that includes it. In MiniJinja, it uses its own. As such, name
+    MiniJinja HTML fragments with an HTML extension: values in a fragment
+    without one are not escaped, even when included in an HTML template.
+
+  * **Tera templates use Tera 2 syntax and are checked when added.**
+
+    - A template's helpers and the templates it references must exist when it
+      is added. Register helpers in [`Templating::init()`]. A template in
+      `template_dir` cannot depend on a template first added in `on_load()`;
+      place templates that depend on each other together in `template_dir`.
+    - Macros were replaced with components.
+    - Arrays are indexed with `items[0]` in place of `items.0`.
+    - Apostrophes are escaped as `&#39;`. Slashes are no longer escaped.
+
+    See [Tera's update notes] for changes to built-in filters, tests,
+    functions, and undefined values.
+
+  * **MiniJinja templates follow MiniJinja 3 semantics.**
+
+    - Floor division, modulo, and rounding follow Python's behavior. Ties are
+      rounded to the nearest even number.
+    - The `tojson` filter includes spaces after commas and colons.
+    - Imported names beginning with `_` are private.
+
+    See [MiniJinja's update notes] for further details.
+
+  * **Handlebars partials and whitespace render differently.**
+
+    Handlebars `6` fixes partial contexts, indentation, and whitespace handling,
+    which may change rendered output. Default HTML escaping is unchanged.
+
+#### General
+
+The following changes are likely to cause compile-time errors.
+
+  * **The templating fairing is now [`Templating`].**
+
+    `Template::fairing()`, `Template::custom()`, and `Template::try_custom()`
+    were removed. Use `Templating::new()` in place of `Template::fairing()`.
+
+    `Template::custom()` callbacks ran _after_ templates were loaded. Callbacks
+    that register helpers or configure engines should instead use
+    `Templating::init()`, which runs _before_ templates are loaded:
+
+    ```diff
+    - .attach(Template::custom(|engines| {
+    + .attach(Templating::init(|engines| {
+          engines.handlebars.register_helper("wow", Box::new(wow_helper));
+      }))
+    ```
+
+    Callbacks that add templates which use templates in `template_dir` should
+    use `on_load()`. Use `try_init()` and `try_on_load()` in place of
+    `try_custom()`. As before, callbacks are called again when templates are
+    reloaded. See [`Templating`] for details on which callback to use.
+
+  * **`tera` was updated to `2.4`.**
+
+    Helpers now use Tera's `Value`, `Kwargs`, and `State` types, and fallible
+    helpers return `TeraResult`. Extra built-ins moved to `tera-contrib`; enable
+    the desired features and register them in [`Templating::init()`].
+
+  * **`minijinja` was updated to `3.0`.**
+
+    - `Value::from_serialize(value)` was replaced with
+      `Value::from(Serde(value))`. MiniJinja's rendering methods accept
+      `Into<Value>`; use `Serde(context)` for serializable contexts. Rocket's
+      `Template` methods and `context!` continue to accept serializable values.
+    - Calls through `Value` and custom `Object` implementations use
+      `&mut State`.
+    - The `loader` feature was removed; loaders are always available.
+    - Whitespace settings moved to `SyntaxConfig`.
+
+  * **`handlebars` was updated to `6.4`.**
+
+    Public types are now non-exhaustive. `RenderContext::set_partial()` and
+    `remove_partial()` were removed. Use `BlockContext::set_local_partial()` to
+    configure local partials.
+
+### Dependency Changes
+
+  * `notify` was updated to `8.2.1`, fixing unaligned memory accesses and hangs
+    when moving watched directories to the trash on Windows, watcher startup
+    errors on macOS, and watch cleanup on Linux.
+
+  * `normpath` was updated to `1.5.2`, fixing unsound path normalization on
+    Windows.
+
+## [`rocket_sync_db_pools`](https://api.rocket.rs/v0.5/rocket_sync_db_pools/) `0.2.0`
+
+### Breaking Changes
+
+This release includes several breaking changes, all of which are the result of
+updated database drivers. These changes are listed below along with a short
+note about how to handle the breaking change in existing applications.
+Applications that depend on a driver directly must update the dependency to
+match or use the driver reexported by `rocket_sync_db_pools`.
+
+  * **`rusqlite` was updated to `0.41` through `0.42` and `r2d2_sqlite` to
+    `0.36` through `0.37`.**
+
+    Cargo selects the newest version compatible with the application's other
+    SQLite dependencies. Applications that also use `sqlx_sqlite` should also
+    update `rocket_db_pools` to `0.3`.
+
+    As such, the version of `rusqlite` reexported by `rocket_sync_db_pools`
+    depends on dependency resolution. Applications that use `rusqlite` types
+    should depend on the desired version directly, for example
+    `rusqlite = "0.42"`.
+
+    Remove the `winsqlite3` feature and update direct `fallible-iterator`
+    dependencies to `0.3`. `WindowAggregate::value()` takes `Option<&mut A>`
+    in place of `Option<&A>`. With Rusqlite `0.42`, scalar function callbacks
+    take `&mut Context`, and `Error::InvalidParameterType` replaces
+    `InvalidFunctionParameterType` and `InvalidFilterParameterType`.
+
+    Rusqlite `0.41` fixes SQL injection through savepoint names, an invalid
+    deallocation in `ToSqlOutput::from_rc()`, and missing `Send` bounds on
+    aggregate and window functions. Its `bundled` feature builds SQLite `3.54`
+    ([RUSTSEC-2026-0459]).
+
+  * **`memcache` was updated to `0.21`. The `r2d2_memcache` reexport was
+    removed.**
+
+    The `r2d2-memcache` dependency and feature were removed as well. Use
+    [`MemcacheConnectionManager`] in place of
+    `r2d2_memcache::MemcacheConnectionManager`. It returns
+    `memcache::MemcacheError` directly. The driver
+    now supports typed values with flags and compare-and-swap identifiers, as
+    well as UDP bind addresses, and fixes ASCII write timeouts and responses
+    split across socket reads.
+
+    The `timeout` and `connect_timeout` URL options accept positive, finite
+    numbers of seconds, including fractions. Invalid or out-of-range values
+    abort initialization with `Error::Custom(MemcacheError::BadURL(..))`.
+
+### Dependency Changes
+
+  * `diesel` was updated to `2.4.0`, fixing PostgreSQL protocol length
+    overflows ([RUSTSEC-2024-0365]), undefined behavior when serializing MySQL
+    date/time values ([RUSTSEC-2026-0134]), and unaligned accesses in SQLite
+    aggregate functions ([RUSTSEC-2026-0137]).
+
+  * `libsqlite3-sys` was updated to `0.39.0` for `diesel_sqlite_pool` and
+    `sqlite_pool`. When SQLite is bundled, it is now SQLite `3.54.0` or newer,
+    which fixes [RUSTSEC-2026-0459]. By default, these features link the
+    system's SQLite, whose version this update does not change.
+
+  * `postgres` was updated to `0.19.14`, fixing denial of service from malformed
+    rows, `hstore` values, and SCRAM iteration counts ([RUSTSEC-2026-0178],
+    [RUSTSEC-2026-0179], [RUSTSEC-2026-0180]).
+
+  * `tokio` was updated to `1.54.1`, fixing a soundness issue in `Interval`
+    ([RUSTSEC-2026-0384]).
+
+  * `r2d2` was updated to `0.8.9`, which no longer depends on an unsound
+    `lock_api` ([RUSTSEC-2020-0070]).
+
+## [`rocket_ws`](https://api.rocket.rs/v0.5/rocket_ws/) `0.2.0`
+
+### Breaking Changes
+
+This release includes several breaking changes, most of which are the result of
+updating `tokio-tungstenite` to `0.30`. These changes are listed below along
+with a short note about how to handle the breaking change in existing
+applications.
+
+#### Silent Changes
+
+These changes are invisible to the compiler and will _not_ yield errors or
+warnings at compile-time. We **strongly** advise all application authors to
+review this list carefully.
+
+  * **Connections allocate a larger read buffer.**
+
+    Previously, each connection allocated a 4KiB read buffer. Connections now
+    allocate an 8KiB read buffer by default. A configuration passed to
+    `WebSocket::config()` replaces this default, and `Config::default()` uses a
+    128KiB read buffer, so applications that configure connections may use
+    considerably more memory. To keep a small buffer, set its size explicitly:
+
+    ```rust
+    let config = ws::Config::default()
+        .max_message_size(Some(3 << 20))
+        .read_buffer_size(8 * 1024);
+    ```
+
+    The read buffer size does not limit the size of incoming messages.
+
+  * **The `WebSocket` request guard validates `Sec-WebSocket-Key`.**
+
+    As required by RFC 6455, the key must be the Base64 encoding of 16 bytes.
+    Requests with an invalid key are now forwarded with `400 Bad Request`.
+    There is no workaround.
+
+#### General
+
+The following changes are likely to cause compile-time errors.
+
+  * **Message payloads are `Utf8Bytes` and `Bytes`.**
+
+    Text messages now use `Utf8Bytes`, while binary, Ping, and Pong messages use
+    `Bytes`. Both types are reexported by `rocket_ws`. Use `.into()` when
+    constructing messages from strings or vectors:
+
+    ```diff
+    - yield ws::Message::Ping(vec![b'h', b'i'])
+    + yield ws::Message::Ping(vec![b'h', b'i'].into())
+    ```
+
+    For borrowed byte slices, use `Message::from(slice)` instead of
+    `Message::binary(slice)`. For arrays, use `Message::from(array.as_slice())`.
+    `Message::into_text()` and `Message::into_data()` return the new types as
+    well.
+
+  * **`CloseFrame` lost its lifetime parameter.**
+
+    Its `reason` is now `Utf8Bytes`. Remove calls to `CloseFrame::into_owned()`.
+
+  * **`Frame` payload methods were changed.**
+
+    - `Frame::payload()` returns `&[u8]`, and `payload_mut()` was removed.
+    - `Frame::into_data()` was replaced with `into_payload()`, returning
+      `Bytes`.
+    - `Frame::into_string()` was replaced with `into_text()`, returning
+      `Result<Utf8Bytes, Utf8Error>`.
+    - `Frame::from_payload()` takes `Bytes`. Convert vectors with `.into()`.
+
+  * **`Error::WriteBufferFull` and `Error::Http` box their contents.**
+
+    `Error::Utf8` now contains a `String`.
+
+  * **`Config` is now non-exhaustive.**
+
+    Use builder methods on `Config::default()` in place of struct literals:
+
+    ```diff
+    - let ws = ws.config(ws::Config {
+    -     max_message_size: Some(3 << 20),
+    -     ..Default::default()
+    - });
+    + let ws = ws.config(ws::Config::default().max_message_size(Some(3 << 20)));
+    ```
+
+    The deprecated `max_send_queue` field, which had no effect, was removed.
+
+### General Improvements
+
+  * `MessageStream` now sends a yielded Close frame before ending the stream,
+    preserving the close code and reason. The application's stream is no longer
+    polled after yielding a Close frame.
+
+  * `MessageStream` now flushes replies to received Close frames, including
+    when the application's stream ends without yielding a reply.
+
+## General Changes
+
+  * `rocket_db_pools`, `rocket_dyn_templates`, `rocket_sync_db_pools`, and
+    `rocket_ws` require `rocket` `0.5.3`.
+
+    Updating `rocket` alone does not update the drivers used by older database
+    libraries. To receive the driver fixes listed above, update
+    `rocket_db_pools` and `rocket_sync_db_pools` as well.
+
+  * The `rust-version` for `rocket_db_pools` was updated to `1.94`, as required
+    by SQLx `0.9`. The `rust-version` for the remaining contrib libraries and
+    both database codegen crates was updated to `1.89`.
+
+  * `rocket_db_pools_codegen` was updated to `0.3.0` and
+    `rocket_sync_db_pools_codegen` to `0.2.0`. Each database library requires
+    its matching codegen version exactly.
+
+  * Database codegen now uses `devise` `0.5` and `proc-macro2-diagnostics`
+    `0.11`. Macro diagnostics no longer contain ANSI escape sequences.
+
+[#3004]: https://github.com/rwf2/Rocket/issues/3004
+[#3018]: https://github.com/rwf2/Rocket/issues/3018
+[#3019]: https://github.com/rwf2/Rocket/pull/3019
+[`linger`]: https://api.rocket.rs/v0.5/rocket/struct.Config.html#structfield.linger
+[`Database::custom()`]: https://api.rocket.rs/v0.5/rocket_db_pools/trait.Database.html#method.custom
+[`Database::try_custom()`]: https://api.rocket.rs/v0.5/rocket_db_pools/trait.Database.html#method.try_custom
+[`Configurable`]: https://api.rocket.rs/v0.5/rocket_db_pools/trait.Configurable.html
+[`Templating`]: https://api.rocket.rs/v0.5/rocket_dyn_templates/struct.Templating.html
+[`Templating::init()`]: https://api.rocket.rs/v0.5/rocket_dyn_templates/struct.Templating.html#method.init
+[Tera's update notes]: https://github.com/Keats/tera/blob/v2.4.0/MIGRATION.md
+[MiniJinja's update notes]: https://github.com/mitsuhiko/minijinja/blob/3.0.3/UPDATING.md
+[`MemcacheConnectionManager`]: https://api.rocket.rs/v0.5/rocket_sync_db_pools/struct.MemcacheConnectionManager.html
+[RUSTSEC-2020-0070]: https://rustsec.org/advisories/RUSTSEC-2020-0070.html
+[RUSTSEC-2023-0018]: https://rustsec.org/advisories/RUSTSEC-2023-0018.html
+[RUSTSEC-2023-0071]: https://rustsec.org/advisories/RUSTSEC-2023-0071.html
+[RUSTSEC-2024-0363]: https://rustsec.org/advisories/RUSTSEC-2024-0363.html
+[RUSTSEC-2024-0365]: https://rustsec.org/advisories/RUSTSEC-2024-0365.html
+[RUSTSEC-2026-0007]: https://rustsec.org/advisories/RUSTSEC-2026-0007.html
+[RUSTSEC-2026-0134]: https://rustsec.org/advisories/RUSTSEC-2026-0134.html
+[RUSTSEC-2026-0137]: https://rustsec.org/advisories/RUSTSEC-2026-0137.html
+[RUSTSEC-2026-0138]: https://rustsec.org/advisories/RUSTSEC-2026-0138.html
+[RUSTSEC-2026-0178]: https://rustsec.org/advisories/RUSTSEC-2026-0178.html
+[RUSTSEC-2026-0179]: https://rustsec.org/advisories/RUSTSEC-2026-0179.html
+[RUSTSEC-2026-0180]: https://rustsec.org/advisories/RUSTSEC-2026-0180.html
+[RUSTSEC-2026-0253]: https://rustsec.org/advisories/RUSTSEC-2026-0253.html
+[RUSTSEC-2026-0381]: https://rustsec.org/advisories/RUSTSEC-2026-0381.html
+[RUSTSEC-2026-0382]: https://rustsec.org/advisories/RUSTSEC-2026-0382.html
+[RUSTSEC-2026-0384]: https://rustsec.org/advisories/RUSTSEC-2026-0384.html
+[RUSTSEC-2026-0459]: https://rustsec.org/advisories/RUSTSEC-2026-0459.html
+[RUSTSEC-2026-0528]: https://rustsec.org/advisories/RUSTSEC-2026-0528.html
+
+# Version 0.5.2 (Oct 23, 2026)
+
+This release contains the following crate updates:
+
+  - `rocket` `0.5.2`
+
+## [`rocket`](https://api.rocket.rs/v0.5/rocket/) `0.5.2`
+
+### Security Updates
+
+  * `rustls` was updated to `0.23.46`, `tokio-rustls` to `0.26.6`, and
+    `rustls-webpki` to `0.103.16`, fixing [RUSTSEC-2026-0382]. Distrusted
+    intermediate certificates are now rejected.
+
+  * `time` was updated to `0.3.47`, fixing a stack overflow when parsing
+    RFC 2822 dates with deeply nested comments ([RUSTSEC-2026-0009]).
+
+  * `tokio` was updated to `1.54.1`, fixing a soundness issue in `Interval`
+    ([RUSTSEC-2026-0384]).
+
+  * Documentation now warns that clients can spoof `X-Real-IP` unless all
+    requests go through a trusted proxy that overwrites it.
+
+  * `hyper` was updated to `1.12`, and `h2` now requires at least `0.4.20`,
+    fixing excessive memory use from empty HTTP/2 frames ([RUSTSEC-2026-0258]).
+
+  * `atomic` was replaced with `ref-swap`, fixing undefined behavior when
+    reading a request's matched route.
+
+### Fixes and Improvements
+
+  * **(fix [#2934] via [8ddfe06c])** Multipart fields without a `Content-Type`
+    now preserve their original bytes. Binary uploads are no longer corrupted
+    by text decoding.
+
+    Fields with a file name, including an empty name, are now parsed as data.
+    Fields without a file name or `Content-Type` are parsed as values if their
+    contents are valid UTF-8, and as binary data otherwise.
+
+    These data fields are subject to the receiving guard's limits: `file` or
+    `file/bin`, `string`, or `bytes`. [`TempFile`] writes them to `temp_dir`,
+    which must exist and be writable.
+
+    UTF-8 byte-order marks are now preserved. Numeric fields with a leading
+    byte-order mark no longer parse.
+
+  * **(fix [#2821] via [4f8b038a])** `204` and `304` responses no longer send
+    a body. `204` responses no longer send `Content-Length` or
+    `Transfer-Encoding` headers.
+
+    `HEAD` and `304` responses preserve known body sizes in `Content-Length`.
+    Unknown sizes are no longer set to zero, and `Content-Length` is never
+    sent with `Transfer-Encoding`.
+
+  * **(fix [#2844] via [de4bbf60])** `Status` constants can now be used in
+    `match` patterns.
+
+  * Routes declared inside functions or macros no longer cause
+    `non_local_definitions` warnings.
+
+  * Mismatched TLS certificates and private keys now cause launch to fail.
+    Mutual TLS also requires a nonempty CA certificate store, even when
+    client authentication is optional.
+
+### Internal Updates
+
+  * The internal names generated for `uri!` macros are now deterministic.
+
+  * `rustls-pemfile` was replaced with `rustls-pki-types` `1.15.1`.
+
+    The PEM decoder now accepts whitespace in base64 data and skips unknown
+    section types. Decoded sections are limited to 256 MiB.
+
+  * `syn`, `devise`, and `proc-macro2-diagnostics` were updated to `3`, `0.5`,
+    and `0.11`, respectively.
+
+  * `pear` was updated to `0.3`.
+
+  * Removed the unused `rand` dependency from `rocket`.
+
+  * Fixed compiler warnings in core and generated code.
+
+## General Changes
+
+  * The `rust-version` for `rocket`, `rocket_http`, and `rocket_codegen` was
+    updated to `1.89`.
+
+    This is the minimum Rust version required by the updated dependencies.
+
+  * The examples and guide now use `rand` `0.10`, and the `state` example uses
+    `flume` `0.12`.
+
+  * Fixed `COPY` destinations in the deployment guide's Dockerfile.
+
+  * **(fix [#2880] via [2163da51])** `FromParam` documentation now correctly
+    lists `422` as the status used when forwarding after a parse error.
+
+[RUSTSEC-2026-0009]: https://rustsec.org/advisories/RUSTSEC-2026-0009.html
+[RUSTSEC-2026-0258]: https://rustsec.org/advisories/RUSTSEC-2026-0258.html
+[RUSTSEC-2026-0382]: https://rustsec.org/advisories/RUSTSEC-2026-0382.html
+[RUSTSEC-2026-0384]: https://rustsec.org/advisories/RUSTSEC-2026-0384.html
+[#2934]: https://github.com/rwf2/Rocket/issues/2934
+[#2821]: https://github.com/rwf2/Rocket/issues/2821
+[#2844]: https://github.com/rwf2/Rocket/issues/2844
+[#2880]: https://github.com/rwf2/Rocket/issues/2880
+[8ddfe06c]: https://github.com/rwf2/Rocket/commit/8ddfe06c
+[4f8b038a]: https://github.com/rwf2/Rocket/commit/4f8b038a
+[de4bbf60]: https://github.com/rwf2/Rocket/commit/de4bbf60
+[2163da51]: https://github.com/rwf2/Rocket/commit/2163da51
+
 # Version 0.5.1 (May 22, 2024)
 
 This release contains the following crate updates:
