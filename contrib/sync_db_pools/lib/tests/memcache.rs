@@ -28,6 +28,11 @@ fn invalid_url_durations() {
 }
 
 #[test]
+fn empty_url_list_is_an_error() {
+    assert!(matches!(Manager::new(Vec::<String>::new()), Err(MemcacheError::BadURL(_))));
+}
+
+#[test]
 fn first_url_timeout_is_used() {
     for name in ["timeout", "connect_timeout"] {
         let url = format!("memcache://localhost:11211?{name}=1&{name}=bad");

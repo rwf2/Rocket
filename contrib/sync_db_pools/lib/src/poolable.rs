@@ -283,11 +283,15 @@ pub(crate) mod memcache_pool {
     impl MemcacheConnectionManager {
         /// Creates a manager for the server(s) in `target`.
         ///
-        /// Returns [`MemcacheError::BadURL`] if a URL is invalid or its
-        /// `timeout` or `connect_timeout` option is not a positive, finite
-        /// number of seconds.
+        /// Returns [`MemcacheError::BadURL`] if there are no URLs, a URL is
+        /// invalid, or its `timeout` or `connect_timeout` option is not a
+        /// positive, finite number of seconds.
         pub fn new<C: Connectable>(target: C) -> Result<Self, MemcacheError> {
             let urls = target.get_urls();
+            if urls.is_empty() {
+                return Err(MemcacheError::BadURL("expected at least one server URL".into()));
+            }
+
             for url in &urls {
                 let parsed = memcache::Url::parse(url)?;
                 for name in ["timeout", "connect_timeout"] {
