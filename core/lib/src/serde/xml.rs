@@ -312,8 +312,8 @@ impl<'v, T: Deserialize<'v> + Send> form::FromFormField<'v> for Xml<T> {
 
 /// Deserialize an instance of type `T` from a string of XML text.
 ///
-/// Only whitespace, comments, and processing instructions may follow the value
-/// in `string`.
+/// Elements or non-whitespace text that follow the value in `string` are an
+/// error.
 ///
 /// **_Always_ use [`Xml`] to deserialize XML request data.**
 ///
