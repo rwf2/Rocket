@@ -2,7 +2,7 @@ error: tuple structs are not supported
  --> tests/ui-fail-stable/from_form_field.rs:4:1
   |
 4 | struct Foo1;
-  | ^^^^^^^^^^^^
+  | ^^^^^^
 
 error: [note] error occurred while deriving `FromFormField`
  --> tests/ui-fail-stable/from_form_field.rs:3:10
@@ -16,7 +16,7 @@ error: tuple structs are not supported
  --> tests/ui-fail-stable/from_form_field.rs:7:1
   |
 7 | struct Foo2(usize);
-  | ^^^^^^^^^^^^^^^^^^^
+  | ^^^^^^
 
 error: [note] error occurred while deriving `FromFormField`
  --> tests/ui-fail-stable/from_form_field.rs:6:10
@@ -29,10 +29,8 @@ error: [note] error occurred while deriving `FromFormField`
 error: named structs are not supported
   --> tests/ui-fail-stable/from_form_field.rs:10:1
    |
-10 | / struct Foo3 {
-11 | |     foo: usize,
-12 | | }
-   | |_^
+10 | struct Foo3 {
+   | ^^^^^^
 
 error: [note] error occurred while deriving `FromFormField`
  --> tests/ui-fail-stable/from_form_field.rs:9:10
@@ -60,7 +58,7 @@ error: enum must have at least one variant
   --> tests/ui-fail-stable/from_form_field.rs:20:1
    |
 20 | enum Foo5 { }
-   | ^^^^^^^^^^^^^
+   | ^^^^
 
 error: [note] error occurred while deriving `FromFormField`
   --> tests/ui-fail-stable/from_form_field.rs:19:10
@@ -115,10 +113,8 @@ error: [note] error occurred while deriving `FromFormField`
 error: variant has conflicting values
   --> tests/ui-fail-stable/from_form_field.rs:41:5
    |
-41 | /     #[field(value = "bar")]
-42 | |     #[field(value = "bar")]
-43 | |     A,
-   | |_____^
+41 |     #[field(value = "bar")]
+   |     ^
 
 error: [note] this value...
   --> tests/ui-fail-stable/from_form_field.rs:41:21
@@ -149,16 +145,14 @@ error: field value conflicts with previous value
 error: [help] ...declared in this variant
   --> tests/ui-fail-stable/from_form_field.rs:50:5
    |
-50 | /     #[field(value = "BAr")]
-51 | |     B,
-   | |_____^
+50 |     #[field(value = "BAr")]
+   |     ^
 
 error: [note] previous field with conflicting name
   --> tests/ui-fail-stable/from_form_field.rs:48:5
    |
-48 | /     #[field(value = "bar")]
-49 | |     A,
-   | |_____^
+48 |     #[field(value = "bar")]
+   |     ^
 
 error: [note] error occurred while deriving `FromFormField`
   --> tests/ui-fail-stable/from_form_field.rs:46:10
@@ -177,9 +171,8 @@ error: field value conflicts with previous value
 error: [help] ...declared in this variant
   --> tests/ui-fail-stable/from_form_field.rs:57:5
    |
-57 | /     #[field(value = "a")]
-58 | |     B,
-   | |_____^
+57 |     #[field(value = "a")]
+   |     ^
 
 error: [note] previous field with conflicting name
   --> tests/ui-fail-stable/from_form_field.rs:56:5
@@ -198,10 +191,8 @@ error: [note] error occurred while deriving `FromFormField`
 error: variant has conflicting values
   --> tests/ui-fail-stable/from_form_field.rs:80:5
    |
-80 | /     #[field(value = "FoO")]
-81 | |     #[field(value = "foo")]
-82 | |     A,
-   | |_____^
+80 |     #[field(value = "FoO")]
+   |     ^
 
 error: [note] this value...
   --> tests/ui-fail-stable/from_form_field.rs:80:21
@@ -226,10 +217,8 @@ error: [note] error occurred while deriving `FromFormField`
 error: field has conflicting names
   --> tests/ui-fail-stable/from_form_field.rs:87:5
    |
-87 | /     #[field(name = "foo")]
-88 | |     #[field(name = uncased("FOO"))]
-89 | |     single: usize,
-   | |_________________^
+87 |     #[field(name = "foo")]
+   |     ^
 
 error: [note] this field name...
   --> tests/ui-fail-stable/from_form_field.rs:87:20
@@ -260,16 +249,14 @@ error: field name conflicts with previous name
 error: [help] declared in this field
   --> tests/ui-fail-stable/from_form_field.rs:96:5
    |
-96 | /     #[field(name = "foo")]
-97 | |     other: usize,
-   | |________________^
+96 |     #[field(name = "foo")]
+   |     ^
 
 error: [note] previous field with conflicting name
   --> tests/ui-fail-stable/from_form_field.rs:94:5
    |
-94 | /     #[field(name = "foo")]
-95 | |     single: usize,
-   | |_________________^
+94 |     #[field(name = "foo")]
+   |     ^
 
 error: [note] error occurred while deriving `FromForm`
   --> tests/ui-fail-stable/from_form_field.rs:92:10
@@ -289,14 +276,13 @@ error: [help] declared in this field
    --> tests/ui-fail-stable/from_form_field.rs:104:5
     |
 104 |     hello_there: usize,
-    |     ^^^^^^^^^^^^^^^^^^
+    |     ^^^^^^^^^^^
 
 error: [note] previous field with conflicting name
    --> tests/ui-fail-stable/from_form_field.rs:102:5
     |
-102 | /     #[field(name = uncased("HELLO_THERE"))]
-103 | |     single: usize,
-    | |_________________^
+102 |     #[field(name = uncased("HELLO_THERE"))]
+    |     ^
 
 error: [note] error occurred while deriving `FromForm`
    --> tests/ui-fail-stable/from_form_field.rs:100:10
@@ -316,14 +302,13 @@ error: [help] declared in this field
    --> tests/ui-fail-stable/from_form_field.rs:111:5
     |
 111 |     hello_there: usize,
-    |     ^^^^^^^^^^^^^^^^^^
+    |     ^^^^^^^^^^^
 
 error: [note] previous field with conflicting name
    --> tests/ui-fail-stable/from_form_field.rs:109:5
     |
-109 | /     #[field(name = "hello_there")]
-110 | |     single: usize,
-    | |_________________^
+109 |     #[field(name = "hello_there")]
+    |     ^
 
 error: [note] error occurred while deriving `FromForm`
    --> tests/ui-fail-stable/from_form_field.rs:107:10

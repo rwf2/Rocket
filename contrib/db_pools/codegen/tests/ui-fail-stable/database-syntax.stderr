@@ -30,7 +30,7 @@ error: unexpected attribute parameter: `name`
   --> tests/ui-fail-stable/database-syntax.rs:12:25
    |
 12 | #[database("some-name", name = "another")]
-   |                         ^^^^^^^^^^^^^^^^
+   |                         ^^^^
 
 error: [note] error occurred while deriving `Database`
   --> tests/ui-fail-stable/database-syntax.rs:11:10
@@ -43,9 +43,8 @@ error: [note] error occurred while deriving `Database`
 error: enums are not supported
   --> tests/ui-fail-stable/database-syntax.rs:16:1
    |
-16 | / #[database("foo")]
-17 | | enum D {  }
-   | |___________^
+16 | #[database("foo")]
+   | ^
 
 error: [note] error occurred while deriving `Database`
   --> tests/ui-fail-stable/database-syntax.rs:15:10
@@ -59,7 +58,7 @@ error: missing `#[database("name")]` attribute
   --> tests/ui-fail-stable/database-syntax.rs:20:1
    |
 20 | struct E(deadpool_postgres::Pool);
-   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   | ^^^^^^
 
 error: [note] error occurred while deriving `Database`
   --> tests/ui-fail-stable/database-syntax.rs:19:10
@@ -72,9 +71,8 @@ error: [note] error occurred while deriving `Database`
 error: struct must have exactly one unnamed field
   --> tests/ui-fail-stable/database-syntax.rs:23:1
    |
-23 | / #[database("foo")]
-24 | | struct F;
-   | |_________^
+23 | #[database("foo")]
+   | ^
 
 error: [note] error occurred while deriving `Database`
   --> tests/ui-fail-stable/database-syntax.rs:22:10
@@ -87,9 +85,8 @@ error: [note] error occurred while deriving `Database`
 error: struct must have exactly one unnamed field
   --> tests/ui-fail-stable/database-syntax.rs:27:1
    |
-27 | / #[database("foo")]
-28 | | struct G(deadpool_postgres::Pool, deadpool_postgres::Pool);
-   | |___________________________________________________________^
+27 | #[database("foo")]
+   | ^
 
 error: [note] error occurred while deriving `Database`
   --> tests/ui-fail-stable/database-syntax.rs:26:10
@@ -102,11 +99,8 @@ error: [note] error occurred while deriving `Database`
 error: named structs are not supported
   --> tests/ui-fail-stable/database-syntax.rs:31:1
    |
-31 | / #[database("foo")]
-32 | | struct H {
-33 | |     foo: deadpool_postgres::Pool,
-34 | | }
-   | |_^
+31 | #[database("foo")]
+   | ^
 
 error: [note] error occurred while deriving `Database`
   --> tests/ui-fail-stable/database-syntax.rs:30:10

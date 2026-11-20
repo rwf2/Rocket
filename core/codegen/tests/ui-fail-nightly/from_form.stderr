@@ -449,6 +449,9 @@ error[E0308]: mismatched types
 error[E0425]: cannot find function `unknown` in this scope
    --> tests/ui-fail-nightly/from_form.rs:153:24
     |
+151 | #[derive(FromForm)]
+    |          -------- in this derive macro
+152 | struct Validate1 {
 153 |     #[field(validate = unknown())]
     |                        ^^^^^^^ not found in this scope
 

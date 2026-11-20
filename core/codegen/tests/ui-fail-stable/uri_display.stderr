@@ -2,7 +2,7 @@ error: fieldless structs are not supported
  --> tests/ui-fail-stable/uri_display.rs:4:1
   |
 4 | struct Foo1;
-  | ^^^^^^^^^^^^
+  | ^^^^^^
 
 error: [note] error occurred while deriving `UriDisplay`
  --> tests/ui-fail-stable/uri_display.rs:3:10
@@ -16,7 +16,7 @@ error: fieldless structs are not supported
  --> tests/ui-fail-stable/uri_display.rs:7:1
   |
 7 | struct Foo2();
-  | ^^^^^^^^^^^^^^
+  | ^^^^^^
 
 error: [note] error occurred while deriving `UriDisplay`
  --> tests/ui-fail-stable/uri_display.rs:6:10
@@ -86,7 +86,7 @@ error: struct must have exactly one field
   --> tests/ui-fail-stable/uri_display.rs:30:1
    |
 30 | struct Foo8;
-   | ^^^^^^^^^^^^
+   | ^^^^^^
 
 error: [note] error occurred while deriving `UriDisplay`
   --> tests/ui-fail-stable/uri_display.rs:29:10
@@ -100,7 +100,7 @@ error: enums are not supported
   --> tests/ui-fail-stable/uri_display.rs:33:1
    |
 33 | enum Foo9 {  }
-   | ^^^^^^^^^^^^^^
+   | ^^^^
 
 error: [note] error occurred while deriving `UriDisplay`
   --> tests/ui-fail-stable/uri_display.rs:32:10
@@ -113,10 +113,8 @@ error: [note] error occurred while deriving `UriDisplay`
 error: named structs are not supported
   --> tests/ui-fail-stable/uri_display.rs:36:1
    |
-36 | / struct Foo10 {
-37 | |     named: usize
-38 | | }
-   | |_^
+36 | struct Foo10 {
+   | ^^^^^^
 
 error: [note] error occurred while deriving `UriDisplay`
   --> tests/ui-fail-stable/uri_display.rs:35:10

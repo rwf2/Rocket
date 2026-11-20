@@ -1,10 +1,8 @@
 error: named structs are not supported
  --> tests/ui-fail-stable/from_param.rs:4:1
   |
-4 | / struct Foo1 {
-5 | |     a: String
-6 | | }
-  | |_^
+4 | struct Foo1 {
+  | ^^^^^^
 
 error: [note] error occurred while deriving `FromParam`
  --> tests/ui-fail-stable/from_param.rs:3:10
@@ -18,7 +16,7 @@ error: named structs are not supported
  --> tests/ui-fail-stable/from_param.rs:9:1
   |
 9 | struct Foo2 {}
-  | ^^^^^^^^^^^^^^
+  | ^^^^^^
 
 error: [note] error occurred while deriving `FromParam`
  --> tests/ui-fail-stable/from_param.rs:8:10
@@ -46,7 +44,7 @@ error: tuple structs are not supported
   --> tests/ui-fail-stable/from_param.rs:18:1
    |
 18 | struct Foo4(usize);
-   | ^^^^^^^^^^^^^^^^^^^
+   | ^^^^^^
 
 error: [note] error occurred while deriving `FromParam`
   --> tests/ui-fail-stable/from_param.rs:17:10

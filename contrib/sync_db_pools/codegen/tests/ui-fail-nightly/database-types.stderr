@@ -110,16 +110,13 @@ note: the trait `Poolable` must be implemented
 error[E0599]: the associated function or constant `fairing` exists for struct `rocket_sync_db_pools::ConnectionPool<B, Vec<i32>>`, but its trait bounds were not satisfied
  --> tests/ui-fail-nightly/database-types.rs:9:10
   |
-9 |   struct B(Vec<i32>);
-  |            ^^^^^^^^ associated function or constant cannot be called on `rocket_sync_db_pools::ConnectionPool<B, Vec<i32>>` due to unsatisfied trait bounds
+9 | struct B(Vec<i32>);
+  |          ^^^^^^^^ associated function or constant cannot be called on `rocket_sync_db_pools::ConnectionPool<B, Vec<i32>>` due to unsatisfied trait bounds
   |
  ::: $RUST/alloc/src/vec/mod.rs
   |
-  | / pub struct Vec<
-  | |     T,
-  | |     #[stable(feature = "allocator_api", since = "CURRENT_RUSTC_VERSION")] A: Allocator = Global,
-  | | > {
-  | |_- doesn't satisfy `Vec<i32>: Poolable`
+  | pub struct Vec<T, #[stable(feature = "allocator_api", since = "1.100.0")] A: Allocator = Global> {
+  | ------------------------------------------------------------------------------------------------ doesn't satisfy `Vec<i32>: Poolable`
   |
   = note: the following trait bounds were not satisfied:
           `Vec<i32>: Poolable`
@@ -127,16 +124,13 @@ error[E0599]: the associated function or constant `fairing` exists for struct `r
 error[E0599]: the method `run` exists for struct `rocket_sync_db_pools::Connection<B, Vec<i32>>`, but its trait bounds were not satisfied
  --> tests/ui-fail-nightly/database-types.rs:9:10
   |
-9 |   struct B(Vec<i32>);
-  |            ^^^^^^^^ method cannot be called on `rocket_sync_db_pools::Connection<B, Vec<i32>>` due to unsatisfied trait bounds
+9 | struct B(Vec<i32>);
+  |          ^^^^^^^^ method cannot be called on `rocket_sync_db_pools::Connection<B, Vec<i32>>` due to unsatisfied trait bounds
   |
  ::: $RUST/alloc/src/vec/mod.rs
   |
-  | / pub struct Vec<
-  | |     T,
-  | |     #[stable(feature = "allocator_api", since = "CURRENT_RUSTC_VERSION")] A: Allocator = Global,
-  | | > {
-  | |_- doesn't satisfy `Vec<i32>: Poolable`
+  | pub struct Vec<T, #[stable(feature = "allocator_api", since = "1.100.0")] A: Allocator = Global> {
+  | ------------------------------------------------------------------------------------------------ doesn't satisfy `Vec<i32>: Poolable`
   |
   = note: the following trait bounds were not satisfied:
           `Vec<i32>: Poolable`
@@ -144,16 +138,13 @@ error[E0599]: the method `run` exists for struct `rocket_sync_db_pools::Connecti
 error[E0599]: the associated function or constant `get_one` exists for struct `rocket_sync_db_pools::ConnectionPool<B, Vec<i32>>`, but its trait bounds were not satisfied
  --> tests/ui-fail-nightly/database-types.rs:9:10
   |
-9 |   struct B(Vec<i32>);
-  |            ^^^^^^^^ associated function or constant cannot be called on `rocket_sync_db_pools::ConnectionPool<B, Vec<i32>>` due to unsatisfied trait bounds
+9 | struct B(Vec<i32>);
+  |          ^^^^^^^^ associated function or constant cannot be called on `rocket_sync_db_pools::ConnectionPool<B, Vec<i32>>` due to unsatisfied trait bounds
   |
  ::: $RUST/alloc/src/vec/mod.rs
   |
-  | / pub struct Vec<
-  | |     T,
-  | |     #[stable(feature = "allocator_api", since = "CURRENT_RUSTC_VERSION")] A: Allocator = Global,
-  | | > {
-  | |_- doesn't satisfy `Vec<i32>: Poolable`
+  | pub struct Vec<T, #[stable(feature = "allocator_api", since = "1.100.0")] A: Allocator = Global> {
+  | ------------------------------------------------------------------------------------------------ doesn't satisfy `Vec<i32>: Poolable`
   |
   = note: the following trait bounds were not satisfied:
           `Vec<i32>: Poolable`
@@ -229,16 +220,13 @@ help: trait `DefaultSentinel` which provides `abort` is implemented but not in s
 error[E0599]: the associated function or constant `pool` exists for struct `rocket_sync_db_pools::ConnectionPool<B, Vec<i32>>`, but its trait bounds were not satisfied
  --> tests/ui-fail-nightly/database-types.rs:9:10
   |
-9 |   struct B(Vec<i32>);
-  |            ^^^^^^^^ associated function or constant cannot be called on `rocket_sync_db_pools::ConnectionPool<B, Vec<i32>>` due to unsatisfied trait bounds
+9 | struct B(Vec<i32>);
+  |          ^^^^^^^^ associated function or constant cannot be called on `rocket_sync_db_pools::ConnectionPool<B, Vec<i32>>` due to unsatisfied trait bounds
   |
  ::: $RUST/alloc/src/vec/mod.rs
   |
-  | / pub struct Vec<
-  | |     T,
-  | |     #[stable(feature = "allocator_api", since = "CURRENT_RUSTC_VERSION")] A: Allocator = Global,
-  | | > {
-  | |_- doesn't satisfy `Vec<i32>: Poolable`
+  | pub struct Vec<T, #[stable(feature = "allocator_api", since = "1.100.0")] A: Allocator = Global> {
+  | ------------------------------------------------------------------------------------------------ doesn't satisfy `Vec<i32>: Poolable`
   |
   = note: the following trait bounds were not satisfied:
           `Vec<i32>: Poolable`
@@ -246,21 +234,18 @@ error[E0599]: the associated function or constant `pool` exists for struct `rock
 error[E0599]: the associated function or constant `from_request` exists for struct `rocket_sync_db_pools::Connection<B, Vec<i32>>`, but its trait bounds were not satisfied
  --> tests/ui-fail-nightly/database-types.rs:9:10
   |
-9 |   struct B(Vec<i32>);
-  |            ^^^^^^^^ associated function or constant cannot be called on `rocket_sync_db_pools::Connection<B, Vec<i32>>` due to unsatisfied trait bounds
+9 | struct B(Vec<i32>);
+  |          ^^^^^^^^ associated function or constant cannot be called on `rocket_sync_db_pools::Connection<B, Vec<i32>>` due to unsatisfied trait bounds
   |
  ::: $WORKSPACE/contrib/sync_db_pools/lib/src/connection.rs
   |
-  |   pub struct Connection<K, C: Poolable> {
-  |   ------------------------------------- doesn't satisfy `_: FromRequest<'_>`
+  | pub struct Connection<K, C: Poolable> {
+  | ------------------------------------- doesn't satisfy `_: FromRequest<'_>`
   |
  ::: $RUST/alloc/src/vec/mod.rs
   |
-  | / pub struct Vec<
-  | |     T,
-  | |     #[stable(feature = "allocator_api", since = "CURRENT_RUSTC_VERSION")] A: Allocator = Global,
-  | | > {
-  | |_- doesn't satisfy `Vec<i32>: Poolable`
+  | pub struct Vec<T, #[stable(feature = "allocator_api", since = "1.100.0")] A: Allocator = Global> {
+  | ------------------------------------------------------------------------------------------------ doesn't satisfy `Vec<i32>: Poolable`
   |
   = note: the following trait bounds were not satisfied:
           `Vec<i32>: Poolable`
@@ -269,21 +254,18 @@ error[E0599]: the associated function or constant `from_request` exists for stru
 error[E0599]: the associated function or constant `abort` exists for struct `rocket_sync_db_pools::Connection<B, Vec<i32>>`, but its trait bounds were not satisfied
  --> tests/ui-fail-nightly/database-types.rs:9:10
   |
-9 |   struct B(Vec<i32>);
-  |            ^^^^^^^^ associated function or constant cannot be called on `rocket_sync_db_pools::Connection<B, Vec<i32>>` due to unsatisfied trait bounds
+9 | struct B(Vec<i32>);
+  |          ^^^^^^^^ associated function or constant cannot be called on `rocket_sync_db_pools::Connection<B, Vec<i32>>` due to unsatisfied trait bounds
   |
  ::: $WORKSPACE/contrib/sync_db_pools/lib/src/connection.rs
   |
-  |   pub struct Connection<K, C: Poolable> {
-  |   ------------------------------------- doesn't satisfy `_: Sentinel`
+  | pub struct Connection<K, C: Poolable> {
+  | ------------------------------------- doesn't satisfy `_: Sentinel`
   |
  ::: $RUST/alloc/src/vec/mod.rs
   |
-  | / pub struct Vec<
-  | |     T,
-  | |     #[stable(feature = "allocator_api", since = "CURRENT_RUSTC_VERSION")] A: Allocator = Global,
-  | | > {
-  | |_- doesn't satisfy `Vec<i32>: Poolable`
+  | pub struct Vec<T, #[stable(feature = "allocator_api", since = "1.100.0")] A: Allocator = Global> {
+  | ------------------------------------------------------------------------------------------------ doesn't satisfy `Vec<i32>: Poolable`
   |
   = note: the following trait bounds were not satisfied:
           `Vec<i32>: Poolable`

@@ -184,14 +184,14 @@ help: the trait `FromFormField<'r>` is not implemented for `Unknown`
   = note: required for `Unknown` to implement `FromForm<'r>`
   = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
-error[E0277]: expected an `FnOnce(_)` closure, found `fn(<Unknown as FromForm<'r>>::Context) -> Result<Unknown, Errors<'r>> {<Unknown as FromForm<'r>>::finalize}`
+error[E0277]: expected `FnOnce(_)` signature, found `fn(<Unknown as FromForm<'r>>::Context) -> Result<Unknown, Errors<'r>> {<Unknown as FromForm<'r>>::finalize}`
  --> tests/ui-fail-nightly/from_form_type_errors.rs:7:12
   |
 5 | #[derive(FromForm)]
   |          -------- in this derive macro expansion
 6 | struct BadType3 {
 7 |     field: Unknown,
-  |            ^^^^^^^ expected an `FnOnce(_)` closure, found `fn(<Unknown as FromForm<'r>>::Context) -> Result<Unknown, Errors<'r>> {<Unknown as FromForm<'r>>::finalize}`
+  |            ^^^^^^^ expected `FnOnce(_)` signature, found `fn(<Unknown as FromForm<'r>>::Context) -> Result<Unknown, Errors<'r>> {<Unknown as FromForm<'r>>::finalize}`
   |
   = help: the trait `FnOnce(_)` is not implemented for fn item `fn(<Unknown as FromForm<'r>>::Context) -> Result<Unknown, Errors<'r>> {<Unknown as FromForm<'r>>::finalize}`
 note: required by a bound in `std::option::Option::<T>::map_or_else`
@@ -279,14 +279,14 @@ help: the trait `FromFormField<'r>` is not implemented for `Foo<usize>`
    = note: required for `Foo<usize>` to implement `FromForm<'r>`
    = note: this error originates in the derive macro `FromForm` (in Nightly builds, run with -Z macro-backtrace for more info)
 
-error[E0277]: expected an `FnOnce(_)` closure, found `fn(<Foo<usize> as FromForm<'r>>::Context) -> Result<Foo<usize>, Errors<'r>> {<Foo<usize> as FromForm<'r>>::finalize}`
+error[E0277]: expected `FnOnce(_)` signature, found `fn(<Foo<usize> as FromForm<'r>>::Context) -> Result<Foo<usize>, Errors<'r>> {<Foo<usize> as FromForm<'r>>::finalize}`
   --> tests/ui-fail-nightly/from_form_type_errors.rs:14:12
    |
 12 | #[derive(FromForm)]
    |          -------- in this derive macro expansion
 13 | struct Other {
 14 |     field: Foo<usize>,
-   |            ^^^^^^^^^^ expected an `FnOnce(_)` closure, found `fn(<Foo<usize> as FromForm<'r>>::Context) -> Result<Foo<usize>, Errors<'r>> {<Foo<usize> as FromForm<'r>>::finalize}`
+   |            ^^^^^^^^^^ expected `FnOnce(_)` signature, found `fn(<Foo<usize> as FromForm<'r>>::Context) -> Result<Foo<usize>, Errors<'r>> {<Foo<usize> as FromForm<'r>>::finalize}`
    |
    = help: the trait `FnOnce(_)` is not implemented for fn item `fn(<Foo<usize> as FromForm<'r>>::Context) -> Result<Foo<usize>, Errors<'r>> {<Foo<usize> as FromForm<'r>>::finalize}`
 note: required by a bound in `std::option::Option::<T>::map_or_else`
