@@ -193,7 +193,7 @@ fn tokio_postgres_tls_provider() -> tokio_postgres_rustls::MakeRustlsConnect {
 }
 
 #[cfg(feature = "deadpool")]
-mod deadpool_postgres {
+mod deadpool {
     use deadpool::{Runtime, managed::{Manager, Pool, PoolError, Object}};
     use super::{Duration, Error, Config, Figment};
 
@@ -201,32 +201,66 @@ mod deadpool_postgres {
     use diesel_async::pooled_connection::AsyncDieselConnectionManager;
 
     pub trait DeadManager: Manager + Sized + Send + 'static {
-        fn new(config: &Config) -> Result<Self, Self::Error>;
+        fn new(config: &Config, figment: &Figment) -> Result<Self, Error<PoolError<Self::Error>>>;
     }
 
     #[cfg(feature = "deadpool_postgres")]
     impl DeadManager for deadpool_postgres::Manager {
-        fn new(config: &Config) -> Result<Self, Self::Error> {
+        fn new(config: &Config, _figment: &Figment) -> Result<Self, Error<PoolError<Self::Error>>> {
             #[cfg(feature = "postgres_rustls_native_certs")]
             let tls_provider = super::tokio_postgres_tls_provider();
 
             #[cfg(not(feature = "postgres_rustls_native_certs"))]
             let tls_provider = deadpool_postgres::tokio_postgres::NoTls;
 
-            Ok(Self::new(config.url.parse()?, tls_provider))
+            let config = config.url.parse().map_err(|e| Error::Init(PoolError::Backend(e)))?;
+            Ok(Self::new(config, tls_provider))
         }
     }
 
     #[cfg(feature = "deadpool_redis")]
     impl DeadManager for deadpool_redis::Manager {
-        fn new(config: &Config) -> Result<Self, Self::Error> {
-            Self::new(config.url.as_str())
+        fn new(config: &Config, figment: &Figment) -> Result<Self, Error<PoolError<Self::Error>>> {
+            let connection_config = deadpool_redis::redis::AsyncConnectionConfig::new()
+                .set_connection_timeout(None)
+                .set_response_timeout(redis_response_timeout(figment)?);
+
+            Self::new_with_config(config.url.as_str(), connection_config)
+                .map_err(|e| Error::Init(PoolError::Backend(e)))
         }
+    }
+
+    #[cfg(feature = "deadpool_redis")]
+    fn redis_response_timeout(
+        figment: &Figment
+    ) -> Result<Option<Duration>, rocket::figment::Error> {
+        use rocket::serde::{Deserialize, Deserializer, de::Error};
+
+        #[derive(Deserialize)]
+        #[serde(crate = "rocket::serde")]
+        struct Options {
+            #[serde(default = "default_timeout", deserialize_with = "deserialize_timeout")]
+            response_timeout: Option<Duration>,
+        }
+
+        fn default_timeout() -> Option<Duration> {
+            Some(Duration::from_millis(500))
+        }
+
+        fn deserialize_timeout<'de, D: Deserializer<'de>>(
+            de: D
+        ) -> Result<Option<Duration>, D::Error> {
+            let seconds = f64::deserialize(de)?;
+            let timeout = Duration::try_from_secs_f64(seconds).map_err(D::Error::custom)?;
+            Ok((seconds != 0.0).then_some(timeout))
+        }
+
+        Ok(figment.extract::<Options>()?.response_timeout)
     }
 
     #[cfg(feature = "diesel_postgres")]
     impl DeadManager for AsyncDieselConnectionManager<diesel_async::AsyncPgConnection> {
-        fn new(config: &Config) -> Result<Self, Self::Error> {
+        fn new(config: &Config, _figment: &Figment) -> Result<Self, Error<PoolError<Self::Error>>> {
             #[cfg(feature = "postgres_rustls_native_certs")]
             use diesel_async::AsyncPgConnection;
             use diesel_async::pooled_connection::ManagerConfig;
@@ -258,7 +292,7 @@ mod deadpool_postgres {
 
     #[cfg(feature = "diesel_mysql")]
     impl DeadManager for AsyncDieselConnectionManager<diesel_async::AsyncMysqlConnection> {
-        fn new(config: &Config) -> Result<Self, Self::Error> {
+        fn new(config: &Config, _figment: &Figment) -> Result<Self, Error<PoolError<Self::Error>>> {
             Ok(Self::new(config.url.as_str()))
         }
     }
@@ -267,7 +301,7 @@ mod deadpool_postgres {
     impl DeadManager for AsyncDieselConnectionManager<
         diesel_async::sync_connection_wrapper::SyncConnectionWrapper::<diesel::SqliteConnection>
     > {
-        fn new(config: &Config) -> Result<Self, Self::Error> {
+        fn new(config: &Config, _figment: &Figment) -> Result<Self, Error<PoolError<Self::Error>>> {
             Ok(Self::new(config.url.as_str()))
         }
     }
@@ -282,7 +316,7 @@ mod deadpool_postgres {
 
         async fn init(figment: &Figment) -> Result<Self, Self::Error> {
             let config: Config = figment.extract()?;
-            let manager = M::new(&config).map_err(|e| Error::Init(e.into()))?;
+            let manager = M::new(&config, figment)?;
 
             Pool::builder(manager)
                 .max_size(config.max_connections)
