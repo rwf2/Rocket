@@ -312,6 +312,9 @@ impl<'v, T: Deserialize<'v> + Send> form::FromFormField<'v> for Xml<T> {
 
 /// Deserialize an instance of type `T` from a string of XML text.
 ///
+/// Only whitespace, comments, and processing instructions may follow the value
+/// in `string`.
+///
 /// **_Always_ use [`Xml`] to deserialize XML request data.**
 ///
 /// # Example
@@ -349,7 +352,10 @@ impl<'v, T: Deserialize<'v> + Send> form::FromFormField<'v> for Xml<T> {
 pub fn from_str<'a, T>(string: &'a str) -> Result<T, quick_xml::DeError>
     where T: Deserialize<'a>,
 {
-    // `T` may not read all of the input, so check that the rest is blank.
+    // `T` may not read all of the input, so check that the rest is blank. This
+    // sees what `quick_xml` deserializes: it can't tell if whitespace was
+    // written as `CDATA` or a character reference, and `quick_xml` skips an XML
+    // declaration that follows the value. Neither carries any data.
     let mut de = quick_xml::de::Deserializer::from_str(string);
     let value = T::deserialize(&mut de)?;
     while !de.is_empty() {
@@ -359,8 +365,8 @@ pub fn from_str<'a, T>(string: &'a str) -> Result<T, quick_xml::DeError>
     Ok(value)
 }
 
-/// Whitespace, the only content allowed after a value. Comments and processing
-/// instructions are skipped by `quick_xml`.
+/// XML whitespace, the only content allowed after a value. Comments and
+/// processing instructions are skipped by `quick_xml`.
 struct Blank;
 
 impl<'de> Deserialize<'de> for Blank {
@@ -377,7 +383,7 @@ impl<'de> Deserialize<'de> for Blank {
             }
 
             fn visit_str<E: de::Error>(self, v: &str) -> Result<Blank, E> {
-                match v.trim().is_empty() {
+                match v.bytes().all(|b| matches!(b, b' ' | b'\t' | b'\r' | b'\n')) {
                     true => Ok(Blank),
                     false => Err(E::invalid_value(Unexpected::Str(v), &self)),
                 }
