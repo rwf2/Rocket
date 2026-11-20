@@ -235,7 +235,7 @@ impl<'r, K: 'static, C: Poolable> FromRequest<'r> for Connection<K, C> {
             None => {
                 let conn = std::any::type_name::<K>();
                 error!("`{conn}::fairing()` is not attached\n\
-                    the fairing must be attached to use `{conn} in routes.");
+                    the fairing must be attached to use `{conn}` in routes.");
                 Outcome::Error((Status::InternalServerError, ()))
             }
         }
@@ -247,7 +247,7 @@ impl<K: 'static, C: Poolable> Sentinel for Connection<K, C> {
         if rocket.state::<ConnectionPool<K, C>>().is_none() {
             let conn = std::any::type_name::<K>();
             error!("`{conn}::fairing()` is not attached\n\
-                the fairing must be attached to use `{conn} in routes.");
+                the fairing must be attached to use `{conn}` in routes.");
 
             return true;
         }
