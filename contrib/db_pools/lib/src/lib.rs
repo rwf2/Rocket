@@ -7,7 +7,7 @@
 //!
 //!    ```toml
 //!    [dependencies.rocket_db_pools]
-//!    version = "0.1.0"
+//!    version = "0.4.0-dev"
 //!    features = ["sqlx_sqlite"]
 //!    ```
 //!
@@ -164,7 +164,7 @@
 //!
 //! ```toml
 //! [dependencies.rocket_db_pools]
-//! version = "0.1.0"
+//! version = "0.4.0-dev"
 //! features = ["diesel_postgres", "postgres_rustls_native_certs"]
 //! ```
 //!
@@ -194,7 +194,7 @@
 //! features = ["macros", "migrate"]
 //!
 //! [dependencies.rocket_db_pools]
-//! version = "0.1.0"
+//! version = "0.4.0-dev"
 //! features = ["sqlx_sqlite"]
 //! ```
 //!

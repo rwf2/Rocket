@@ -12,7 +12,7 @@
 //! diesel = "2.4.0"
 //!
 //! [dependencies.rocket_db_pools]
-//! version = "0.1.0"
+//! version = "0.4.0-dev"
 //! features = ["diesel_mysql"]
 //! ```
 //!
