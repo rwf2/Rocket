@@ -545,62 +545,6 @@ mod handlebars_tests {
         let response = client.get("/tera/test").dispatch();
         assert_eq!(response.status(), Status::NotFound);
     }
-
-    #[test]
-    #[cfg(debug_assertions)]
-    fn test_template_reload() {
-        use std::fs::File;
-        use std::io::Write;
-        use std::time::Duration;
-
-        use rocket::local::blocking::Client;
-
-        const RELOAD_TEMPLATE: &str = "hbs/reload.txt";
-        const INITIAL_TEXT: &str = "initial";
-        const NEW_TEXT: &str = "reload";
-
-        fn write_file(path: &Path, text: &str) {
-            let mut file = File::create(path).expect("open file");
-            file.write_all(text.as_bytes()).expect("write file");
-            file.sync_all().expect("sync file");
-        }
-
-        // set up the template before initializing the Rocket instance so
-        // that it will be picked up in the initial loading of templates.
-        let reload_path = template_root().join("hbs").join("reload.txt.hbs");
-        write_file(&reload_path, INITIAL_TEXT);
-
-        // set up the client. if we can't reload templates, then just quit
-        let client = Client::debug(rocket()).unwrap();
-        let res = client.get("/is_reloading").dispatch();
-        if res.status() != Status::Ok {
-            return;
-        }
-
-        // verify that the initial content is correct
-        let initial_rendered = Template::show(client.rocket(), RELOAD_TEMPLATE, ());
-        assert_eq!(initial_rendered, Some(INITIAL_TEXT.into()));
-
-        // write a change to the file
-        write_file(&reload_path, NEW_TEXT);
-
-        for _ in 0..6 {
-            // dispatch any request to trigger a template reload
-            client.get("/").dispatch();
-
-            // if the new content is correct, we are done
-            let new_rendered = Template::show(client.rocket(), RELOAD_TEMPLATE, ());
-            if new_rendered == Some(NEW_TEXT.into()) {
-                write_file(&reload_path, INITIAL_TEXT);
-                return;
-            }
-
-            // otherwise, retry a few times, waiting 250ms in between
-            std::thread::sleep(Duration::from_millis(250));
-        }
-
-        panic!("failed to reload modified template in 1.5s");
-    }
 }
 
 #[cfg(feature = "minijinja")]
@@ -821,5 +765,146 @@ mod j2_tests {
 
         let response = client.get("/hbs/txt_test").dispatch();
         assert_eq!(response.status(), Status::NotFound);
+    }
+}
+
+#[async_test]
+#[cfg(debug_assertions)]
+async fn test_template_reload() {
+    use std::fs::{self, File};
+    use std::io::Write;
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicUsize, Ordering::SeqCst};
+    use std::time::{Duration, Instant};
+
+    use rocket::http::{ContentType, Status};
+    use rocket::local::asynchronous::Client;
+    use rocket::request::FromRequest;
+
+    fn write_file(path: &Path, text: &str) {
+        let mut file = File::create(path).expect("open file");
+        file.write_all(text.as_bytes()).expect("write file");
+        file.sync_all().expect("sync file");
+    }
+
+    async fn wait_for(client: &Client, mut condition: impl FnMut() -> bool) {
+        let deadline = Instant::now() + Duration::from_secs(3);
+        loop {
+            // Dispatch any request to trigger a template reload.
+            client.get("/").dispatch().await;
+            if condition() {
+                return;
+            }
+
+            assert!(Instant::now() < deadline, "failed to reload templates in 3s");
+            rocket::tokio::time::sleep(Duration::from_millis(50)).await;
+        }
+    }
+
+    let engines: &[(&str, &str)] = &[
+        #[cfg(feature = "handlebars")]
+        ("hbs", "{{#if}}"),
+        #[cfg(feature = "tera")]
+        ("tera", "{% if %}"),
+        #[cfg(feature = "minijinja")]
+        ("j2", "{% if %}"),
+    ];
+
+    for &(ext, invalid) in engines {
+        let dir = tempfile::tempdir().expect("template directory");
+        let path = dir.path().join(format!("reload.txt.{ext}"));
+        let renamed = dir.path().join(format!("reload.html.{ext}"));
+
+        // Set up the template before initializing Rocket so that it will be
+        // picked up in the initial loading of templates.
+        write_file(&path, "initial");
+        let init_path = path.clone();
+        let load_path = path.clone();
+        let init_calls = Arc::new(AtomicUsize::new(0));
+        let load_calls = Arc::new(AtomicUsize::new(0));
+        let init_counter = init_calls.clone();
+        let load_counter = load_calls.clone();
+        let rocket = rocket::custom(Config::figment().merge(("template_dir", dir.path())))
+            .attach(Templating::try_init(move |_| {
+                init_counter.fetch_add(1, SeqCst);
+                if matches!(fs::read_to_string(&init_path), Ok(text) if text == "reject init") {
+                    return Err("reject initialization".into());
+                }
+
+                Ok(())
+            }).try_on_load(move |_| {
+                load_counter.fetch_add(1, SeqCst);
+                if matches!(fs::read_to_string(&load_path), Ok(text) if text == "reject load") {
+                    return Err("reject loading".into());
+                }
+
+                Ok(())
+            }))
+            .mount("/", routes![is_reloading]);
+        let client = Client::debug(rocket).await.unwrap();
+        assert_eq!(init_calls.load(SeqCst), 1);
+        assert_eq!(load_calls.load(SeqCst), 1);
+        assert_eq!(client.get("/is_reloading").dispatch().await.status(), Status::Ok);
+
+        let req = client.get("/");
+        let metadata = Metadata::from_request(&req).await.unwrap();
+        let render = |name| metadata.render(name, context! { content: "<b>" });
+        assert_eq!(render("reload.txt"), Some((ContentType::Text, "initial".into())));
+
+        // Write a change and wait for the new content to be rendered.
+        write_file(&path, "reload");
+        wait_for(&client, || {
+            render("reload.txt") == Some((ContentType::Text, "reload".into()))
+        }).await;
+        assert!(init_calls.load(SeqCst) > 1);
+        assert_eq!(init_calls.load(SeqCst), load_calls.load(SeqCst));
+
+        // An initialization error skips loading and preserves active templates.
+        let initialized = init_calls.load(SeqCst);
+        let loaded = load_calls.load(SeqCst);
+        write_file(&path, "reject init");
+        wait_for(&client, || init_calls.load(SeqCst) > initialized).await;
+        assert_eq!(load_calls.load(SeqCst), loaded);
+        assert_eq!(render("reload.txt"), Some((ContentType::Text, "reload".into())));
+
+        // An error from the loading hook also preserves active templates.
+        write_file(&path, "reject load");
+        wait_for(&client, || load_calls.load(SeqCst) > loaded).await;
+        assert_eq!(render("reload.txt"), Some((ContentType::Text, "reload".into())));
+
+        let initialized = init_calls.load(SeqCst);
+        let loaded = load_calls.load(SeqCst);
+        write_file(&path, invalid);
+        wait_for(&client, || init_calls.load(SeqCst) > initialized).await;
+        if ext == "j2" {
+            // MiniJinja parses lazily, so invalid edits fail to render.
+            assert!(load_calls.load(SeqCst) > loaded);
+            assert_eq!(render("reload.txt"), None);
+        } else {
+            // Native loading errors skip the hook and preserve active templates.
+            assert_eq!(load_calls.load(SeqCst), loaded);
+            assert_eq!(render("reload.txt"), Some((ContentType::Text, "reload".into())));
+        }
+
+        let repaired = if ext == "hbs" { "repaired &lt;b&gt;" } else { "repaired <b>" };
+        let loaded = load_calls.load(SeqCst);
+        write_file(&path, "repaired {{ content }}");
+        wait_for(&client, || {
+            load_calls.load(SeqCst) > loaded
+                && render("reload.txt") == Some((ContentType::Text, repaired.into()))
+        }).await;
+
+        fs::rename(&path, &renamed).expect("rename template");
+        wait_for(&client, || {
+            render("reload.html") == Some((ContentType::HTML, "repaired &lt;b&gt;".into()))
+        }).await;
+        assert_eq!(render("reload.txt"), None);
+
+        fs::remove_file(&renamed).expect("remove template");
+        wait_for(&client, || render("reload.html").is_none()).await;
+
+        // Dropping the client also stops the watcher before removing its root.
+        drop(client);
+        dir.close().expect("remove template directory");
     }
 }
