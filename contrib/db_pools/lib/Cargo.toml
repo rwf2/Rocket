@@ -115,7 +115,7 @@ optional = true
 
 [dependencies.libsqlite3-sys]
 # SQLx's wider range permits older bundles with known SQLite vulnerabilities.
-version = ">=0.39.0"
+version = ">=0.40.0"
 default-features = false
 optional = true
 

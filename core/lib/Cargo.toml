@@ -38,10 +38,10 @@ trace = ["tracing-subscriber", "tinyvec", "thread_local", "rustls?/logging", "to
 
 [dependencies]
 # Optional serialization dependencies.
-serde_json = { version = "1.0.33", optional = true }
+serde_json = { version = "1.0.142", optional = true }
 quick-xml = { version = "0.42", optional = true, features = ["serialize"] }
 rmp-serde = { version = "1", optional = true }
-uuid_ = { package = "uuid", version = "1", optional = true, features = ["serde"] }
+uuid_ = { package = "uuid", version = "1.1.2", optional = true, features = ["serde"] }
 
 # Optional MTLS dependencies
 x509-parser = { version = "0.18", optional = true }
@@ -66,13 +66,13 @@ ubyte = {version = "0.10.2", features = ["serde"] }
 serde = { version = "1.0.220", features = ["derive"] }
 figment = { version = "0.10.17", features = ["toml", "env"] }
 either = "1.6.1"
-pin-project-lite = "0.2.11"
-indexmap = { version = "2", features = ["serde"] }
-tempfile = "3.4.0"
-async-trait = "0.1.43"
+pin-project-lite = "0.2.17"
+indexmap = { version = "2.2.3", features = ["serde"] }
+tempfile = "3.7.0"
+async-trait = "0.1.80"
 async-stream = "0.3.3"
 multer = { version = "3.1.0", features = ["tokio-io"] }
-tokio-stream = { version = "0.1.6", features = ["signal", "time"] }
+tokio-stream = { version = "0.1.8", features = ["signal", "time"] }
 cookie = { version = "0.18", features = ["percent-encode"] }
 futures = { version = "0.3.30", default-features = false, features = ["std"] }
 state = "0.6"
@@ -102,7 +102,7 @@ version = "1.54.1"
 features = ["rt-multi-thread", "net", "io-util", "fs", "time", "sync", "signal", "parking_lot"]
 
 [dependencies.tokio-util]
-version = "0.7.9"
+version = "0.7.10"
 default-features = false
 features = ["io"]
 
@@ -166,5 +166,5 @@ tokio = { version = "1.54.1", features = ["macros", "io-std"] }
 hyper = { version = "1.12", default-features = false, features = ["client", "http1", "http2"] }
 http-body-util = "0.1.5"
 figment = { version = "0.10.17", features = ["test"] }
-pretty_assertions = "1"
+pretty_assertions = "1.3.0"
 rustls = { version = "0.23.46", default-features = false, features = ["ring", "std", "tls12"] }

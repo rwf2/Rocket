@@ -22,13 +22,13 @@ postgres_pool = ["postgres", "r2d2_postgres"]
 memcache_pool = ["memcache"]
 
 [dependencies]
-r2d2 = "0.8.9"
+r2d2 = "0.8.10"
 tokio = { version = "1.54.1", features = ["rt", "rt-multi-thread"] }
 serde = { version = "1.0.220", features = ["derive"] }
 
 diesel = { version = "2.4.0", default-features = false, optional = true }
 # Diesel's wider range permits older bundles with known SQLite vulnerabilities.
-libsqlite3-sys = { version = ">=0.39.0", default-features = false, optional = true }
+libsqlite3-sys = { version = ">=0.40.0", default-features = false, optional = true }
 
 postgres = { version = "0.19.14", optional = true }
 r2d2_postgres = { version = "0.18", optional = true }
