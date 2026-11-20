@@ -194,7 +194,7 @@ impl<T> Xml<T> {
 
 impl<'r, T: Deserialize<'r>> Xml<T> {
     fn from_str(s: &'r str) -> Result<Self, Error<'r>> {
-        quick_xml::de::from_str(s).map(Xml).map_err(|e| Error::Parse(s, e))
+        from_str(s).map(Xml).map_err(|e| Error::Parse(s, e))
     }
 
     async fn from_data(req: &'r Request<'_>, data: Data<'r>) -> Result<Self, Error<'r>> {
@@ -346,11 +346,46 @@ impl<'v, T: Deserialize<'v> + Send> form::FromFormField<'v> for Xml<T> {
 /// is wrong with the data, for example required struct fields are missing from
 /// the XML element or some number is too big to fit in the expected primitive
 /// type.
-#[inline(always)]
 pub fn from_str<'a, T>(string: &'a str) -> Result<T, quick_xml::DeError>
     where T: Deserialize<'a>,
 {
-    quick_xml::de::from_str(string)
+    // `T` may not read all of the input, so check that the rest is blank.
+    let mut de = quick_xml::de::Deserializer::from_str(string);
+    let value = T::deserialize(&mut de)?;
+    while !de.is_empty() {
+        Blank::deserialize(&mut de)?;
+    }
+
+    Ok(value)
+}
+
+/// Whitespace, the only content allowed after a value. Comments and processing
+/// instructions are skipped by `quick_xml`.
+struct Blank;
+
+impl<'de> Deserialize<'de> for Blank {
+    fn deserialize<D: serde::Deserializer<'de>>(de: D) -> Result<Self, D::Error> {
+        use serde::de::{self, Visitor, Unexpected};
+
+        struct BlankVisitor;
+
+        impl<'de> Visitor<'de> for BlankVisitor {
+            type Value = Blank;
+
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                f.write_str("end of input")
+            }
+
+            fn visit_str<E: de::Error>(self, v: &str) -> Result<Blank, E> {
+                match v.trim().is_empty() {
+                    true => Ok(Blank),
+                    false => Err(E::invalid_value(Unexpected::Str(v), &self)),
+                }
+            }
+        }
+
+        de.deserialize_any(BlankVisitor)
+    }
 }
 
 /// Serialize a `T` into a XML string with compact representation.
