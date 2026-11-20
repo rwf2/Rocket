@@ -60,8 +60,8 @@ pub(crate) trait Engine: Send + Sync + Sized + 'static {
 /// # }
 /// ```
 ///
-/// [`tera::Value`]: crate::tera::Value
-/// [`tera::TeraResult`]: crate::tera::TeraResult
+/// [`tera::Value`]: https://docs.rs/tera/2/tera/struct.Value.html
+/// [`tera::TeraResult`]: https://docs.rs/tera/2/tera/type.TeraResult.html
 pub struct Engines {
     /// A `Tera` templating engine.
     ///
