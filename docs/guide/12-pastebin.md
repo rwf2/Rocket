@@ -227,7 +227,7 @@ Before we continue, we'll need to make a few design decisions.
     ```toml
     [dependencies]
     ## existing Rocket dependencies...
-    rand = "0.10"
+    rand = "0.10.3"
     ```
 
     Ensure that your application builds with the new code:
