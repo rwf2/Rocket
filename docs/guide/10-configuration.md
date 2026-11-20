@@ -33,7 +33,7 @@ values:
 | `proxy_proto_header` | `string`, `false`  | Header identifying [client to proxy protocol].  | `None`                        |
 | `keep_alive`         | `u32`              | Keep-alive timeout seconds; disabled when `0`.  | `5`                           |
 | `linger`             | `u32`              | Linger time seconds; disabled when `0`.         | `10`                          |
-| `log_level`          | [`LogLevel`]       | Max level to log. (off/normal/debug/critical)   | `normal`/`critical`           |
+| `log_level`          | [`Level`]          | Max level to log; disabled when `off`.          | `info`/`error`                |
 | `cli_colors`         | [`CliColors`]      | Whether to use colors and emoji when logging.   | `"auto"`                      |
 | `secret_key`         | [`SecretKey`]      | Secret key for signing and encrypting values.   | `None`                        |
 | `tls`                | [`TlsConfig`]      | TLS configuration, if any.                      | `None`                        |
@@ -74,7 +74,7 @@ profile supplant any values with the same name in any profile.
 [`Json`]: @figment/providers/struct.Json.html
 [`Figment`]: @figment/struct.Figment.html
 [`Deserialize`]: @api/master/rocket/serde/trait.Deserialize.html
-[`LogLevel`]: @api/master/rocket/config/enum.LogLevel.html
+[`Level`]: @api/master/rocket/config/struct.Level.html
 [`Limits`]: @api/master/rocket/data/struct.Limits.html
 [`Limits::default()`]: @api/master/rocket/data/struct.Limits.html#impl-Default-for-Limits
 [`SecretKey`]: @api/master/rocket/config/struct.SecretKey.html
@@ -98,7 +98,7 @@ sources in ascending priority order:
 The selected profile is the value of the `ROCKET_PROFILE` environment variable,
 or if it is not set, "debug" when compiled in debug mode and "release" when
 compiled in release mode. With the exception of `log_level`, which changes from
-`normal` in debug to `critical` in release, all of the default configuration
+`info` in debug to `error` in release, all of the default configuration
 values are the same in all profiles. What's more, all configuration values
 _have_ defaults, so no configuration is needed to get started.
 
@@ -163,7 +163,7 @@ linger = 10
 ident = "Rocket"
 ip_header = "X-Real-IP" # set to `false` to disable
 proxy_proto_header = false # set to `false` (the default) to disable
-log_level = "normal"
+log_level = "info"
 temp_dir = "/tmp"
 cli_colors = true
 # NOTE: Don't (!) use this key! Generate your own and keep it private!
