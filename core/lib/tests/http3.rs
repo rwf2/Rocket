@@ -674,6 +674,49 @@ async fn request_body_errors_are_not_eof() {
     server.shutdown().await;
 }
 
+#[derive(Default)]
+struct Pending {
+    reading: Notify,
+    returned: Notify,
+}
+
+#[post("/pending", data = "<data>")]
+async fn pending_body(mut data: rocket::Data<'_>, pending: &rocket::State<Arc<Pending>>) {
+    data.peek(5).await;
+    pending.reading.notify_one();
+    data.peek(512).await;
+    pending.returned.notify_one();
+}
+
+#[rocket::async_test]
+async fn shutdown_cancels_pending_body_reads() {
+    let pending = Arc::new(Pending::default());
+    let rocket = rocket();
+    let figment = rocket.figment().clone().merge(("shutdown.grace", 1));
+    let rocket = rocket.reconfigure(figment).manage(pending.clone())
+        .mount("/", routes![pending_body]);
+
+    let server = Server::launch(rocket).await;
+    let mut client = Client::connect(server.addr).await;
+    let request = http::Request::builder()
+        .method("POST")
+        .uri("https://localhost/pending")
+        .body(()).unwrap();
+
+    let mut stream = client.requests.send_request(request).await.unwrap();
+    stream.send_data(Bytes::from_static(b"hello")).await.unwrap();
+    pending.reading.notified().await;
+
+    // The read is cancelled when the grace period ends, and the handler
+    // returns. The response may not be sent as the grace period has ended.
+    server.shutdown.notify();
+    timeout(Duration::from_secs(5), pending.returned.notified()).await
+        .expect("handler did not return after its read was cancelled");
+
+    client.close().await;
+    timeout(Duration::from_secs(5), server.task).await.unwrap().unwrap();
+}
+
 // Waits for the server's 15 second header read timeout.
 #[ignore = "takes 15 seconds"]
 #[rocket::async_test]

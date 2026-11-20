@@ -216,8 +216,9 @@ impl Stream for QuicRx {
 }
 
 impl AsyncCancel for QuicRx {
-    fn poll_cancel(mut self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<io::Result<()>> {
-        self.0.stop_sending(h3::error::Code::H3_NO_ERROR);
+    fn poll_cancel(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<io::Result<()>> {
+        // The stream is dropped once cancelled, which stops the client from
+        // sending. `stop_sending()` would panic here if a read were pending.
         Poll::Ready(Ok(()))
     }
 }
