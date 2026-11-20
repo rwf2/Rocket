@@ -76,6 +76,27 @@ enum End {
     Failed(String),
 }
 
+/// Opens a QUIC connection to `addr` that negotiates HTTP/3.
+async fn quic_connect(addr: SocketAddr) -> (quinn::Endpoint, quinn::Connection) {
+    let mut roots = rustls::RootCertStore::empty();
+    for cert in CertificateDer::pem_slice_iter(&fixture("ca_cert")) {
+        roots.add(cert.unwrap()).unwrap();
+    }
+
+    let mut tls = rustls::ClientConfig::builder_with_provider(ring::default_provider().into())
+        .with_protocol_versions(&[&rustls::version::TLS13]).unwrap()
+        .with_root_certificates(roots)
+        .with_no_client_auth();
+
+    tls.alpn_protocols = vec![b"h3".to_vec()];
+    let quic = quinn::crypto::rustls::QuicClientConfig::try_from(tls).unwrap();
+    let local = SocketAddr::from((Ipv4Addr::LOCALHOST, 0));
+    let mut endpoint = quinn::Endpoint::client(local).unwrap();
+    endpoint.set_default_client_config(quinn::ClientConfig::new(Arc::new(quic)));
+    let conn = endpoint.connect(addr, "localhost").unwrap().await.unwrap();
+    (endpoint, conn)
+}
+
 struct Client {
     endpoint: quinn::Endpoint,
     conn: quinn::Connection,
@@ -85,22 +106,7 @@ struct Client {
 
 impl Client {
     async fn connect(addr: SocketAddr) -> Client {
-        let mut roots = rustls::RootCertStore::empty();
-        for cert in CertificateDer::pem_slice_iter(&fixture("ca_cert")) {
-            roots.add(cert.unwrap()).unwrap();
-        }
-
-        let mut tls = rustls::ClientConfig::builder_with_provider(ring::default_provider().into())
-            .with_protocol_versions(&[&rustls::version::TLS13]).unwrap()
-            .with_root_certificates(roots)
-            .with_no_client_auth();
-
-        tls.alpn_protocols = vec![b"h3".to_vec()];
-        let quic = quinn::crypto::rustls::QuicClientConfig::try_from(tls).unwrap();
-        let local = SocketAddr::from((Ipv4Addr::LOCALHOST, 0));
-        let mut endpoint = quinn::Endpoint::client(local).unwrap();
-        endpoint.set_default_client_config(quinn::ClientConfig::new(Arc::new(quic)));
-        let conn = endpoint.connect(addr, "localhost").unwrap().await.unwrap();
+        let (endpoint, conn) = quic_connect(addr).await;
         let (mut driver, requests) = h3::client::new(h3_quinn::Connection::new(conn.clone()))
             .await.unwrap();
 
@@ -453,6 +459,73 @@ async fn raw_frames(recv: &mut quinn::RecvStream) -> Result<Vec<(usize, Vec<u8>)
     Ok(frames)
 }
 
+/// Reads a QUIC variable-length integer from `recv`.
+async fn read_varint(recv: &mut quinn::RecvStream) -> u64 {
+    let mut buf = [0; 8];
+    recv.read_exact(&mut buf[..1]).await.unwrap();
+    let len = 1 << (buf[0] >> 6);
+    recv.read_exact(&mut buf[1..len]).await.unwrap();
+    buf[1..len].iter().fold(buf[0] as u64 & 0x3f, |acc, &b| acc << 8 | b as u64)
+}
+
+/// An HTTP/3 connection without an h3 client, to see what the server sends on
+/// its control stream.
+struct RawClient {
+    endpoint: quinn::Endpoint,
+    conn: quinn::Connection,
+    _control: quinn::SendStream,
+}
+
+impl RawClient {
+    async fn connect(addr: SocketAddr) -> RawClient {
+        let (endpoint, conn) = quic_connect(addr).await;
+        // Open the control stream with an empty SETTINGS frame. Closing it is
+        // a connection error, so it lives as long as the client.
+        let mut control = conn.open_uni().await.unwrap();
+        control.write_all(&[0x00, 0x04, 0x00]).await.unwrap();
+        RawClient { endpoint, conn, _control: control }
+    }
+
+    /// Sends a GET request for `path`.
+    async fn get(&self, path: &str) -> quinn::RecvStream {
+        let (mut send, recv) = self.conn.open_bi().await.unwrap();
+        let request = [
+            (":method", "GET"), (":scheme", "https"), (":authority", "localhost"),
+            (":path", path),
+        ];
+
+        send.write_all(&headers_frame(&request)).await.unwrap();
+        send.finish().unwrap();
+        recv
+    }
+
+    /// Returns the stream ID in the first GOAWAY frame the server sends.
+    /// Consumes the server's control stream, so it must only be called once.
+    async fn goaway(&self) -> u64 {
+        let mut control = loop {
+            let mut recv = self.conn.accept_uni().await.unwrap();
+            if read_varint(&mut recv).await == 0x00 {
+                break recv;
+            }
+        };
+
+        loop {
+            let (kind, len) = (read_varint(&mut control).await, read_varint(&mut control).await);
+            if kind == 0x07 {
+                return read_varint(&mut control).await;
+            }
+
+            let mut payload = vec![0; len as usize];
+            control.read_exact(&mut payload).await.unwrap();
+        }
+    }
+
+    async fn close(self) {
+        self.conn.close(Code::H3_NO_ERROR.value().try_into().unwrap(), b"");
+        self.endpoint.wait_idle().await;
+    }
+}
+
 fn counted(rocket: Rocket<Build>) -> (Rocket<Build>, Arc<AtomicUsize>) {
     let count = Arc::new(AtomicUsize::new(0));
     let counter = count.clone();
@@ -581,6 +654,40 @@ async fn shutdown_waits_for_requests_in_flight() {
     client.close().await;
     server.task.await.unwrap();
     assert!(start.elapsed() < Duration::from_secs(1), "shutdown took {:?}", start.elapsed());
+}
+
+#[rocket::async_test]
+async fn goaway_allows_requests_in_flight() {
+    let state = Arc::new(Slow::default());
+    let server = Server::launch(rocket().manage(state.clone()).mount("/", routes![slow])).await;
+    let client = RawClient::connect(server.addr).await;
+    let mut recv = client.get("/slow").await;
+    state.entered.notified().await;
+
+    // The request on stream 0 was accepted, so the first refused is stream 4.
+    server.shutdown.notify();
+    assert_eq!(timeout(Duration::from_secs(5), client.goaway()).await.unwrap(), 4);
+    state.release.notify_one();
+    let frames = timeout(Duration::from_secs(5), raw_frames(&mut recv)).await.unwrap().unwrap();
+    assert_eq!(frames.last(), Some(&(0x00, b"slow".to_vec())));
+    client.close().await;
+    timeout(Duration::from_secs(5), server.task).await.unwrap().unwrap();
+}
+
+#[rocket::async_test]
+async fn goaway_follows_last_request() {
+    // Completed requests ensure the connection is being served at shutdown.
+    let server = Server::launch(rocket().mount("/", routes![ready])).await;
+    let client = RawClient::connect(server.addr).await;
+    for _ in 0..2 {
+        let frames = raw_frames(&mut client.get("/ready").await).await.unwrap();
+        assert_eq!(frames.last(), Some(&(0x00, b"ready".to_vec())));
+    }
+
+    server.shutdown.notify();
+    assert_eq!(timeout(Duration::from_secs(5), client.goaway()).await.unwrap(), 8);
+    client.close().await;
+    timeout(Duration::from_secs(5), server.task).await.unwrap().unwrap();
 }
 
 #[rocket::async_test]

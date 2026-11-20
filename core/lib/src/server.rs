@@ -232,11 +232,16 @@ impl Rocket<Orbit> {
                 let (certs, sni) = (quic::certificates(&conn), quic::server_name(&conn));
                 let meta = ConnectionMeta::new(Ok(remote), certs, sni.as_deref());
                 // Accept request headers as large as hyper accepts for HTTP/2.
-                let mut h3: quic::Connection = h3::server::builder()
-                    .max_field_section_size(16 * 1024)
-                    .build(h3_quinn::Connection::new(conn.clone()))
-                    .map_err(io::Error::other)
-                    .await?;
+                let mut builder = h3::server::builder();
+                let h3 = builder.max_field_section_size(16 * 1024)
+                    .build(h3_quinn::Connection::new(conn.clone()));
+
+                // The client may never let the control streams open, so stop
+                // waiting when shutdown starts.
+                let mut h3: quic::Connection = match h3.race(rocket.shutdown()).await {
+                    Either::Left(h3) => h3.map_err(io::Error::other)?,
+                    Either::Right(_) => return Ok(()),
+                };
 
                 loop {
                     let resolver = match h3.accept().race(rocket.shutdown()).await {
@@ -245,10 +250,18 @@ impl Rocket<Orbit> {
                         Either::Left(Err(e)) if e.is_h3_no_error() => break,
                         Either::Left(Err(e)) => return Err(io::Error::other(e)),
                         Either::Right(_) => {
-                            // Send `GOAWAY` so the client makes no new requests, then
-                            // let in-flight requests finish within the grace period.
-                            h3.shutdown(0).await.map_err(io::Error::other)?;
-                            let _ = h3.accept().race(rocket.shutdown.grace.clone()).await;
+                            // Send `GOAWAY` with the ID of the first request that
+                            // won't be processed (RFC 9114 §5.2): the one after the
+                            // last accepted. `accept()` isn't called again, so no
+                            // request at or above that ID is accepted. Only the
+                            // client knows when it has received every response, so
+                            // wait for it to close the connection.
+                            let grace = rocket.shutdown.grace.clone();
+                            if let Either::Left(sent) = h3.shutdown(1).race(grace.clone()).await {
+                                sent.map_err(io::Error::other)?;
+                                conn.closed().race(grace).await;
+                            }
+
                             break;
                         }
                     };
@@ -256,9 +269,12 @@ impl Rocket<Orbit> {
                     let (rocket, meta, conn) = (rocket.clone(), meta.clone(), conn.clone());
                     spawn_inspect(quic::log_error, async move {
                         // Limit the time to read headers as `serve12` does for HTTP/1.
+                        // The request was accepted before any `GOAWAY`, so it's
+                        // served if its headers arrive within the grace period.
                         let headers = resolver.resolve_request();
                         let headers = tokio::time::timeout(Duration::from_secs(15), headers);
-                        let (req, stream) = match headers.race(rocket.shutdown()).await {
+                        let grace = rocket.shutdown.grace.clone();
+                        let (req, stream) = match headers.race(grace).await {
                             Either::Left(Ok(headers)) => headers.map_err(io::Error::other)?,
                             Either::Left(Err(e)) => return Err(io::Error::new(TimedOut, e)),
                             Either::Right(_) => return Ok(()),
