@@ -624,7 +624,7 @@ impl<'a, S: Send + 'a, E: Send + 'a, F: Send + 'a> Outcome<S, E, F> {
 }
 
 crate::export! {
-    /// Unwraps a [`Success`](Outcome::Success) or propagates a `Forward` or
+    /// Unwraps a [`Success`] or propagates a `Forward` or
     /// `Error` by returning early.
     ///
     /// # Syntax
@@ -642,7 +642,7 @@ crate::export! {
     ///
     /// This is just like `?` (or previously, `try!`), but for `Outcome`. In the
     /// case of a `Forward` or `Error` variant, the inner type is passed to
-    /// [`From`](std::convert::From), allowing for the conversion between
+    /// [`From`], allowing for the conversion between
     /// specific and more general types. The resulting forward/error is
     /// immediately returned. Because of the early return, `try_outcome!` can
     /// only be used in methods that return [`Outcome`].
