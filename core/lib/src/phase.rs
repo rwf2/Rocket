@@ -121,5 +121,6 @@ phases! {
         pub(crate) state: TypeMap![Send + Sync],
         pub(crate) shutdown: Stages,
         pub(crate) endpoints: Vec<Endpoint>,
+        pub(crate) alt_svc: Option<String>,
     }
 }

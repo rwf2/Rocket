@@ -812,6 +812,24 @@ async fn shutdown_cancels_responses_after_grace() {
     server.task.await.unwrap();
 }
 
+#[rocket::async_test]
+async fn alt_svc_is_per_instance() {
+    use rocket::local::asynchronous::Client as LocalClient;
+
+    // A local client has no QUIC endpoint, so it doesn't advertise HTTP/3.
+    let client = LocalClient::untracked(rocket().mount("/", routes![ready])).await.unwrap();
+    assert_eq!(client.get("/ready").dispatch().await.headers().get_one("Alt-Svc"), None);
+
+    for _ in 0..2 {
+        let server = Server::launch(rocket().mount("/", routes![ready])).await;
+        let mut client = Client::connect(server.addr).await;
+        let alt_svc = format!("h3=\":{}\"", server.addr.port());
+        assert_eq!(client.get("/ready").await.header("Alt-Svc"), Some(&*alt_svc));
+        client.close().await;
+        server.shutdown().await;
+    }
+}
+
 #[catch(400)]
 fn bad_request() -> &'static str {
     "bad request"

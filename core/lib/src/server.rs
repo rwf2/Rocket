@@ -84,17 +84,6 @@ impl Rocket<Orbit> {
         let chunk_size = response.inner().body().max_chunk_size();
         builder.body(ReaderStream::with_capacity(response, chunk_size)).map_err(io::Error::other)
     }
-
-    pub(crate) fn alt_svc(&self) -> Option<&'static str> {
-        cfg!(feature = "http3-preview").then(|| {
-            static ALT_SVC: state::InitCell<Option<String>> = state::InitCell::new();
-
-            ALT_SVC.get_or_init(|| {
-                let addr = self.endpoints().find_map(|v| v.quic())?;
-                Some(format!("h3=\":{}\"", addr.port()))
-            }).as_deref()
-        })?
-    }
 }
 
 #[tracing::instrument("upgrade", skip_all, fields(protocol = proto))]

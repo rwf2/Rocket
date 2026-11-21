@@ -651,8 +651,15 @@ impl Rocket<Ignite> {
     }
 
     pub(crate) fn into_orbit(self, endpoints: Vec<Endpoint>) -> Rocket<Orbit> {
+        // The `Alt-Svc` header value that advertises HTTP/3, if it's served.
+        let alt_svc = endpoints.iter()
+            .find_map(|e| e.quic())
+            .filter(|_| cfg!(feature = "http3-preview"))
+            .map(|addr| format!("h3=\":{}\"", addr.port()));
+
         Rocket(Orbiting {
             endpoints,
+            alt_svc,
             router: self.0.router,
             fairings: self.0.fairings,
             figment: self.0.figment,

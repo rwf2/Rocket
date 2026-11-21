@@ -158,7 +158,7 @@ impl Rocket<Orbit> {
             response.set_raw_header("Content-Length", size.to_string());
         }
 
-        if let Some(alt_svc) = request.rocket().alt_svc() {
+        if let Some(alt_svc) = request.rocket().alt_svc.as_deref() {
             response.set_raw_header("Alt-Svc", alt_svc);
         }
 
