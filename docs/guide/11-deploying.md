@@ -94,7 +94,7 @@ scenarios.
 [DDoS mitigation]: @github/issues/1405
 [graceful shutdown]: @api/master/rocket/shutdown/struct.ShutdownConfig.html
 [`Shutdown`]: @api/master/rocket/struct.Shutdown.html
-[shutdown fairings]: @api/master/rocket/fairing/trait.Fairing.html#shutdown
+[shutdown fairings]: @api/master/rocket/fairing/trait.Fairing.html#method.on_shutdown
 [triggers]: @api/master/rocket/shutdown/struct.ShutdownConfig.html#triggers
 
 ## Common Scenarios

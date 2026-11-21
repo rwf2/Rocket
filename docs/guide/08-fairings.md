@@ -119,7 +119,7 @@ events is briefly described below and in details in the [`Fairing`] trait docs:
     of all fairings is awaited before resuming shutdown.
 
 [ignition]: @api/master/rocket/struct.Rocket.html#method.ignite
-[shutdown is triggered]: @api/master/rocket/config/struct.Shutdown.html#triggers
+[shutdown is triggered]: @api/master/rocket/shutdown/struct.ShutdownConfig.html#triggers
 
 ## Implementing
 
