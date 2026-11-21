@@ -60,6 +60,7 @@
 //! |-----------------|----------|---------------------------------------------------------|
 //! | `trace`         | Yes      | Enables the default Rocket tracing [subscriber].        |
 //! | `http2`         | Yes      | Support for HTTP/2 (enabled by default).                |
+//! | `tokio-macros`  | Yes      | Enables the `macros` feature in the exported `tokio`.   |
 //! | `secrets`       | No       | Support for authenticated, encrypted [private cookies]. |
 //! | `tls`           | No       | Support for [TLS] encrypted connections.                |
 //! | `mtls`          | No       | Support for verified clients via [mutual TLS].          |
@@ -67,7 +68,6 @@
 //! | `xml`           | No       | Support for [XML (de)serialization].                    |
 //! | `msgpack`       | No       | Support for [MessagePack (de)serialization].            |
 //! | `uuid`          | No       | Support for [UUID value parsing and (de)serialization]. |
-//! | `tokio-macros`  | No       | Enables the `macros` feature in the exported `tokio`    |
 //! | `http3-preview` | No       | Experimental preview support for [HTTP/3].              |
 //!
 //! Disabled features can be selectively enabled in `Cargo.toml`:
@@ -77,7 +77,7 @@
 //! rocket = { version = "0.6.0-dev", features = ["secrets", "tls", "json"] }
 //! ```
 //!
-//! Conversely, HTTP/2 can be disabled:
+//! Conversely, the default features, including HTTP/2, can be disabled:
 //!
 //! ```toml
 //! [dependencies]

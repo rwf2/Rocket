@@ -245,21 +245,24 @@ impl AdHoc {
         })
     }
 
-    /// Constructs an `AdHoc` request fairing that strips trailing slashes from
-    /// all URIs in all incoming requests.
+    /// Constructs an `AdHoc` fairing that strips trailing slashes from incoming
+    /// request URIs that would otherwise fail to route.
     ///
     /// The fairing returned by this method is intended largely for applications
-    /// that migrated from Rocket v0.4 to Rocket v0.5. In Rocket v0.4, requests
+    /// that migrated from Rocket v0.5 to Rocket v0.6. In Rocket v0.5, requests
     /// with a trailing slash in the URI were treated as if the trailing slash
     /// were not present. For example, the request URI `/foo/` would match the
     /// route `/<a>` with `a = foo`. If the application depended on this
     /// behavior, say by using URIs with previously innocuous trailing slashes
     /// in an external application, requests will not be routed as expected.
     ///
-    /// This fairing resolves this issue by stripping a trailing slash, if any,
-    /// in all incoming URIs. When it does so, it logs a warning. It is
-    /// recommended to use this fairing as a stop-gap measure instead of a
-    /// permanent resolution, if possible.
+    /// This fairing resolves this issue by stripping the trailing slash from any
+    /// incoming URI that no route with a trailing slash matches. When it does
+    /// so, it logs a warning. Additionally, for every route whose URI ends in a
+    /// trailing parameter, like `/foo/<bar..>`, the fairing mounts a copy of
+    /// the route at the prefix, `/foo`, so that requests to the prefix match as
+    /// they did in Rocket v0.5. It is recommended to use this fairing as a
+    /// stop-gap measure instead of a permanent resolution, if possible.
     //
     /// # Example
     ///

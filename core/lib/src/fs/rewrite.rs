@@ -146,7 +146,7 @@ impl Rewriter for PathBuf {
 }
 
 /// Normalize directories to always include a trailing slash by redirecting
-/// (with a 302 temporary redirect) requests for directories without a trailing
+/// (with a 307 temporary redirect) requests for directories without a trailing
 /// slash to the same path with a trailing slash.
 ///
 /// # Example

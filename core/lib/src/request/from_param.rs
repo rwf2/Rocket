@@ -73,8 +73,9 @@ use crate::http::uri::{Segments, error::PathError, fmt::Path};
 ///
 /// `Either<A, B>` is particularly useful with a `B` type of `&str`, allowing
 /// you to retrieve the invalid path segment. Because `&str`'s implementation of
-/// `FromParam` always succeeds, the `Right` variant of the `Either` will always
-/// contain the path segment in case of failure.
+/// `FromParam` succeeds for every non-empty segment, the `Right` variant of the
+/// `Either` will contain the path segment in case of failure unless the segment
+/// is empty.
 ///
 /// For instance, consider the following route and handler:
 ///
@@ -111,15 +112,17 @@ use crate::http::uri::{Segments, error::PathError, fmt::Path};
 ///         NonZeroU64, NonZeroU128, NonZeroUsize**
 ///
 ///     A value is parsed successfully if the `from_str` method from the given
-///     type returns successfully. Otherwise, the raw path segment is returned
-///     in the `Err` value.
+///     type returns successfully. Otherwise, the error returned by `from_str`
+///     is returned in the `Err` value.
 ///
 ///   * **&str, String**
 ///
-///     _This implementation always returns successfully._
+///     _This implementation fails only if the path segment is empty._
 ///
 ///     Returns the percent-decoded path segment with invalid UTF-8 byte
-///     sequences replaced by � U+FFFD.
+///     sequences replaced by � U+FFFD. If the segment is empty, as it is for
+///     the trailing slash in a request to `/foo/` matched against `/foo/<bar>`,
+///     an [`Empty`] error is returned.
 ///
 ///   * **Option&lt;T>** _where_ **T: FromParam**
 ///
