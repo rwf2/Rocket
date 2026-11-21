@@ -42,8 +42,8 @@ values:
 | `tls`                | [`TlsConfig`]      | TLS configuration, if any.                      | `None`                        |
 | `limits`             | [`Limits`]         | Streaming read size limits.                     | [`Limits::default()`]         |
 | `limits.$name`       | `&str`/`uint`      | Read limit for `$name`.                         | form = "32KiB"                |
-| `ctrlc`              | `bool`             | Whether `ctrl-c` initiates a server shutdown.   | `true`                        |
 | `shutdown`*          | [`ShutdownConfig`] | Graceful shutdown configuration.                | [`ShutdownConfig::default()`] |
+| `shutdown.ctrlc`     | `bool`             | Whether `ctrl-c` initiates a server shutdown.   | `true`                        |
 
 
 <small>* Note: the `workers`, `max_blocking`, and `shutdown.force` configuration
