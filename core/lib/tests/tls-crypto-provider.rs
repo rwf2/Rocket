@@ -1,5 +1,7 @@
 #![cfg(feature = "tls")]
 
+mod server;
+
 use std::io;
 use std::net::TcpStream;
 use std::sync::Arc;
@@ -7,15 +9,15 @@ use std::time::Duration;
 
 use rocket::Config;
 use rocket::figment::Figment;
-use rocket::fairing::AdHoc;
 use rocket::tls::{TlsConfig, CipherSuite};
-use rocket::tokio::sync::oneshot;
 use rocket::tokio::task;
 
 use rustls::{ClientConfig, ClientConnection, RootCertStore, SupportedCipherSuite};
 use rustls::crypto::CryptoProvider;
 use rustls::crypto::ring::{self, cipher_suite};
 use rustls::pki_types::{CertificateDer, pem::PemObject};
+
+use server::Server;
 
 fn fixture(name: &str) -> Vec<u8> {
     let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/../../examples/tls");
@@ -80,23 +82,14 @@ async fn installed_provider_replaces_configured_ciphers() {
             .with_ciphers(configured)
             .with_preferred_server_cipher_order(prefer_server);
 
-        let (tx, rx) = oneshot::channel();
         let mut config = Config::debug_default();
         config.shutdown.ctrlc = false;
-        let figment = Figment::from(config).merge(("port", 0)).merge(("tls", tls));
-        let app = rocket::custom(figment);
+        let app = rocket::custom(Figment::from(config).merge(("tls", tls)));
         let tls: TlsConfig = app.figment().extract_inner("tls").unwrap();
         assert!(tls.ciphers().eq(configured));
 
-        let app = app.attach(AdHoc::on_liftoff("TLS Test", |rocket| {
-            Box::pin(async move {
-                let port = rocket.endpoints().find_map(|e| e.tcp()).unwrap().port();
-                tx.send((port, rocket.shutdown())).unwrap();
-            })
-        }));
-
-        let server = task::spawn(async move { app.launch().await.unwrap(); });
-        let (port, shutdown) = rx.await.unwrap();
+        let server = Server::launch(app).await;
+        let port = server.addr.port();
         let negotiated = task::spawn_blocking(move || {
             let suites = vec![
                 cipher_suite::TLS13_CHACHA20_POLY1305_SHA256,
@@ -126,7 +119,6 @@ async fn installed_provider_replaces_configured_ciphers() {
             }
         }
 
-        shutdown.notify();
-        server.await.unwrap();
+        server.shutdown().await;
     }
 }

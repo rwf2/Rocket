@@ -1,5 +1,7 @@
 #![cfg(feature = "tls")]
 
+mod server;
+
 use std::io::{self, Read, Write};
 use std::net::TcpStream;
 use std::sync::Arc;
@@ -7,14 +9,14 @@ use std::time::Duration;
 
 use rocket::Config;
 use rocket::figment::Figment;
-use rocket::fairing::AdHoc;
 use rocket::tls::{TlsConfig, CipherSuite};
-use rocket::tokio::sync::oneshot;
-use rocket::tokio::task::{self, JoinHandle};
+use rocket::tokio::task;
 
 use rustls::{ClientConfig, ClientConnection, RootCertStore, StreamOwned, SupportedCipherSuite};
 use rustls::crypto::ring::{self, cipher_suite};
 use rustls::pki_types::{CertificateDer, PrivateKeyDer, pem::PemObject};
+
+use server::Server;
 
 fn fixture(name: &str) -> Vec<u8> {
     let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/../../examples/tls");
@@ -32,24 +34,14 @@ fn identity(cert: rocket::mtls::Certificate<'_>) -> String {
     cert.subject().to_string()
 }
 
-async fn serve(tls: TlsConfig) -> (u16, rocket::Shutdown, JoinHandle<()>) {
-    let (tx, rx) = oneshot::channel();
+async fn serve(tls: TlsConfig) -> Server {
     let mut config = Config::debug_default();
     config.shutdown.ctrlc = false;
-    let figment = Figment::from(config).merge(("port", 0)).merge(("tls", tls));
-    let app = rocket::custom(figment).mount("/", rocket::routes![index]);
+    let app = rocket::custom(Figment::from(config).merge(("tls", tls)))
+        .mount("/", rocket::routes![index]);
     #[cfg(feature = "mtls")]
     let app = app.mount("/", rocket::routes![identity]);
-    let app = app.attach(AdHoc::on_liftoff("TLS Test", |rocket| {
-        Box::pin(async move {
-            let port = rocket.endpoints().find_map(|e| e.tcp()).unwrap().port();
-            tx.send((port, rocket.shutdown())).unwrap();
-        })
-    }));
-
-    let task = task::spawn(async move { app.launch().await.unwrap(); });
-    let (port, shutdown) = rx.await.unwrap();
-    (port, shutdown, task)
+    Server::launch(app).await
 }
 
 fn client(
@@ -130,15 +122,15 @@ async fn tls_versions() {
     let cert = fixture("rsa_sha256_cert");
     let key = fixture("rsa_sha256_key");
     let tls = TlsConfig::from_bytes(&cert, &key);
-    let (port, shutdown, server) = serve(tls).await;
+    let server = serve(tls).await;
+    let port = server.addr.port();
     for version in [&rustls::version::TLS12, &rustls::version::TLS13] {
         let response = request(port, client(version, None), "/").await.unwrap();
         assert!(response.starts_with("HTTP/1.1 200"));
         assert!(response.ends_with("hello"));
     }
 
-    shutdown.notify();
-    server.await.unwrap();
+    server.shutdown().await;
 }
 
 #[rocket::async_test]
@@ -156,7 +148,8 @@ async fn configured_ciphers() {
             ])
             .with_preferred_server_cipher_order(prefer_server);
 
-        let (port, shutdown, server) = serve(tls).await;
+        let server = serve(tls).await;
+        let port = server.addr.port();
         let stream = task::spawn_blocking(move || {
             connect(port, client(&rustls::version::TLS13, None)).unwrap()
         }).await.unwrap();
@@ -164,8 +157,7 @@ async fn configured_ciphers() {
         let negotiated = stream.conn.negotiated_cipher_suite().unwrap();
         assert_eq!(negotiated.suite(), cipher);
         drop(stream);
-        shutdown.notify();
-        server.await.unwrap();
+        server.shutdown().await;
     }
 
     let suites = [
@@ -199,7 +191,8 @@ async fn configured_ciphers() {
         let cert = fixture("rsa_sha256_cert");
         let key = fixture("rsa_sha256_key");
         let tls = TlsConfig::from_bytes(&cert, &key).with_ciphers(ciphers.clone());
-        let (port, shutdown, server) = serve(tls).await;
+        let server = serve(tls).await;
+        let port = server.addr.port();
         for (suite, client_suite) in suites {
             let negotiated = task::spawn_blocking(move || {
                 let config = client_with_suites(vec![client_suite], client_suite.version(), None);
@@ -213,8 +206,7 @@ async fn configured_ciphers() {
             }
         }
 
-        shutdown.notify();
-        server.await.unwrap();
+        server.shutdown().await;
     }
 }
 
@@ -223,7 +215,8 @@ async fn tls_alpn() {
     let cert = fixture("rsa_sha256_cert");
     let key = fixture("rsa_sha256_key");
     let tls = TlsConfig::from_bytes(&cert, &key);
-    let (port, shutdown, server) = serve(tls).await;
+    let server = serve(tls).await;
+    let port = server.addr.port();
     let stream = task::spawn_blocking(move || {
         let mut config = client(&rustls::version::TLS13, None);
         config.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec()];
@@ -238,8 +231,7 @@ async fn tls_alpn() {
 
     assert_eq!(stream.conn.alpn_protocol(), Some(expected));
     drop(stream);
-    shutdown.notify();
-    server.await.unwrap();
+    server.shutdown().await;
 }
 
 #[cfg(feature = "mtls")]
@@ -254,7 +246,8 @@ async fn mutual_tls() {
             .with_mutual(MtlsConfig::from_bytes(&fixture("ca_cert"))
                 .mandatory(mandatory));
 
-        let (port, shutdown, server) = serve(tls).await;
+        let server = serve(tls).await;
+        let port = server.addr.port();
         let pem = fixture("ed25519_cert");
         let config = client(&rustls::version::TLS13, Some(&pem));
         let response = request(port, config, "/identity").await.unwrap();
@@ -272,8 +265,7 @@ async fn mutual_tls() {
             assert!(response.ends_with("hello"));
         }
 
-        shutdown.notify();
-        server.await.unwrap();
+        server.shutdown().await;
     }
 }
 
@@ -287,7 +279,8 @@ async fn optional_mtls_rejects_invalid_certificates() {
     let mutual = MtlsConfig::from_bytes(&fixture("ca_cert")).mandatory(false);
     let tls = TlsConfig::from_bytes(&cert, &key).with_mutual(mutual);
 
-    let (port, shutdown, server) = serve(tls).await;
+    let server = serve(tls).await;
+    let port = server.addr.port();
     for (name, cert) in [
         ("expired", include_bytes!("static/tls/expired.pem").as_slice()),
         ("server-only",
@@ -301,8 +294,7 @@ async fn optional_mtls_rejects_invalid_certificates() {
         assert!(response.is_err(), "accepted {name} client certificate");
     }
 
-    shutdown.notify();
-    server.await.unwrap();
+    server.shutdown().await;
 }
 
 #[cfg(feature = "mtls")]

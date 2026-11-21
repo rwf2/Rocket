@@ -2,6 +2,8 @@
 
 #[macro_use] extern crate rocket;
 
+mod server;
+
 use std::future::poll_fn;
 use std::io;
 use std::net::{Ipv4Addr, SocketAddr};
@@ -13,18 +15,20 @@ use std::time::Duration;
 
 use bytes::{Buf, Bytes};
 use h3::error::{Code, StreamError};
-use rocket::{Build, Rocket, Shutdown};
+use rocket::{Build, Rocket};
 use rocket::fairing::AdHoc;
 use rocket::figment::Figment;
 use rocket::futures::{stream, StreamExt};
 use rocket::response::{Responder, Response as RocketResponse};
 use rocket::tls::TlsConfig;
 use rocket::tokio::io::{AsyncRead, ReadBuf};
-use rocket::tokio::sync::{oneshot, Notify};
+use rocket::tokio::sync::Notify;
 use rocket::tokio::task::JoinHandle;
 use rocket::tokio::time::timeout;
 use rustls::crypto::ring;
 use rustls::pki_types::{CertificateDer, pem::PemObject};
+
+use server::Server;
 
 type RequestStream = h3::client::RequestStream<h3_quinn::BidiStream<Bytes>, Bytes>;
 
@@ -39,54 +43,6 @@ fn rocket() -> Rocket<Build> {
     let mut config = rocket::Config::debug_default();
     config.shutdown.ctrlc = false;
     rocket::custom(Figment::from(config).merge(("tls", tls)))
-}
-
-/// Held while sockets are bound so that a port found by `free_port()` is still
-/// free when Rocket binds to it.
-static BINDING: rocket::tokio::sync::Mutex<()> = rocket::tokio::sync::Mutex::const_new(());
-
-/// Returns a port that's free for TCP and UDP: Rocket serves HTTP/3 on the UDP
-/// port with the same number as its TCP port.
-fn free_port() -> u16 {
-    use std::net::{TcpListener, UdpSocket};
-
-    loop {
-        let udp = UdpSocket::bind((Ipv4Addr::LOCALHOST, 0)).unwrap();
-        let port = udp.local_addr().unwrap().port();
-        if TcpListener::bind((Ipv4Addr::LOCALHOST, port)).is_ok() {
-            return port;
-        }
-    }
-}
-
-struct Server {
-    addr: SocketAddr,
-    shutdown: Shutdown,
-    task: JoinHandle<()>,
-}
-
-impl Server {
-    async fn launch(rocket: Rocket<Build>) -> Server {
-        let _binding = BINDING.lock().await;
-        let figment = rocket.figment().clone().merge(("port", free_port()));
-        let (tx, rx) = oneshot::channel();
-        let rocket = rocket.reconfigure(figment);
-        let rocket = rocket.attach(AdHoc::on_liftoff("Send Address", |rocket| {
-            Box::pin(async move {
-                let addr = rocket.endpoints().find_map(|e| e.quic()).unwrap();
-                tx.send((addr, rocket.shutdown())).unwrap();
-            })
-        }));
-
-        let task = rocket::tokio::spawn(async move { rocket.launch().await.unwrap(); });
-        let (addr, shutdown) = rx.await.unwrap();
-        Server { addr, shutdown, task }
-    }
-
-    async fn shutdown(self) {
-        self.shutdown.notify();
-        self.task.await.unwrap();
-    }
 }
 
 /// How a response stream ended.
@@ -113,7 +69,7 @@ async fn quic_connect(addr: SocketAddr) -> (quinn::Endpoint, quinn::Connection) 
     let quic = quinn::crypto::rustls::QuicClientConfig::try_from(tls).unwrap();
     let local = SocketAddr::from((Ipv4Addr::LOCALHOST, 0));
     let mut endpoint = {
-        let _binding = BINDING.lock().await;
+        let _binding = server::binding().await;
         quinn::Endpoint::client(local).unwrap()
     };
 
