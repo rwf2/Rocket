@@ -1181,9 +1181,16 @@ impl<P: Phase> Rocket<P> {
     /// # Error
     ///
     /// If there is a problem starting the application or the application fails
-    /// unexpectedly while running, an [`Error`] is returned. Note that a value
-    /// of type `Error` panics if dropped without first being inspected. See the
+    /// unexpectedly while running, an [`Error`] is returned. Use
+    /// [`Error::report()`] to log the error and obtain an exit code. See the
     /// [`Error`] documentation for more information.
+    ///
+    /// # Listener
+    ///
+    /// This method binds to the network interface described by the
+    /// configuration via [`DefaultListener`]. To bind via a different listener,
+    /// use [`Rocket::launch_with()`]. To serve on an existing listener, use
+    /// [`Rocket::launch_on()`] or [`Rocket::try_launch_on()`].
     ///
     /// # Example
     ///
@@ -1200,6 +1207,36 @@ impl<P: Phase> Rocket<P> {
         self.launch_with::<DefaultListener>().await
     }
 
+    /// Like [`Rocket::launch()`] but binds via the listener `B`.
+    ///
+    /// The instance is first [ignited](Rocket::ignite()). Then, a listener is
+    /// created via [`B::bind()`](Bind::bind()), which reads its configuration
+    /// from the ignited instance. Finally, the instance is launched on the
+    /// listener as described in [`Rocket::launch()`]. [`Rocket::launch()`] is
+    /// equivalent to `launch_with::<DefaultListener>()`.
+    ///
+    /// Use this method to launch on a listener that is configured via Rocket's
+    /// configuration, either one of Rocket's own or a custom implementation of
+    /// [`Bind`].
+    ///
+    /// # Error
+    ///
+    /// In addition to the errors returned by [`Rocket::launch()`], returns an
+    /// [`ErrorKind::Bind`] error if `B` fails to bind.
+    ///
+    /// # Example
+    ///
+    /// Launch on a plain TCP listener, ignoring any `tls` configuration:
+    ///
+    /// ```rust,no_run
+    /// use rocket::listener::tcp::TcpListener;
+    ///
+    /// #[rocket::main]
+    /// async fn main() -> Result<(), rocket::Error> {
+    ///     let rocket = rocket::build().launch_with::<TcpListener>().await?;
+    ///     Ok(())
+    /// }
+    /// ```
     pub async fn launch_with<B: Bind>(self) -> Result<Rocket<Ignite>, Error> {
         let rocket = self.into_ignite().await?;
         let bind_endpoint = B::bind_endpoint(&rocket).ok();
@@ -1223,6 +1260,32 @@ impl<P: Phase> Rocket<P> {
         }
     }
 
+    /// Like [`Rocket::launch_on()`] but takes a future that resolves to a
+    /// listener or an error.
+    ///
+    /// The future `listener` is awaited first. If it resolves to an error, an
+    /// [`ErrorKind::Bind`] error is returned. Otherwise, the instance is
+    /// [ignited](Rocket::ignite()) and launched on the resulting listener as
+    /// described in [`Rocket::launch()`].
+    ///
+    /// Use this method to bind a listener without Rocket's configuration and
+    /// report a binding failure as a Rocket [`Error`].
+    ///
+    /// # Example
+    ///
+    /// Launch on a TCP listener bound to a random, available port:
+    ///
+    /// ```rust,no_run
+    /// use std::net::Ipv4Addr;
+    /// use rocket::listener::tcp::TcpListener;
+    ///
+    /// #[rocket::main]
+    /// async fn main() -> Result<(), rocket::Error> {
+    ///     let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0));
+    ///     let rocket = rocket::build().try_launch_on(listener).await?;
+    ///     Ok(())
+    /// }
+    /// ```
     pub async fn try_launch_on<L, F, E>(self, listener: F) -> Result<Rocket<Ignite>, Error>
         where L: Listener + 'static,
               F: Future<Output = Result<L, E>>,
@@ -1232,6 +1295,28 @@ impl<P: Phase> Rocket<P> {
         self.into_ignite().await?._launch(listener).await
     }
 
+    /// Like [`Rocket::launch()`] but launches on the existing `listener`.
+    ///
+    /// The instance is [ignited](Rocket::ignite()) and launched on `listener`
+    /// as described in [`Rocket::launch()`]. Rocket's configuration is not
+    /// consulted to bind: `listener` is used as is.
+    ///
+    /// Use this method when your application has already created a listener. To
+    /// await a listener that may fail to bind, use [`Rocket::try_launch_on()`].
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use std::net::Ipv4Addr;
+    /// use rocket::listener::tcp::TcpListener;
+    ///
+    /// #[rocket::main]
+    /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    ///     let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 8000)).await?;
+    ///     let rocket = rocket::build().launch_on(listener).await?;
+    ///     Ok(())
+    /// }
+    /// ```
     pub async fn launch_on<L>(self, listener: L) -> Result<Rocket<Ignite>, Error>
         where L: Listener + 'static,
     {
