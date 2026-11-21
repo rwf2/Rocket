@@ -15,13 +15,13 @@
 //!
 //! Then, use [`WebSocket`] as a request guard in any route and either call
 //! [`WebSocket::channel()`] or return a stream via [`Stream!`] or
-//! [`WebSocket::stream()`] in the handler. The examples below are equivalent:
+//! [`WebSocket::stream()`] in the handler. The endpoints in the example below are equivalent:
 //!
 //! ```rust
 //! # use rocket::get;
 //! # use rocket_ws as ws;
 //! #
-//! #[get("/echo?channel")]
+//! #[get("/echo/channel")]
 //! fn echo_channel(ws: ws::WebSocket) -> ws::Channel<'static> {
 //!     use rocket::futures::{SinkExt, StreamExt};
 //!
@@ -34,7 +34,7 @@
 //!     }))
 //! }
 //!
-//! #[get("/echo?stream")]
+//! #[get("/echo/stream")]
 //! fn echo_stream(ws: ws::WebSocket) -> ws::Stream!['static] {
 //!     ws::Stream! { ws =>
 //!         for await message in ws {
@@ -43,7 +43,7 @@
 //!     }
 //! }
 //!
-//! #[get("/echo?compose")]
+//! #[get("/echo/compose")]
 //! fn echo_compose(ws: ws::WebSocket) -> ws::Stream!['static] {
 //!     ws.stream(|io| io)
 //! }
