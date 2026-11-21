@@ -1,3 +1,421 @@
+# Version 0.6.0-rc.1 (Unreleased)
+
+## Major Features and Improvements
+
+This release introduces the following major features and improvements:
+
+  * Pluggable [connection listeners] and support for serving on [Unix domain sockets].
+  * Structured logging and tracing based on [`tracing`] with `pretty` and `compact` formats.
+  * Experimental, preview support for [HTTP/3] over QUIC via the `http3-preview` feature.
+  * More precise routing: trailing slashes in request and route URIs are significant.
+  * A [`FileServer`] built from a pipeline of composable, customizable [rewrites].
+  * [Dynamic TLS] configuration selected per connection by a [`Resolver`].
+  * Support for any installed [`CryptoProvider`] for TLS.
+  * [Routes for any method]: every method in the IANA HTTP method registry and method-less routes.
+  * [XML] data and form guards and responders via the new `xml` feature.
+  * Chainable [data transformers] that transform request body data as it is read.
+  * [`#[suppress]`](https://api.rocket.rs/master/rocket/attr.suppress.html) for silencing
+    Rocket's lints.
+  * [`#[derive(FromParam)]`](https://api.rocket.rs/master/rocket/derive.FromParam.html) for enums
+    whose variants have no fields.
+  * Mount points with any UTF-8 characters and consistent percent-encoding in [`uri!`].
+  * A configurable [proxy protocol header] to identify requests a proxy received over TLS.
+  * A runtime [waker] that keeps I/O and timers progressing when a task blocks a worker.
+  * Exit codes for failed launches via [`Error::report()`].
+  * [Fairing retrieval] by type from an instance of `Rocket`.
+  * Public [route matching] and collision checking for routes and catchers.
+
+## Breaking Changes
+
+This release includes many breaking changes. The most significant changes are listed below. The
+[upgrading guide] describes how to handle them.
+
+### Silent Changes
+
+These changes are invisible to the compiler and will _not_ yield errors or warnings at compile-time.
+We **strongly** advise all application authors to review this list carefully.
+
+  * Trailing slashes are significant during routing. A request to `/foo/` is not routed to `/foo`,
+    and a request to `/foo/?a=1` is not routed to `/foo?<a>`. Attach [`AdHoc::uri_normalizer()`]
+    to strip the trailing slash from requests that would otherwise fail to route.
+  * A trailing slash is an empty final segment. A request to `/user/` is routed to `/user/<name>`
+    with an empty `name`. `FromParam` for `&str`, `String`, and numeric types fails on empty
+    segments, so the request is forwarded with a `422` where it previously failed to route with a
+    `404`. Parameters of type `Option<T>` receive `None`.
+  * A route with a multi-segment parameter, like `/files/<path..>`, no longer matches a request to
+    `/files`. A trailing slash is included in the matched path: `/files/a/` yields `a/`.
+  * A route with URI `/` mounted at a base with a trailing slash, like `/foo/`, only matches
+    `/foo/`. Mounted at `/foo`, it only matches `/foo`.
+  * [`FileServer::new()`], which replaces `FileServer::from()`, redirects requests for a directory
+    without a trailing slash to the same URI with a trailing slash. A file server mounted at
+    `/static` no longer serves requests to `/static`.
+  * [`uri!`] percent-encodes static path and query segments and literal prefixes that begin with
+    `/`. For a route URI of `/a%20b`, `uri!` generates `/a%2520b`, the request URI the route
+    matches. A static query of `c=d+e` generates `c=d%2Be`.
+  * [`uri!`] normalizes the generated URI after arguments are substituted. For a route URI of
+    `/<a>/<b>`, the values `""` and `"b"` generate `/b` where they previously generated `//b`.
+  * A `%` in a catcher base is no longer a percent-encoding escape. A catcher registered at `/a%20b`
+    catches errors from requests to `/a%2520b/..`, which routes mounted at `/a%20b` have always
+    matched.
+  * The default `log_level` in release mode is now `error`, which hides warnings. Set `log_level`
+    to `warn` to see warnings as before.
+  * The `log_level` values `critical` and `normal` result in a configuration error at launch.
+  * `Method::from_str()` no longer parses mixed-case method names: `"Get"` fails to parse.
+  * Request handlers that have not completed by the end of the shutdown grace period are cancelled.
+  * Requests that fail to parse pass through request fairings, the `400` catcher, and response
+    fairings, both in the server and in local clients. Previously, only the catcher ran.
+  * The [`MsgPack`] responder serializes structures as maps with field names. Respond with
+    [`Compact`] for the previous array encoding. `MsgPack<T>` deserializes both encodings.
+  * TLS key files must contain exactly one private key and no other items. Previously, the first
+    supported key was used, and any other contents were ignored.
+  * A [`CryptoProvider`] installed as the process default is used for TLS and replaces the
+    configured `ciphers`. Previously, Rocket always used `ring` with the configured `ciphers`.
+  * The `main` function generated by `#[launch]` logs launch errors and exits with a failure
+    status. Previously, it panicked.
+  * [`Error`] no longer panics when dropped without being inspected.
+  * `rocket_db_pools` SQLx pools connect when a connection is first requested. Previously, a
+    database that couldn't be reached during ignition aborted launch.
+  * When a `rocket_ws` [`MessageStream`] ends, a `Close` message is sent, if one wasn't yielded,
+    and the client's reply is awaited for up to 5 seconds before the connection is closed.
+
+### General
+
+  * The minimum supported Rust version for all crates is now `1.95`.
+  * The new `trace` and `tokio-macros` features are enabled by default. Applications that disable
+    default features must enable them as needed.
+  * The reexported `tokio` no longer enables the `io-std` feature and only enables the `macros`
+    feature with the `tokio-macros` feature.
+  * The configuration of network interfaces moved to [connection listeners]:
+    * Removed `Config::address`, `Config::port`, `Config::tls`, and their constants.
+    * Removed `Config::tls_enabled()` and `Config::mtls_enabled()`.
+    * The `address`, `port`, and `tls` parameters are read by the listener.
+    * Added [`Rocket::endpoints()`] to retrieve the endpoints Rocket is listening on.
+  * Renamed `Rocket::configure()` to [`Rocket::reconfigure()`].
+  * Renamed `config::Shutdown` to [`ShutdownConfig`] and moved it to the new [`rocket::shutdown`]
+    module. It is reexported from `config`.
+  * Renamed `config::MutualTls` to [`MtlsConfig`] and moved it to `rocket::mtls`.
+  * Moved `config::CipherSuite` to [`tls::CipherSuite`].
+  * Replaced `log` with [`tracing`]:
+    * Replaced `config::LogLevel` with [`Level`]. `Config::log_level` is an `Option<Level>`, where
+      `None` disables logging.
+    * The `log_level` parameter accepts `off`, `error`, `warn`, `info`, `debug`, `trace`, or `0`
+      through `5`.
+    * `Config::cli_colors` is a [`CliColors`].
+    * The `error!`, `warn!`, `info!`, `debug!`, and `trace!` macros emit `tracing` events.
+    * Removed the indented logging macros, like `info_!`, and the `rocket::log` module.
+    * Removed `Error::pretty_print()`. Use [`Trace::trace_error()`] instead.
+    * `Route`, `Catcher`, `Request`, `Outcome`, `Limits`, and `config::Shutdown` no longer
+      implement `Display`. `Route`, `Catcher`, and `Request` implement [`Trace`] instead.
+  * Changed the variants of [`ErrorKind`]:
+    * `Bind` carries the endpoint, if known, and a boxed error.
+    * `Collisions` is a struct variant with `routes` and `catchers` fields.
+    * `Shutdown` carries only the instance of `Rocket`.
+    * Added `Liftoff`, which indicates that liftoff failed.
+  * Removed `Client::new()`, deprecated since `0.5.0`.
+  * Moved `rocket::Either` to [`rocket::either::Either`].
+  * Removed the `rocket::http::hyper` module.
+  * `Shutdown::notify()` takes `&self`.
+
+### Routing and URIs
+
+  * The [`route`] attribute takes the route URI first and an optional `method`:
+    `#[route(GET, uri = "/")]` is now `#[route("/", method = GET)]`.
+  * [`Method`] has a variant for every method in the IANA HTTP method registry and is marked
+    `#[non_exhaustive]`.
+  * Deprecated `Method::supports_payload()` in favor of [`Method::allows_request_body()`].
+  * `Route::method` is an `Option<Method>`, where `None` matches any method. `Route::new()` and
+    `Route::ranked()` accept a `Method` or an `Option<Method>`.
+  * [`Rocket::mount()`] and [`Rocket::register()`] take a `&str` base. Bases are never
+    percent-decoded.
+  * The fields of [`RouteUri`] are private. Use `RouteUri::base()`, `RouteUri::inner()`, and
+    `RouteUri::unmounted()`. `RouteUri` dereferences to an `Origin`, whose methods replace
+    `RouteUri::as_str()`, `RouteUri::path()`, and `RouteUri::query()`.
+  * Replaced the `Catcher::base` field with [`Catcher::base()`].
+  * `RouteUri::base()` and `Catcher::base()` return a `Path`.
+  * Renamed `Segments::len()` to `Segments::num()`.
+  * [`uri!`] rejects URI literals that are not normalized: `uri!("/a//b")` must be written as
+    `uri!("/a/b")`.
+  * `FromParam` for `&str` and `String` fails with an [`Empty`] error on empty segments.
+  * The `FromParam` error for types parsed via `FromStr` is the type's `FromStr` error.
+    Previously, it was the raw segment.
+  * Removed the `IntoCollection` trait. APIs that accepted one, like `Accept::new()`, accept an
+    `IntoIterator`.
+
+### Data and Forms
+
+  * `DataStream` is now a `#[non_exhaustive]` enum.
+
+### Request Guards
+
+  * `Request::remote()` returns an `Option<&Endpoint>`, and `Request::set_remote()` takes an
+    [`Endpoint`]. The `SocketAddr` request guard is unchanged.
+  * `LocalRequest::remote()` accepts any type that converts into an `Endpoint`.
+
+### Responders
+
+  * Removed `FileServer::from()`, the two-argument `FileServer::new()`, and `fs::Options` in favor
+    of [rewrites].
+  * `IoHandler::io()` takes `self: Box<Self>`.
+  * `Response::upgrade()` returns an `Option<&mut dyn IoHandler>`.
+
+### Contrib Libraries
+
+  * The `rocket_db_pools` [`Pool`] trait no longer requires `Sync`. ([#2969])
+
+## General Improvements
+
+In addition to new features and major improvements, Rocket saw the following improvements:
+
+### General
+
+  * Added [`AdHoc::uri_normalizer()`], which strips trailing slashes from requests that would
+    otherwise fail to route.
+  * Added support for trailing slashes in route URIs: `#[get("/foo/")]`.
+  * Added support for mount points with any UTF-8 characters. A route mounted at `/häcker` matches
+    requests to `/h%C3%A4cker/..`.
+  * Added `#[suppress]` for silencing Rocket's lints. ([#1188])
+  * Added `#[derive(FromParam)]` for enums and the [`InvalidOption`] error it returns.
+  * Added [`Rocket::fairing()`], `Rocket::fairing_mut()`, `Rocket::fairings()`, and
+    `Rocket::fairings_mut()`.
+  * Added [`Rocket::launch_with()`], [`Rocket::launch_on()`], and [`Rocket::try_launch_on()`].
+  * Added [`Error::report()`].
+  * Added `Route::matches()`, `Route::collides_with()`, `Catcher::matches()`, and
+    `Catcher::collides_with()`. ([#1561])
+  * Added [`Route::rebase()`] and [`Catcher::rebase()`]. ([#2533])
+  * Added support for `Either` in `uri!`.
+  * Added the [`wake_interval`] configuration parameter. ([#2239])
+  * Added the [`proxy_proto_header`] configuration parameter, [`Request::proxy_proto()`], and
+    [`Request::context_is_likely_secure()`].
+  * Added the `log_format` configuration parameter.
+  * Added support for `"always"`, `"auto"`, and `"never"` values for `cli_colors`. ([#2649])
+  * Added [`Data::chain_transform()`] and friends for transforming request body data. ([#775])
+  * Added the [`rocket::trace`] module. ([#21])
+    * Added the [`Trace`] and `TraceAll` traits.
+    * Added the [`RocketFmt`] and [`RocketDynFmt`] subscribers. ([#2840])
+    * Added [`RequestId`], which tags each request's span with a unique ID.
+    * Logs include the source location of routes and catchers.
+    * Rocket's subscriber forwards `log` records.
+  * Added the `xml` feature and the [`rocket::serde::xml`] module.
+  * Added `Limits::XML`, set to 1 MiB by default.
+  * `MsgPack` is generic over its encoding. [`Compact`] responds with compact MessagePack.
+    ([#2107])
+  * Fixed route attributes in `macro_rules!` macros, which failed to compile with "cannot find
+    value `__req` in this scope". ([#2919])
+
+### HTTP
+
+  * Added preview support for HTTP/3 via the `http3-preview` feature. ([#2723])
+  * Added `Method` variants for every method in the IANA HTTP method registry. ([#232])
+  * Added support for routes that match any method: `#[route("/")]`. ([#2731])
+  * Added `Method::is_safe()`, `Method::is_idempotent()`, and `Method::allows_request_body()`.
+  * Added [`HttpVersion`] and [`Request::version()`].
+  * Added [`ProxyProto`].
+  * Trailing slashes and empty queries are allowed in normalized URIs: `/foo/` and `/foo?` are
+    normalized. ([#2512])
+  * Added `Origin::has_trailing_slash()`, `Origin::is_normalized_nontrailing()`, and
+    `Origin::into_normalized_nontrailing()`.
+  * Added `Uri::is_normalized()`, `Uri::normalize()`, and `Uri::into_normalized()`.
+  * Added `Authority::set_port()`, `RawStr::trim()`, and `Accept::add()`.
+  * `RawStr::split()` and `Path::raw_segments()` return a `DoubleEndedIterator`.
+
+### Connections and TLS
+
+  * Added pluggable [connection listeners] via the [`Listener`] and [`Bind`] traits. ([#2671])
+  * Added support for Unix domain sockets: an `address` of `unix:path/to/socket`. ([#1070])
+  * Added the `reuse` configuration parameter for Unix domain sockets.
+  * Added the [`Endpoint`] type.
+  * Added the [`rocket::tls`] module, including [`TlsListener`].
+  * Added [`Resolver`] for selecting TLS configuration per connection. ([#2730], [#2363], [#2748],
+    [#2683], [#2577])
+  * Added support for using an installed [`CryptoProvider`].
+  * Added `TlsConfig::validate()`, `TlsConfig::server_config()`, `TlsConfig::certs_reader()`,
+    `TlsConfig::key_reader()`, and `MtlsConfig::ca_certs_reader()`.
+  * Added [`Request::sni()`]. ([#2942], [#3015])
+
+### Request
+
+  * Added an `&Endpoint` request guard.
+  * Added [`LocalRequest::xml()`] and [`LocalResponse::into_xml()`].
+  * `LocalRequest::json()`, `LocalRequest::msgpack()`, and `LocalRequest::xml()` replace an
+    existing `Content-Type` header. Previously, they added a second one, and the first remained in
+    effect.
+
+### Response
+
+  * Added [`FileServer::identity()`], `FileServer::without_index()`, `FileServer::filter()`,
+    `FileServer::map()`, `FileServer::rewrite()`, and the [rewrites] in `fs::rewrite`. ([#2716])
+  * Added `Redirect::map_uri()`, `Response::set_header_map()`, `NamedFile::open_with()`, and
+    `TempFile::is_empty()`.
+  * Responses dispatched by local clients include a `Content-Length` header when the size of the
+    body is known. Previously, the header was only set on responses sent by the server.
+
+### Trait Implementations
+
+  * Implemented `Clone` for `Request`, `Redirect`, and `Shield`.
+  * Implemented `Default` for `TlsConfig`.
+  * Implemented `IntoIterator` for `HeaderMap`, `MediaType`, `QMediaType`, and `shield::Allow`.
+  * Implemented `AsRef<OsStr>` for `RawStr`, `uri::Path`, and `uri::Query`.
+  * Implemented `AsRef<str>`, `TryFrom<&str>`, `TryFrom<&[u8]>`, and `PartialEq<&Method>` for
+    `Method`.
+  * Implemented `PartialEq<&T>` for `T` and for `Uri`, where `T` is any URI type.
+  * Implemented `std::error::Error` for `uri::Error` and `uri::error::PathError`.
+  * Implemented `Display` for `uri::error::PathError`.
+  * Implemented `UriDisplay` and `FromUriParam` for `Either`.
+  * Implemented `From<figment::Error>` and `From<io::Error>` for `Error`.
+
+### Contrib Libraries
+
+  * Added the `diesel_sqlite` feature and [`diesel::SqlitePool`] to `rocket_db_pools`.
+  * `rocket_db_pools` reexports Diesel's `SyncConnectionWrapper` and `AsyncConnectionWrapper`.
+  * `rocket_sync_db_pools` rejects a Memcache configuration without a server URL. Previously, the
+    pool's clients panicked on first use.
+
+### Updated Dependencies
+
+  * The `tracing` dependency was introduced (`0.1`).
+  * The `tracing-subscriber` dependency was introduced (`0.3`).
+  * The `tinyvec` dependency was introduced (`1.6`).
+  * The `thread_local` dependency was introduced (`1.1`).
+  * The `quick-xml` dependency was introduced (`0.42`).
+  * The `quinn` dependency was introduced (`0.11`).
+  * The `h3` dependency was introduced (`0.0.8`).
+  * The `h3-quinn` dependency was introduced (`0.0.10`).
+  * The `ring` dependency was introduced (`0.17.12`).
+  * The `libc` dependency was introduced on Unix (`0.2`).
+  * The `percent-encoding` dependency was introduced in `rocket_codegen` (`2.3`).
+  * The `log` dependency was introduced in `rocket_db_pools` (`0.4`).
+  * The `http` dependency was updated to `1.1`.
+  * The `x509-parser` dependency was updated to `0.18`.
+  * The `parking_lot` dependency was updated to `0.13`.
+  * The minimum `rusqlite` and `r2d2_sqlite` versions for `rocket_sync_db_pools` are now `0.42`
+    and `0.37`, respectively.
+  * The minimum `libsqlite3-sys` version for `rocket_db_pools` and `rocket_sync_db_pools` is now
+    `0.40`.
+  * The `log` dependency was removed from `rocket` and `rocket_http`.
+  * The `smallvec` dependency was removed.
+  * The `http-body-util` dependency was removed.
+  * `rocket_http` no longer depends on `hyper`, `http`, `h2`, `tokio`, `futures`,
+    `pin-project-lite`, `x509-parser`, or any TLS library. Its `tls`, `mtls`, `http2`,
+    `private-cookies`, and `rustls-pemfile` features were removed.
+
+## Infrastructure
+
+The following changes were made to the project's infrastructure:
+
+  * The workspace resolves and builds with the minimum allowed version of every direct dependency.
+  * All crates use workspace-wide lints.
+  * Added an end-to-end testbench. ([#1509])
+  * Added fuzzing targets for routing collision safety and URI normalization.
+  * Added a `--help` flag to `test.sh`.
+  * Added a CONTRIBUTING guide.
+  * Added a v0.5 to v0.6 upgrading guide.
+  * Updated documentation for all changes.
+  * Fixed many typos throughout documentation. ([#2989])
+
+[connection listeners]: https://api.rocket.rs/master/rocket/listener/index.html
+[Unix domain sockets]: https://api.rocket.rs/master/rocket/listener/unix/index.html
+[`tracing`]: https://docs.rs/tracing/0.1/tracing/
+[HTTP/3]: https://api.rocket.rs/master/rocket/listener/quic/index.html
+[`FileServer`]: https://api.rocket.rs/master/rocket/fs/struct.FileServer.html
+[rewrites]: https://api.rocket.rs/master/rocket/fs/rewrite/index.html
+[Dynamic TLS]: https://api.rocket.rs/master/rocket/tls/trait.Resolver.html
+[`Resolver`]: https://api.rocket.rs/master/rocket/tls/trait.Resolver.html
+[`CryptoProvider`]: https://rocket.rs/master/guide/configuration/#crypto-providers
+[Routes for any method]: https://rocket.rs/master/guide/requests/#methods
+[XML]: https://api.rocket.rs/master/rocket/serde/xml/index.html
+[data transformers]: https://api.rocket.rs/master/rocket/data/trait.Transform.html
+[`uri!`]: https://api.rocket.rs/master/rocket/macro.uri.html
+[proxy protocol header]: https://rocket.rs/master/guide/configuration/#proxied-tls
+[waker]: https://rocket.rs/master/guide/configuration/#wake-interval
+[`Error::report()`]: https://api.rocket.rs/master/rocket/error/struct.Error.html#method.report
+[Fairing retrieval]: https://api.rocket.rs/master/rocket/struct.Rocket.html#method.fairing
+[route matching]: https://api.rocket.rs/master/rocket/route/struct.Route.html#method.matches
+[upgrading guide]: https://rocket.rs/master/guide/upgrading/
+[`AdHoc::uri_normalizer()`]: https://api.rocket.rs/master/rocket/fairing/struct.AdHoc.html#method.uri_normalizer
+[`FileServer::new()`]: https://api.rocket.rs/master/rocket/fs/struct.FileServer.html#method.new
+[`MsgPack`]: https://api.rocket.rs/master/rocket/serde/msgpack/struct.MsgPack.html
+[`Compact`]: https://api.rocket.rs/master/rocket/serde/msgpack/type.Compact.html
+[`Error`]: https://api.rocket.rs/master/rocket/error/struct.Error.html
+[`MessageStream`]: https://api.rocket.rs/master/rocket_ws/stream/struct.MessageStream.html
+[`Rocket::endpoints()`]: https://api.rocket.rs/master/rocket/struct.Rocket.html#method.endpoints
+[`Rocket::reconfigure()`]: https://api.rocket.rs/master/rocket/struct.Rocket.html#method.reconfigure
+[`ShutdownConfig`]: https://api.rocket.rs/master/rocket/shutdown/struct.ShutdownConfig.html
+[`rocket::shutdown`]: https://api.rocket.rs/master/rocket/shutdown/index.html
+[`MtlsConfig`]: https://api.rocket.rs/master/rocket/mtls/struct.MtlsConfig.html
+[`tls::CipherSuite`]: https://api.rocket.rs/master/rocket/tls/enum.CipherSuite.html
+[`Level`]: https://api.rocket.rs/master/rocket/config/struct.Level.html
+[`CliColors`]: https://api.rocket.rs/master/rocket/config/enum.CliColors.html
+[`Trace::trace_error()`]: https://api.rocket.rs/master/rocket/trace/trait.Trace.html#method.trace_error
+[`Trace`]: https://api.rocket.rs/master/rocket/trace/trait.Trace.html
+[`ErrorKind`]: https://api.rocket.rs/master/rocket/error/enum.ErrorKind.html
+[`rocket::either::Either`]: https://api.rocket.rs/master/rocket/index.html#reexport.either
+[`route`]: https://api.rocket.rs/master/rocket/attr.route.html
+[`Method`]: https://api.rocket.rs/master/rocket/http/enum.Method.html
+[`Method::allows_request_body()`]: https://api.rocket.rs/master/rocket/http/enum.Method.html#method.allows_request_body
+[`Rocket::mount()`]: https://api.rocket.rs/master/rocket/struct.Rocket.html#method.mount
+[`Rocket::register()`]: https://api.rocket.rs/master/rocket/struct.Rocket.html#method.register
+[`RouteUri`]: https://api.rocket.rs/master/rocket/route/struct.RouteUri.html
+[`Catcher::base()`]: https://api.rocket.rs/master/rocket/catcher/struct.Catcher.html#method.base
+[`Empty`]: https://api.rocket.rs/master/rocket/error/struct.Empty.html
+[`Endpoint`]: https://api.rocket.rs/master/rocket/listener/enum.Endpoint.html
+[`Pool`]: https://api.rocket.rs/master/rocket_db_pools/trait.Pool.html
+[`InvalidOption`]: https://api.rocket.rs/master/rocket/error/struct.InvalidOption.html
+[`Rocket::fairing()`]: https://api.rocket.rs/master/rocket/struct.Rocket.html#method.fairing
+[`Rocket::launch_with()`]: https://api.rocket.rs/master/rocket/struct.Rocket.html#method.launch_with
+[`Rocket::launch_on()`]: https://api.rocket.rs/master/rocket/struct.Rocket.html#method.launch_on
+[`Rocket::try_launch_on()`]: https://api.rocket.rs/master/rocket/struct.Rocket.html#method.try_launch_on
+[`Route::rebase()`]: https://api.rocket.rs/master/rocket/route/struct.Route.html#method.rebase
+[`Catcher::rebase()`]: https://api.rocket.rs/master/rocket/catcher/struct.Catcher.html#method.rebase
+[`wake_interval`]: https://api.rocket.rs/master/rocket/struct.Config.html#structfield.wake_interval
+[`proxy_proto_header`]: https://api.rocket.rs/master/rocket/struct.Config.html#structfield.proxy_proto_header
+[`Request::proxy_proto()`]: https://api.rocket.rs/master/rocket/request/struct.Request.html#method.proxy_proto
+[`Request::context_is_likely_secure()`]: https://api.rocket.rs/master/rocket/request/struct.Request.html#method.context_is_likely_secure
+[`Data::chain_transform()`]: https://api.rocket.rs/master/rocket/data/struct.Data.html#method.chain_transform
+[`rocket::trace`]: https://api.rocket.rs/master/rocket/trace/index.html
+[`RocketFmt`]: https://api.rocket.rs/master/rocket/trace/subscriber/struct.RocketFmt.html
+[`RocketDynFmt`]: https://api.rocket.rs/master/rocket/trace/subscriber/struct.RocketDynFmt.html
+[`RequestId`]: https://api.rocket.rs/master/rocket/trace/subscriber/struct.RequestId.html
+[`rocket::serde::xml`]: https://api.rocket.rs/master/rocket/serde/xml/index.html
+[`HttpVersion`]: https://api.rocket.rs/master/rocket/http/enum.HttpVersion.html
+[`Request::version()`]: https://api.rocket.rs/master/rocket/request/struct.Request.html#method.version
+[`ProxyProto`]: https://api.rocket.rs/master/rocket/http/enum.ProxyProto.html
+[`Listener`]: https://api.rocket.rs/master/rocket/listener/trait.Listener.html
+[`Bind`]: https://api.rocket.rs/master/rocket/listener/trait.Bind.html
+[`rocket::tls`]: https://api.rocket.rs/master/rocket/tls/index.html
+[`TlsListener`]: https://api.rocket.rs/master/rocket/tls/struct.TlsListener.html
+[`Request::sni()`]: https://api.rocket.rs/master/rocket/request/struct.Request.html#method.sni
+[`LocalRequest::xml()`]: https://api.rocket.rs/master/rocket/local/blocking/struct.LocalRequest.html#method.xml
+[`LocalResponse::into_xml()`]: https://api.rocket.rs/master/rocket/local/blocking/struct.LocalResponse.html#method.into_xml
+[`FileServer::identity()`]: https://api.rocket.rs/master/rocket/fs/struct.FileServer.html#method.identity
+[`diesel::SqlitePool`]: https://api.rocket.rs/master/rocket_db_pools/diesel/type.SqlitePool.html
+[#21]: https://github.com/rwf2/Rocket/issues/21
+[#232]: https://github.com/rwf2/Rocket/issues/232
+[#775]: https://github.com/rwf2/Rocket/issues/775
+[#1070]: https://github.com/rwf2/Rocket/issues/1070
+[#1188]: https://github.com/rwf2/Rocket/issues/1188
+[#1509]: https://github.com/rwf2/Rocket/issues/1509
+[#1561]: https://github.com/rwf2/Rocket/issues/1561
+[#2107]: https://github.com/rwf2/Rocket/issues/2107
+[#2239]: https://github.com/rwf2/Rocket/issues/2239
+[#2363]: https://github.com/rwf2/Rocket/issues/2363
+[#2512]: https://github.com/rwf2/Rocket/issues/2512
+[#2533]: https://github.com/rwf2/Rocket/issues/2533
+[#2577]: https://github.com/rwf2/Rocket/issues/2577
+[#2649]: https://github.com/rwf2/Rocket/issues/2649
+[#2671]: https://github.com/rwf2/Rocket/issues/2671
+[#2683]: https://github.com/rwf2/Rocket/issues/2683
+[#2716]: https://github.com/rwf2/Rocket/issues/2716
+[#2723]: https://github.com/rwf2/Rocket/issues/2723
+[#2730]: https://github.com/rwf2/Rocket/issues/2730
+[#2731]: https://github.com/rwf2/Rocket/issues/2731
+[#2748]: https://github.com/rwf2/Rocket/issues/2748
+[#2840]: https://github.com/rwf2/Rocket/issues/2840
+[#2919]: https://github.com/rwf2/Rocket/issues/2919
+[#2942]: https://github.com/rwf2/Rocket/issues/2942
+[#2969]: https://github.com/rwf2/Rocket/issues/2969
+[#2989]: https://github.com/rwf2/Rocket/issues/2989
+[#3015]: https://github.com/rwf2/Rocket/issues/3015
+
 # Version 0.5.4 (Nov 19, 2026)
 
 This release contains the following crate updates:
