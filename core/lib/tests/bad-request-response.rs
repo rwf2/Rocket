@@ -3,10 +3,10 @@
 use std::net::{Ipv4Addr, SocketAddr};
 use std::time::Duration;
 
-use rocket::Request;
+use rocket::{Build, Request, Rocket};
 use rocket::config::Ident;
 use rocket::fairing::AdHoc;
-use rocket::http::Cookie;
+use rocket::http::{Cookie, HeaderMap};
 use rocket::listener::tcp::TcpListener;
 use rocket::tokio::io::{AsyncReadExt, AsyncWriteExt};
 use rocket::tokio::{net::TcpStream, sync::oneshot, time::timeout};
@@ -38,6 +38,37 @@ struct Sent {
     body: String,
 }
 
+impl Sent {
+    fn new(status: u16, headers: &HeaderMap<'_>) -> Sent {
+        let header = |name: &str| headers.get_one(name).map(|v| v.to_string());
+        Sent {
+            status,
+            server: header("Server"),
+            set_cookie: header("Set-Cookie"),
+            request_fairing: header("X-Request-Fairing"),
+            response_fairing: header("X-Response-Fairing"),
+            content_type_options: header("X-Content-Type-Options"),
+            content_length: header("Content-Length"),
+            transfer_encoding: header("Transfer-Encoding"),
+            body: String::new(),
+        }
+    }
+
+    fn expected(status: u16, body: &str, length: usize) -> Sent {
+        Sent {
+            status,
+            server: Some("Rocket Test".into()),
+            set_cookie: Some(format!("caught={status}; SameSite=Strict; Path=/")),
+            request_fairing: Some("true".into()),
+            response_fairing: Some("true".into()),
+            content_type_options: Some("nosniff".into()),
+            content_length: Some(length.to_string()),
+            transfer_encoding: None,
+            body: body.into(),
+        }
+    }
+}
+
 async fn send(port: u16, method: &str, target: &str) -> Sent {
     let request = format!("{method} {target} HTTP/1.1\r\n\
         Host: localhost\r\nConnection: close\r\n\r\n");
@@ -66,12 +97,11 @@ async fn send(port: u16, method: &str, target: &str) -> Sent {
     }
 }
 
-async fn check_bad_request_responses() {
-    let (tx, rx) = oneshot::channel();
+fn rocket() -> Rocket<Build> {
     let mut config = rocket::Config::debug_default();
     config.ident = Ident::try_new("Rocket Test").unwrap();
     config.shutdown.ctrlc = false;
-    let rocket = rocket::custom(config)
+    rocket::custom(config)
         .register("/", catchers![bad_request, not_found])
         .attach(AdHoc::on_request("Mark Request", |req, _| Box::pin(async move {
             req.local_cache(|| RequestFairingRan(true));
@@ -81,6 +111,11 @@ async fn check_bad_request_responses() {
             res.set_raw_header("X-Request-Fairing", ran.to_string());
             res.set_raw_header("X-Response-Fairing", "true");
         })))
+}
+
+async fn check_bad_request_responses() {
+    let (tx, rx) = oneshot::channel();
+    let rocket = rocket()
         .attach(AdHoc::on_liftoff("Send Port and Shutdown", |rocket| Box::pin(async move {
             let port = rocket.endpoints().find_map(|e| e.tcp()).unwrap().port();
             tx.send((port, rocket.shutdown())).unwrap();
@@ -101,18 +136,7 @@ async fn check_bad_request_responses() {
     ];
 
     for (method, target, status, body, length) in cases {
-        let expected = Sent {
-            status,
-            server: Some("Rocket Test".into()),
-            set_cookie: Some(format!("caught={status}; SameSite=Strict; Path=/")),
-            request_fairing: Some("true".into()),
-            response_fairing: Some("true".into()),
-            content_type_options: Some("nosniff".into()),
-            content_length: Some(length.to_string()),
-            transfer_encoding: None,
-            body: body.into(),
-        };
-
+        let expected = Sent::expected(status, body, length);
         assert_eq!(send(port, method, target).await, expected, "{method} {target}");
     }
 
@@ -123,4 +147,31 @@ async fn check_bad_request_responses() {
 #[rocket::async_test]
 async fn bad_requests_are_answered_like_other_errors() {
     timeout(Duration::from_secs(10), check_bad_request_responses()).await.unwrap();
+}
+
+// "admin" isn't a valid origin URI. The local client answers it like the server.
+#[rocket::async_test]
+async fn local_bad_requests_are_answered_like_other_errors() {
+    use rocket::local::asynchronous::Client;
+
+    let client = Client::untracked(rocket()).await.unwrap();
+    for (request, body) in [(client.get("admin"), "bad request"), (client.head("admin"), "")] {
+        let response = request.dispatch().await;
+        let mut sent = Sent::new(response.status().code, response.headers());
+        sent.body = response.into_string().await.unwrap_or_default();
+        assert_eq!(sent, Sent::expected(400, body, 11));
+    }
+}
+
+#[test]
+fn local_blocking_bad_requests_are_answered_like_other_errors() {
+    use rocket::local::blocking::Client;
+
+    let client = Client::untracked(rocket()).unwrap();
+    for (request, body) in [(client.get("admin"), "bad request"), (client.head("admin"), "")] {
+        let response = request.dispatch();
+        let mut sent = Sent::new(response.status().code, response.headers());
+        sent.body = response.into_string().unwrap_or_default();
+        assert_eq!(sent, Sent::expected(400, body, 11));
+    }
 }

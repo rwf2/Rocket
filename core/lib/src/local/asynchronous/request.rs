@@ -3,7 +3,8 @@ use std::fmt;
 use rocket_http::HttpVersion;
 
 use crate::{Request, Data};
-use crate::http::{Status, Method};
+use crate::request::RequestError;
+use crate::http::Method;
 use crate::http::uri::Origin;
 
 use super::{Client, LocalResponse};
@@ -83,8 +84,8 @@ impl<'c> LocalRequest<'c> {
 
     // Performs the actual dispatch.
     async fn _dispatch(mut self) -> LocalResponse<'c> {
-        // First, revalidate the URI, returning an error response (generated
-        // from an error catcher) immediately if it's invalid. If it's valid,
+        // First, revalidate the URI, recording an error if it's invalid. As on
+        // the server, `dispatch` then answers with a `400`. If it's valid,
         // then `request` already contains a correct URI.
         let rocket = self.client.rocket();
         if let Err(ref invalid) = self.uri {
@@ -92,9 +93,8 @@ impl<'c> LocalRequest<'c> {
             // _shouldn't_ error. Check that now and error only if not.
             if self.inner().uri() == invalid {
                 error!("invalid request URI: {:?}", invalid.path());
-                return LocalResponse::new(self.request, move |req| {
-                    rocket.dispatch_error(Status::BadRequest, req)
-                }).await
+                let error = RequestError::InvalidUri(invalid.to_string());
+                self.request.errors.push(error);
             }
         }
 

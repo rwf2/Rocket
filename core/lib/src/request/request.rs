@@ -1173,7 +1173,7 @@ impl<'r> Request<'r> {
                 Origin::new(uri.path(), uri.query().map(Cow::Borrowed))
             })
             .unwrap_or_else(|| {
-                errors.push(RequestError::InvalidUri(hyper.uri.clone()));
+                errors.push(RequestError::InvalidUri(hyper.uri.to_string()));
                 Origin::root().clone()
             });
 
@@ -1233,7 +1233,7 @@ impl<'r> Request<'r> {
 
 #[derive(Debug, Clone)]
 pub(crate) enum RequestError {
-    InvalidUri(hyper::Uri),
+    InvalidUri(String),
     BadMethod(hyper::Method),
 }
 

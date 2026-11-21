@@ -18,7 +18,7 @@ pub use rocket_codegen::FromParam;
 #[doc(inline)]
 pub use crate::response::flash::FlashMessage;
 
-pub(crate) use self::request::ConnectionMeta;
+pub(crate) use self::request::{ConnectionMeta, RequestError};
 pub(crate) use self::atomic_method::AtomicMethod;
 
 crate::export! {
