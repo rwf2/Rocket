@@ -246,12 +246,11 @@ each driver. Additionally:
     response_timeout = 0
     ```
 
-  * **SQLite connections in `rocket_sync_db_pools` wait up to 5 seconds for
-    locks.**
+  * **Diesel SQLite connections in `rocket_sync_db_pools` wait up to 5
+    seconds for locks.**
 
-    The SQLite `busy_timeout` of Diesel and `rusqlite` connections was
-    previously 1 second. To use a different timeout, execute
-    `PRAGMA busy_timeout` in `run()`.
+    The SQLite `busy_timeout` of Diesel connections was previously 1 second.
+    To use a different timeout, execute `PRAGMA busy_timeout` in `run()`.
 
 [`Database::custom()`]: @api/master/rocket_db_pools/trait.Database.html#method.custom
 [`Database::try_custom()`]: @api/master/rocket_db_pools/trait.Database.html#method.try_custom
