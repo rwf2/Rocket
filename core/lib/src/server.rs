@@ -9,6 +9,7 @@ use hyper_util::rt::{TokioExecutor, TokioIo, TokioTimer};
 use hyper_util::server::conn::auto::Builder;
 use futures::{Future, TryFutureExt};
 use tokio::io::{AsyncRead, AsyncWrite};
+use tracing::Instrument;
 
 use crate::{Ignite, Orbit, Request, Rocket};
 use crate::request::ConnectionMeta;
@@ -16,7 +17,7 @@ use crate::erased::{ErasedRequest, ErasedResponse, ErasedIoHandler};
 use crate::listener::{Listener, Connection, BouncedExt, CancellableExt, Lingering};
 use crate::error::log_server_error;
 use crate::data::{IoStream, RawStream};
-use crate::util::{spawn_inspect, FutureExt, ReaderStream};
+use crate::util::{spawn_inspect, Detach, FutureExt, ReaderStream};
 use crate::trace::{Trace, TraceAll};
 
 type Result<T, E = crate::Error> = std::result::Result<T, E>;
@@ -27,25 +28,36 @@ impl Rocket<Orbit> {
         uri = %parts.uri,
         autohandled
     ))]
-    async fn service<T: for<'a> Into<RawStream<'a>>>(
+    async fn service<T: for<'a> Into<RawStream<'a>> + Send + 'static>(
         self: Arc<Self>,
         parts: http::request::Parts,
         stream: T,
         upgrade: Option<hyper::upgrade::OnUpgrade>,
         connection: ConnectionMeta,
-    ) -> Result<hyper::Response<ReaderStream<ErasedResponse>>, http::Error> {
+    ) -> io::Result<hyper::Response<ReaderStream<ErasedResponse>>> {
         connection.trace_debug();
         let version = parts.version;
+        let grace = self.shutdown.grace.clone();
         let request = ErasedRequest::new(self, parts, |rocket, parts| {
             Request::from_hyp(rocket, parts, connection).unwrap_or_else(|e| e)
         });
 
         span_debug!("request headers" => request.inner().headers().iter().trace_all_debug());
-        let mut response = request.into_response(
+        let response = request.into_response(
             stream,
             |rocket, request, data| Box::pin(rocket.preprocess(request, data)),
             |token, rocket, request, data| Box::pin(rocket.dispatch(token, request, data))
-        ).await;
+        );
+
+        // If this future is dropped before the response is ready, e.g. because
+        // the client disconnected, the request is spawned to run to completion,
+        // response fairings included, and its response is discarded. Either
+        // way, it's cancelled when the shutdown grace period ends, which is
+        // when I/O is cut off for clients that are still connected.
+        let response = Detach::new(response.race(grace).in_current_span());
+        let Some(mut response) = response.await.left() else {
+            return Err(io::Error::new(io::ErrorKind::TimedOut, "shutdown grace period elapsed"));
+        };
 
         // TODO: Should upgrades be handled in dispatch?
         response.inner().trace_info();
@@ -66,11 +78,11 @@ impl Rocket<Orbit> {
         // a nonzero content-length followed by an empty DATA frame. HTTP/1
         // takes the body path because hyper otherwise drops that header.
         if version == http::Version::HTTP_2 && response.inner().body().is_empty() {
-            return builder.body(ReaderStream::empty(response));
+            return builder.body(ReaderStream::empty(response)).map_err(io::Error::other);
         }
 
         let chunk_size = response.inner().body().max_chunk_size();
-        builder.body(ReaderStream::with_capacity(response, chunk_size))
+        builder.body(ReaderStream::with_capacity(response, chunk_size)).map_err(io::Error::other)
     }
 
     pub(crate) fn alt_svc(&self) -> Option<&'static str> {
@@ -283,10 +295,12 @@ impl Rocket<Orbit> {
                         let (tx, rx) = stream.split();
                         let mut tx = QuicTx::new(tx, rocket.shutdown.grace.clone());
                         let rx = QuicRx(rx).cancellable(rocket.shutdown.clone());
+                        // `service()` times out when the shutdown grace period ends.
                         let service = rocket.clone().service(req.into_parts().0, rx, None, meta);
-                        let response = match service.race(rocket.shutdown.mercy.clone()).await {
-                            Either::Left(response) => response.map_err(io::Error::other)?,
-                            Either::Right(_) => return Ok(()),
+                        let response = match service.await {
+                            Ok(response) => response,
+                            Err(e) if e.kind() == TimedOut => return Ok(()),
+                            Err(e) => return Err(e),
                         };
 
                         // A body may wait indefinitely for data, so stop waiting when

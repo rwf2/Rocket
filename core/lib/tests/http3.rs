@@ -655,13 +655,33 @@ async fn connection_headers_are_not_sent() {
 struct Slow {
     entered: Notify,
     release: Notify,
+    finished: Notify,
 }
 
 #[get("/slow")]
 async fn slow(slow: &rocket::State<Arc<Slow>>) -> &'static str {
     slow.entered.notify_one();
     slow.release.notified().await;
+    slow.finished.notify_one();
     "slow"
+}
+
+#[rocket::async_test]
+async fn close_lets_handler_finish() {
+    let state = Arc::new(Slow::default());
+    let server = Server::launch(rocket().manage(state.clone()).mount("/", routes![slow])).await;
+    let mut client = Client::connect(server.addr).await;
+    let _stream = client.request("GET", "/slow", None).await;
+    state.entered.notified().await;
+
+    // Give the server time to see the close before releasing the handler.
+    client.close().await;
+    rocket::tokio::time::sleep(Duration::from_millis(200)).await;
+    state.release.notify_one();
+    timeout(Duration::from_secs(2), state.finished.notified()).await
+        .expect("handler did not finish after HTTP/3 connection was closed");
+
+    server.shutdown().await;
 }
 
 #[rocket::async_test]
