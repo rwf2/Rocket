@@ -14,9 +14,9 @@ This release introduces the following major features and improvements:
   * [Routes for any method]: every method in the IANA HTTP method registry and method-less routes.
   * [XML] data and form guards and responders via the new `xml` feature.
   * Chainable [data transformers] that transform request body data as it is read.
-  * [`#[suppress]`](https://api.rocket.rs/master/rocket/attr.suppress.html) for silencing
+  * [`#[suppress]`](https://api.rocket.rs/v0.6-rc/rocket/attr.suppress.html) for silencing
     Rocket's lints.
-  * [`#[derive(FromParam)]`](https://api.rocket.rs/master/rocket/derive.FromParam.html) for enums
+  * [`#[derive(FromParam)]`](https://api.rocket.rs/v0.6-rc/rocket/derive.FromParam.html) for enums
     whose variants have no fields.
   * Mount points with any UTF-8 characters and consistent percent-encoding in [`uri!`].
   * A configurable [proxy protocol header] to identify requests a proxy received over TLS.
@@ -334,82 +334,82 @@ The following changes were made to the project's infrastructure:
   * Updated documentation for all changes.
   * Fixed many typos throughout documentation. ([#2989])
 
-[connection listeners]: https://api.rocket.rs/master/rocket/listener/index.html
-[Unix domain sockets]: https://api.rocket.rs/master/rocket/listener/unix/index.html
+[connection listeners]: https://api.rocket.rs/v0.6-rc/rocket/listener/index.html
+[Unix domain sockets]: https://api.rocket.rs/v0.6-rc/rocket/listener/unix/index.html
 [`tracing`]: https://docs.rs/tracing/0.1/tracing/
-[HTTP/3]: https://api.rocket.rs/master/rocket/listener/quic/index.html
-[`FileServer`]: https://api.rocket.rs/master/rocket/fs/struct.FileServer.html
-[rewrites]: https://api.rocket.rs/master/rocket/fs/rewrite/index.html
-[Dynamic TLS]: https://api.rocket.rs/master/rocket/tls/trait.Resolver.html
-[`Resolver`]: https://api.rocket.rs/master/rocket/tls/trait.Resolver.html
-[`CryptoProvider`]: https://rocket.rs/master/guide/configuration/#crypto-providers
-[Routes for any method]: https://rocket.rs/master/guide/requests/#methods
-[XML]: https://api.rocket.rs/master/rocket/serde/xml/index.html
-[data transformers]: https://api.rocket.rs/master/rocket/data/trait.Transform.html
-[`uri!`]: https://api.rocket.rs/master/rocket/macro.uri.html
-[proxy protocol header]: https://rocket.rs/master/guide/configuration/#proxied-tls
-[waker]: https://rocket.rs/master/guide/configuration/#wake-interval
-[`Error::report()`]: https://api.rocket.rs/master/rocket/error/struct.Error.html#method.report
-[Fairing retrieval]: https://api.rocket.rs/master/rocket/struct.Rocket.html#method.fairing
-[route matching]: https://api.rocket.rs/master/rocket/route/struct.Route.html#method.matches
-[upgrading guide]: https://rocket.rs/master/guide/upgrading/
-[`AdHoc::uri_normalizer()`]: https://api.rocket.rs/master/rocket/fairing/struct.AdHoc.html#method.uri_normalizer
-[`FileServer::new()`]: https://api.rocket.rs/master/rocket/fs/struct.FileServer.html#method.new
-[`MsgPack`]: https://api.rocket.rs/master/rocket/serde/msgpack/struct.MsgPack.html
-[`Compact`]: https://api.rocket.rs/master/rocket/serde/msgpack/type.Compact.html
-[`Error`]: https://api.rocket.rs/master/rocket/error/struct.Error.html
-[`MessageStream`]: https://api.rocket.rs/master/rocket_ws/stream/struct.MessageStream.html
-[`Rocket::endpoints()`]: https://api.rocket.rs/master/rocket/struct.Rocket.html#method.endpoints
-[`Rocket::reconfigure()`]: https://api.rocket.rs/master/rocket/struct.Rocket.html#method.reconfigure
-[`ShutdownConfig`]: https://api.rocket.rs/master/rocket/shutdown/struct.ShutdownConfig.html
-[`rocket::shutdown`]: https://api.rocket.rs/master/rocket/shutdown/index.html
-[`MtlsConfig`]: https://api.rocket.rs/master/rocket/mtls/struct.MtlsConfig.html
-[`tls::CipherSuite`]: https://api.rocket.rs/master/rocket/tls/enum.CipherSuite.html
-[`Level`]: https://api.rocket.rs/master/rocket/config/struct.Level.html
-[`CliColors`]: https://api.rocket.rs/master/rocket/config/enum.CliColors.html
-[`Trace::trace_error()`]: https://api.rocket.rs/master/rocket/trace/trait.Trace.html#method.trace_error
-[`Trace`]: https://api.rocket.rs/master/rocket/trace/trait.Trace.html
-[`ErrorKind`]: https://api.rocket.rs/master/rocket/error/enum.ErrorKind.html
-[`rocket::either::Either`]: https://api.rocket.rs/master/rocket/index.html#reexport.either
-[`route`]: https://api.rocket.rs/master/rocket/attr.route.html
-[`Method`]: https://api.rocket.rs/master/rocket/http/enum.Method.html
-[`Method::allows_request_body()`]: https://api.rocket.rs/master/rocket/http/enum.Method.html#method.allows_request_body
-[`Rocket::mount()`]: https://api.rocket.rs/master/rocket/struct.Rocket.html#method.mount
-[`Rocket::register()`]: https://api.rocket.rs/master/rocket/struct.Rocket.html#method.register
-[`RouteUri`]: https://api.rocket.rs/master/rocket/route/struct.RouteUri.html
-[`Catcher::base()`]: https://api.rocket.rs/master/rocket/catcher/struct.Catcher.html#method.base
-[`Empty`]: https://api.rocket.rs/master/rocket/error/struct.Empty.html
-[`Endpoint`]: https://api.rocket.rs/master/rocket/listener/enum.Endpoint.html
-[`Pool`]: https://api.rocket.rs/master/rocket_db_pools/trait.Pool.html
-[`InvalidOption`]: https://api.rocket.rs/master/rocket/error/struct.InvalidOption.html
-[`Rocket::fairing()`]: https://api.rocket.rs/master/rocket/struct.Rocket.html#method.fairing
-[`Rocket::launch_with()`]: https://api.rocket.rs/master/rocket/struct.Rocket.html#method.launch_with
-[`Rocket::launch_on()`]: https://api.rocket.rs/master/rocket/struct.Rocket.html#method.launch_on
-[`Rocket::try_launch_on()`]: https://api.rocket.rs/master/rocket/struct.Rocket.html#method.try_launch_on
-[`Route::rebase()`]: https://api.rocket.rs/master/rocket/route/struct.Route.html#method.rebase
-[`Catcher::rebase()`]: https://api.rocket.rs/master/rocket/catcher/struct.Catcher.html#method.rebase
-[`wake_interval`]: https://api.rocket.rs/master/rocket/struct.Config.html#structfield.wake_interval
-[`proxy_proto_header`]: https://api.rocket.rs/master/rocket/struct.Config.html#structfield.proxy_proto_header
-[`Request::proxy_proto()`]: https://api.rocket.rs/master/rocket/request/struct.Request.html#method.proxy_proto
-[`Request::context_is_likely_secure()`]: https://api.rocket.rs/master/rocket/request/struct.Request.html#method.context_is_likely_secure
-[`Data::chain_transform()`]: https://api.rocket.rs/master/rocket/data/struct.Data.html#method.chain_transform
-[`rocket::trace`]: https://api.rocket.rs/master/rocket/trace/index.html
-[`RocketFmt`]: https://api.rocket.rs/master/rocket/trace/subscriber/struct.RocketFmt.html
-[`RocketDynFmt`]: https://api.rocket.rs/master/rocket/trace/subscriber/struct.RocketDynFmt.html
-[`RequestId`]: https://api.rocket.rs/master/rocket/trace/subscriber/struct.RequestId.html
-[`rocket::serde::xml`]: https://api.rocket.rs/master/rocket/serde/xml/index.html
-[`HttpVersion`]: https://api.rocket.rs/master/rocket/http/enum.HttpVersion.html
-[`Request::version()`]: https://api.rocket.rs/master/rocket/request/struct.Request.html#method.version
-[`ProxyProto`]: https://api.rocket.rs/master/rocket/http/enum.ProxyProto.html
-[`Listener`]: https://api.rocket.rs/master/rocket/listener/trait.Listener.html
-[`Bind`]: https://api.rocket.rs/master/rocket/listener/trait.Bind.html
-[`rocket::tls`]: https://api.rocket.rs/master/rocket/tls/index.html
-[`TlsListener`]: https://api.rocket.rs/master/rocket/tls/struct.TlsListener.html
-[`Request::sni()`]: https://api.rocket.rs/master/rocket/request/struct.Request.html#method.sni
-[`LocalRequest::xml()`]: https://api.rocket.rs/master/rocket/local/blocking/struct.LocalRequest.html#method.xml
-[`LocalResponse::into_xml()`]: https://api.rocket.rs/master/rocket/local/blocking/struct.LocalResponse.html#method.into_xml
-[`FileServer::identity()`]: https://api.rocket.rs/master/rocket/fs/struct.FileServer.html#method.identity
-[`diesel::SqlitePool`]: https://api.rocket.rs/master/rocket_db_pools/diesel/type.SqlitePool.html
+[HTTP/3]: https://api.rocket.rs/v0.6-rc/rocket/listener/quic/index.html
+[`FileServer`]: https://api.rocket.rs/v0.6-rc/rocket/fs/struct.FileServer.html
+[rewrites]: https://api.rocket.rs/v0.6-rc/rocket/fs/rewrite/index.html
+[Dynamic TLS]: https://api.rocket.rs/v0.6-rc/rocket/tls/trait.Resolver.html
+[`Resolver`]: https://api.rocket.rs/v0.6-rc/rocket/tls/trait.Resolver.html
+[`CryptoProvider`]: https://rocket.rs/v0.6-rc/guide/configuration/#crypto-providers
+[Routes for any method]: https://rocket.rs/v0.6-rc/guide/requests/#methods
+[XML]: https://api.rocket.rs/v0.6-rc/rocket/serde/xml/index.html
+[data transformers]: https://api.rocket.rs/v0.6-rc/rocket/data/trait.Transform.html
+[`uri!`]: https://api.rocket.rs/v0.6-rc/rocket/macro.uri.html
+[proxy protocol header]: https://rocket.rs/v0.6-rc/guide/configuration/#proxied-tls
+[waker]: https://rocket.rs/v0.6-rc/guide/configuration/#wake-interval
+[`Error::report()`]: https://api.rocket.rs/v0.6-rc/rocket/error/struct.Error.html#method.report
+[Fairing retrieval]: https://api.rocket.rs/v0.6-rc/rocket/struct.Rocket.html#method.fairing
+[route matching]: https://api.rocket.rs/v0.6-rc/rocket/route/struct.Route.html#method.matches
+[upgrading guide]: https://rocket.rs/v0.6-rc/guide/upgrading/
+[`AdHoc::uri_normalizer()`]: https://api.rocket.rs/v0.6-rc/rocket/fairing/struct.AdHoc.html#method.uri_normalizer
+[`FileServer::new()`]: https://api.rocket.rs/v0.6-rc/rocket/fs/struct.FileServer.html#method.new
+[`MsgPack`]: https://api.rocket.rs/v0.6-rc/rocket/serde/msgpack/struct.MsgPack.html
+[`Compact`]: https://api.rocket.rs/v0.6-rc/rocket/serde/msgpack/type.Compact.html
+[`Error`]: https://api.rocket.rs/v0.6-rc/rocket/error/struct.Error.html
+[`MessageStream`]: https://api.rocket.rs/v0.6-rc/rocket_ws/stream/struct.MessageStream.html
+[`Rocket::endpoints()`]: https://api.rocket.rs/v0.6-rc/rocket/struct.Rocket.html#method.endpoints
+[`Rocket::reconfigure()`]: https://api.rocket.rs/v0.6-rc/rocket/struct.Rocket.html#method.reconfigure
+[`ShutdownConfig`]: https://api.rocket.rs/v0.6-rc/rocket/shutdown/struct.ShutdownConfig.html
+[`rocket::shutdown`]: https://api.rocket.rs/v0.6-rc/rocket/shutdown/index.html
+[`MtlsConfig`]: https://api.rocket.rs/v0.6-rc/rocket/mtls/struct.MtlsConfig.html
+[`tls::CipherSuite`]: https://api.rocket.rs/v0.6-rc/rocket/tls/enum.CipherSuite.html
+[`Level`]: https://api.rocket.rs/v0.6-rc/rocket/config/struct.Level.html
+[`CliColors`]: https://api.rocket.rs/v0.6-rc/rocket/config/enum.CliColors.html
+[`Trace::trace_error()`]: https://api.rocket.rs/v0.6-rc/rocket/trace/trait.Trace.html#method.trace_error
+[`Trace`]: https://api.rocket.rs/v0.6-rc/rocket/trace/trait.Trace.html
+[`ErrorKind`]: https://api.rocket.rs/v0.6-rc/rocket/error/enum.ErrorKind.html
+[`rocket::either::Either`]: https://api.rocket.rs/v0.6-rc/rocket/index.html#reexport.either
+[`route`]: https://api.rocket.rs/v0.6-rc/rocket/attr.route.html
+[`Method`]: https://api.rocket.rs/v0.6-rc/rocket/http/enum.Method.html
+[`Method::allows_request_body()`]: https://api.rocket.rs/v0.6-rc/rocket/http/enum.Method.html#method.allows_request_body
+[`Rocket::mount()`]: https://api.rocket.rs/v0.6-rc/rocket/struct.Rocket.html#method.mount
+[`Rocket::register()`]: https://api.rocket.rs/v0.6-rc/rocket/struct.Rocket.html#method.register
+[`RouteUri`]: https://api.rocket.rs/v0.6-rc/rocket/route/struct.RouteUri.html
+[`Catcher::base()`]: https://api.rocket.rs/v0.6-rc/rocket/catcher/struct.Catcher.html#method.base
+[`Empty`]: https://api.rocket.rs/v0.6-rc/rocket/error/struct.Empty.html
+[`Endpoint`]: https://api.rocket.rs/v0.6-rc/rocket/listener/enum.Endpoint.html
+[`Pool`]: https://api.rocket.rs/v0.6-rc/rocket_db_pools/trait.Pool.html
+[`InvalidOption`]: https://api.rocket.rs/v0.6-rc/rocket/error/struct.InvalidOption.html
+[`Rocket::fairing()`]: https://api.rocket.rs/v0.6-rc/rocket/struct.Rocket.html#method.fairing
+[`Rocket::launch_with()`]: https://api.rocket.rs/v0.6-rc/rocket/struct.Rocket.html#method.launch_with
+[`Rocket::launch_on()`]: https://api.rocket.rs/v0.6-rc/rocket/struct.Rocket.html#method.launch_on
+[`Rocket::try_launch_on()`]: https://api.rocket.rs/v0.6-rc/rocket/struct.Rocket.html#method.try_launch_on
+[`Route::rebase()`]: https://api.rocket.rs/v0.6-rc/rocket/route/struct.Route.html#method.rebase
+[`Catcher::rebase()`]: https://api.rocket.rs/v0.6-rc/rocket/catcher/struct.Catcher.html#method.rebase
+[`wake_interval`]: https://api.rocket.rs/v0.6-rc/rocket/struct.Config.html#structfield.wake_interval
+[`proxy_proto_header`]: https://api.rocket.rs/v0.6-rc/rocket/struct.Config.html#structfield.proxy_proto_header
+[`Request::proxy_proto()`]: https://api.rocket.rs/v0.6-rc/rocket/request/struct.Request.html#method.proxy_proto
+[`Request::context_is_likely_secure()`]: https://api.rocket.rs/v0.6-rc/rocket/request/struct.Request.html#method.context_is_likely_secure
+[`Data::chain_transform()`]: https://api.rocket.rs/v0.6-rc/rocket/data/struct.Data.html#method.chain_transform
+[`rocket::trace`]: https://api.rocket.rs/v0.6-rc/rocket/trace/index.html
+[`RocketFmt`]: https://api.rocket.rs/v0.6-rc/rocket/trace/subscriber/struct.RocketFmt.html
+[`RocketDynFmt`]: https://api.rocket.rs/v0.6-rc/rocket/trace/subscriber/struct.RocketDynFmt.html
+[`RequestId`]: https://api.rocket.rs/v0.6-rc/rocket/trace/subscriber/struct.RequestId.html
+[`rocket::serde::xml`]: https://api.rocket.rs/v0.6-rc/rocket/serde/xml/index.html
+[`HttpVersion`]: https://api.rocket.rs/v0.6-rc/rocket/http/enum.HttpVersion.html
+[`Request::version()`]: https://api.rocket.rs/v0.6-rc/rocket/request/struct.Request.html#method.version
+[`ProxyProto`]: https://api.rocket.rs/v0.6-rc/rocket/http/enum.ProxyProto.html
+[`Listener`]: https://api.rocket.rs/v0.6-rc/rocket/listener/trait.Listener.html
+[`Bind`]: https://api.rocket.rs/v0.6-rc/rocket/listener/trait.Bind.html
+[`rocket::tls`]: https://api.rocket.rs/v0.6-rc/rocket/tls/index.html
+[`TlsListener`]: https://api.rocket.rs/v0.6-rc/rocket/tls/struct.TlsListener.html
+[`Request::sni()`]: https://api.rocket.rs/v0.6-rc/rocket/request/struct.Request.html#method.sni
+[`LocalRequest::xml()`]: https://api.rocket.rs/v0.6-rc/rocket/local/blocking/struct.LocalRequest.html#method.xml
+[`LocalResponse::into_xml()`]: https://api.rocket.rs/v0.6-rc/rocket/local/blocking/struct.LocalResponse.html#method.into_xml
+[`FileServer::identity()`]: https://api.rocket.rs/v0.6-rc/rocket/fs/struct.FileServer.html#method.identity
+[`diesel::SqlitePool`]: https://api.rocket.rs/v0.6-rc/rocket_db_pools/diesel/type.SqlitePool.html
 [#21]: https://github.com/rwf2/Rocket/issues/21
 [#232]: https://github.com/rwf2/Rocket/issues/232
 [#775]: https://github.com/rwf2/Rocket/issues/775

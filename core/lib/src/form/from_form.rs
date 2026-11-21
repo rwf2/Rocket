@@ -65,7 +65,7 @@ use crate::http::uncased::AsUncased;
 /// [FromFormField]: crate::form::FromFormField
 /// [`shift()`ed]: NameView::shift()
 /// [`key()`]: NameView::key()
-/// [forms guide]: https://rocket.rs/master/guide/requests/#forms
+/// [forms guide]: https://rocket.rs/v0.6-rc/guide/requests/#forms
 ///
 /// # Parsing Strategy
 ///

@@ -1,11 +1,11 @@
 [package]
 name = "rocket_dyn_templates"
-version = "0.4.0-dev"
+version = "0.4.0-rc.1"
 authors = ["Sergio Benitez <sb@sergio.bz>"]
 description = "Dynamic templating engine integration for Rocket."
-documentation = "https://api.rocket.rs/master/rocket_dyn_templates/"
+documentation = "https://api.rocket.rs/v0.6-rc/rocket_dyn_templates/"
 homepage = "https://rocket.rs"
-repository = "https://github.com/rwf2/Rocket/tree/master/contrib/dyn_templates"
+repository = "https://github.com/rwf2/Rocket/tree/v0.6-rc/contrib/dyn_templates"
 readme = "README.md"
 keywords = ["rocket", "framework", "templates", "templating", "engine"]
 license = "MIT OR Apache-2.0"
@@ -34,7 +34,7 @@ optional = true
 features = ["serde", "speedups", "json", "urlencode"]
 
 [dependencies.rocket]
-version = "0.6.0-dev"
+version = "=0.6.0-rc.1"
 path = "../../core/lib"
 default-features = false
 

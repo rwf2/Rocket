@@ -21,5 +21,5 @@ provides answers to commonly asked questions.
 
 The best way to learn Rocket is to _build something_. It should be fun and easy,
 and there's always someone to help. Alternatively, you can read through the
-[Rocket examples](@git/master/examples) or the [Rocket source code](@git/master/core/lib/src).
+[Rocket examples](@git/v0.6-rc/examples) or the [Rocket source code](@git/v0.6-rc/core/lib/src).
 Whatever you decide to do next, we hope you have a blast!

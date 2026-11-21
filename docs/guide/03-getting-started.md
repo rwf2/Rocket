@@ -47,7 +47,7 @@ Now, add Rocket as a dependency in your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rocket = "0.6.0-dev"
+rocket = "=0.6.0-rc.1"
 ```
 
 ! warning: Development versions must be _git_ dependencies.

@@ -55,13 +55,13 @@ Unlike other frameworks, Rocket makes it its mission to help you avoid security
 and correctness blunders. It does this by including, out-of-the-box:
 
   * A flexible, type-based [configuration](../configuration/) system.
-  * [Security and privacy headers](@api/master/rocket/shield/) by default.
-  * Zero-Copy RFC compliant [URI parsers](@api/master/rocket/http/uri).
-  * Safe, [typed URIs](@api/master/rocket/macro.uri.html) with compile-time checking.
-  * [Compile-time and launch-time route checking](@api/master/rocket/attr.route.html).
-  * A [testing framework](@api/master/rocket/local) with sync and `async` variants.
+  * [Security and privacy headers](@api/v0.6-rc/rocket/shield/) by default.
+  * Zero-Copy RFC compliant [URI parsers](@api/v0.6-rc/rocket/http/uri).
+  * Safe, [typed URIs](@api/v0.6-rc/rocket/macro.uri.html) with compile-time checking.
+  * [Compile-time and launch-time route checking](@api/v0.6-rc/rocket/attr.route.html).
+  * A [testing framework](@api/v0.6-rc/rocket/local) with sync and `async` variants.
   * Safe, exclusive access to fully decoded HTTP values.
-  * Mandatory [data limits](@api/master/rocket/data/struct.Limits.html) to prevent
+  * Mandatory [data limits](@api/v0.6-rc/rocket/data/struct.Limits.html) to prevent
     trivial DoS attacks.
 
 Of course, this functionality comes at a compile-time cost (but notably, _not_
@@ -83,8 +83,8 @@ time can be further reduced by using faster linkers like `lld`. We think the
 trade-off is worth it. Rocket will never compromise security, correctness, or
 usability to "win" at benchmarks of any sort.
 
-[`rocket_dyn_templates`]: @api/master/rocket_dyn_templates/
-[`rocket_db_pools`]: @api/master/rocket_db_pools/
+[`rocket_dyn_templates`]: @api/v0.6-rc/rocket_dyn_templates/
+[`rocket_db_pools`]: @api/v0.6-rc/rocket_db_pools/
 {{ endfaq() }}
 
 
@@ -258,7 +258,7 @@ Can I, and if so how, do I use WebSockets?
 {{ answer() }}
 
 You can! WebSocket support is provided by the officially maintained
-[`rocket_ws`](@api/master/rocket_ws/) crate. You'll find all the docs you need
+[`rocket_ws`](@api/v0.6-rc/rocket_ws/) crate. You'll find all the docs you need
 there.
 
 Rocket _also_ supports [Server-Sent Events], which allows for real-time
@@ -267,8 +267,8 @@ bit simpler, and you may find SSE sufficient for your use-case. For instance,
 the [chat example] uses SSE to implement a real-time, multiroom chat
 application.
 
-[Server-Sent Events]: @api/master/rocket/response/stream/struct.EventStream.html
-[chat example]: @git/master/examples/chat
+[Server-Sent Events]: @api/v0.6-rc/rocket/response/stream/struct.EventStream.html
+[chat example]: @git/v0.6-rc/examples/chat
 {{ endfaq() }}
 
 {{ faq("global-state") }}
@@ -304,12 +304,12 @@ submissions into any type that implements [`FromForm`]. This includes types like
 
 [multipart]: https://datatracker.ietf.org/doc/html/rfc7578
 [multipart forms]: ../requests/#multipart
-[`DataField`]: @api/master/rocket/form/struct.DataField.html
-[`TempFile`]: @api/master/rocket/fs/enum.TempFile.html
-[`DataField`]: @api/master/rocket/data/struct.Data.html
-[`Form`]: @api/master/rocket/form/struct.Form.html
-[`FromForm`]: @api/master/rocket/form/trait.FromForm.html
-[`Data`]: @api/master/rocket/struct.Data.html
+[`DataField`]: @api/v0.6-rc/rocket/form/struct.DataField.html
+[`TempFile`]: @api/v0.6-rc/rocket/fs/enum.TempFile.html
+[`DataField`]: @api/v0.6-rc/rocket/data/struct.Data.html
+[`Form`]: @api/v0.6-rc/rocket/form/struct.Form.html
+[`FromForm`]: @api/v0.6-rc/rocket/form/trait.FromForm.html
+[`Data`]: @api/v0.6-rc/rocket/struct.Data.html
 {{ endfaq() }}
 
 {{ faq("raw-request") }}
@@ -338,11 +338,11 @@ out-of-the-box, and you can implement your own, too. See the following:
   * Request Guards: [`FromRequest`]
 
 [philosophy]: ../introduction/#foreword
-[`FromParam`]: @api/master/rocket/request/trait.FromParam.html
-[`FromSegments`]: @api/master/rocket/request/trait.FromSegments.html
-[`FromData`]: @api/master/rocket/data/trait.FromData.html
-[`FromForm`]: @api/master/rocket/form/trait.FromForm.html
-[`FromRequest`]: @api/master/rocket/request/trait.FromRequest.html
+[`FromParam`]: @api/v0.6-rc/rocket/request/trait.FromParam.html
+[`FromSegments`]: @api/v0.6-rc/rocket/request/trait.FromSegments.html
+[`FromData`]: @api/v0.6-rc/rocket/data/trait.FromData.html
+[`FromForm`]: @api/v0.6-rc/rocket/form/trait.FromForm.html
+[`FromRequest`]: @api/v0.6-rc/rocket/request/trait.FromRequest.html
 {{ endfaq() }}
 
 {{ faq("response-headers") }}
@@ -372,7 +372,7 @@ details setting a custom `Content-Type` or overriding an existing one.
 **Everything Else**
 
 To add a custom header, you'll need a custom [`Responder`]. Not to worry!
-[`Responder` can be derived](@api/master/rocket/derive.Responder.html) in almost all
+[`Responder` can be derived](@api/v0.6-rc/rocket/derive.Responder.html) in almost all
 cases. If a type for the header you want to add already exists, you can directly
 derive `Responder` for a struct that contains the header value, which adds the
 header to the response:
@@ -429,11 +429,11 @@ impl<'r> Responder<'r, 'static> for Person {
 }
 ```
 
-[`Responder`]: @api/master/rocket/response/trait.Responder.html
-[`content`]: @api/master/rocket/response/content/index.html
-[`status`]: @api/master/rocket/response/status/index.html
-[`Header`]: @api/master/rocket/http/struct.Header.html
-[`Json`]: @api/master/rocket/serde/json/struct.Json.html
+[`Responder`]: @api/v0.6-rc/rocket/response/trait.Responder.html
+[`content`]: @api/v0.6-rc/rocket/response/content/index.html
+[`status`]: @api/v0.6-rc/rocket/response/status/index.html
+[`Header`]: @api/v0.6-rc/rocket/http/struct.Header.html
+[`Json`]: @api/v0.6-rc/rocket/serde/json/struct.Json.html
 {{ endfaq() }}
 
 {{ faq("multiple-responses") }}
@@ -462,7 +462,7 @@ enum Error<'r, T> {
 ```
 
 [`Either<A, B>`]: https://docs.rs/either/1/either/enum.Either.html
-[derive a custom `Responder`]: @api/master/rocket/derive.Responder.html
+[derive a custom `Responder`]: @api/v0.6-rc/rocket/derive.Responder.html
 {{ endfaq() }}
 
 {{ faq("automatic-reload") }}
@@ -535,7 +535,7 @@ async fn main() {
 The cost to using the attribute is imperceptible and guarantees compatibility
 with Rocket's async I/O.
 
-[`launch()`]: @api/master/rocket/struct.Rocket.html#method.launch
+[`launch()`]: @api/v0.6-rc/rocket/struct.Rocket.html#method.launch
 {{ endfaq() }}
 
 ## Debugging
@@ -585,7 +585,7 @@ is to depend on a `contrib` library from git while also depending on a
 `crates.io` version of Rocket or vice-versa:
 
 ```toml
-rocket = "0.6.0-dev"
+rocket = "=0.6.0-rc.1"
 rocket_db_pools = { git = "https://github.com/rwf2/Rocket.git" }
 ```
 

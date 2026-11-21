@@ -64,8 +64,8 @@ use crate::request::{Outcome, Request, FromRequest};
 /// assert!(matches!(error.kind(), ErrorKind::InsecureSecretKey(profile)));
 /// ```
 ///
-/// [private cookies]: https://rocket.rs/master/guide/requests/#private-cookies
-/// [configuration guide]: https://rocket.rs/master/guide/configuration/#secret-key
+/// [private cookies]: https://rocket.rs/v0.6-rc/guide/requests/#private-cookies
+/// [configuration guide]: https://rocket.rs/v0.6-rc/guide/configuration/#secret-key
 #[derive(Clone)]
 #[cfg_attr(nightly, doc(cfg(feature = "secrets")))]
 pub struct SecretKey {

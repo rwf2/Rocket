@@ -18,7 +18,7 @@ directory. For instance, the following set of commands runs the `hello` example:
 ```sh
 git clone https://github.com/rwf2/Rocket
 cd Rocket
-git checkout master
+git checkout v0.6-rc
 cd examples/hello
 cargo run
 ```

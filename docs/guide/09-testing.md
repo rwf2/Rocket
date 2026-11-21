@@ -53,10 +53,10 @@ instance. Usage is straightforward:
      # let _ = response;
      ```
 
-[`local`]: @api/master/rocket/local/
-[`Client`]: @api/master/rocket/local/#client
-[`LocalRequest`]: @api/master/rocket/local/#localrequest
-[`Rocket`]: @api/master/rocket/struct.Rocket.html
+[`local`]: @api/v0.6-rc/rocket/local/
+[`Client`]: @api/v0.6-rc/rocket/local/#client
+[`LocalRequest`]: @api/v0.6-rc/rocket/local/#localrequest
+[`Rocket`]: @api/v0.6-rc/rocket/struct.Rocket.html
 
 ## Validating Responses
 
@@ -77,15 +77,15 @@ a few below:
   * [`into_msgpack`]: deserializes the body data on-the-fly as MessagePack.
   * [`into_xml`]: deserializes the body data on-the-fly as XML.
 
-[`LocalResponse`]: @api/master/rocket/local/blocking/struct.LocalResponse.html
-[`status`]: @api/master/rocket/local/blocking/struct.LocalResponse.html#method.status
-[`content_type`]: @api/master/rocket/local/blocking/struct.LocalResponse.html#method.content_type
-[`headers`]: @api/master/rocket/local/blocking/struct.LocalResponse.html#method.headers
-[`into_string`]: @api/master/rocket/local/blocking/struct.LocalResponse.html#method.into_string
-[`into_bytes`]: @api/master/rocket/local/blocking/struct.LocalResponse.html#method.into_bytes
-[`into_json`]: @api/master/rocket/local/blocking/struct.LocalResponse.html#method.into_json
-[`into_msgpack`]: @api/master/rocket/local/blocking/struct.LocalResponse.html#method.into_msgpack
-[`into_xml`]: @api/master/rocket/local/blocking/struct.LocalResponse.html#method.into_xml
+[`LocalResponse`]: @api/v0.6-rc/rocket/local/blocking/struct.LocalResponse.html
+[`status`]: @api/v0.6-rc/rocket/local/blocking/struct.LocalResponse.html#method.status
+[`content_type`]: @api/v0.6-rc/rocket/local/blocking/struct.LocalResponse.html#method.content_type
+[`headers`]: @api/v0.6-rc/rocket/local/blocking/struct.LocalResponse.html#method.headers
+[`into_string`]: @api/v0.6-rc/rocket/local/blocking/struct.LocalResponse.html#method.into_string
+[`into_bytes`]: @api/v0.6-rc/rocket/local/blocking/struct.LocalResponse.html#method.into_bytes
+[`into_json`]: @api/v0.6-rc/rocket/local/blocking/struct.LocalResponse.html#method.into_json
+[`into_msgpack`]: @api/v0.6-rc/rocket/local/blocking/struct.LocalResponse.html#method.into_msgpack
+[`into_xml`]: @api/v0.6-rc/rocket/local/blocking/struct.LocalResponse.html#method.into_xml
 
 These methods are typically used in combination with the `assert_eq!` or
 `assert!` macros as follows:
@@ -277,7 +277,7 @@ mod test {
 ```
 
 The tests can be run with `cargo test`. You can find the full source code to
-[this example on GitHub](@git/master/examples/testing).
+[this example on GitHub](@git/v0.6-rc/examples/testing).
 
 ## Asynchronous Testing
 
@@ -291,9 +291,9 @@ capable of dispatching multiple requests simultaneously. While synthetic, the
 a case. For more information, see the [`rocket::local`] and
 [`rocket::local::asynchronous`] documentation.
 
-[`rocket::local`]: @api/master/rocket/local/index.html
-[`rocket::local::asynchronous`]: @api/master/rocket/local/asynchronous/index.html
-[`async_required` `testing` example]: @git/master/examples/testing/src/async_required.rs
+[`rocket::local`]: @api/v0.6-rc/rocket/local/index.html
+[`rocket::local::asynchronous`]: @api/v0.6-rc/rocket/local/asynchronous/index.html
+[`async_required` `testing` example]: @git/v0.6-rc/examples/testing/src/async_required.rs
 
 ## Codegen Debug
 

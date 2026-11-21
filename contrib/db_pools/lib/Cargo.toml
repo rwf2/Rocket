@@ -1,9 +1,9 @@
 [package]
 name = "rocket_db_pools"
-version = "0.4.0-dev"
+version = "0.4.0-rc.1"
 authors = ["Sergio Benitez <sb@sergio.bz>", "Jeb Rosen <jeb@jebrosen.com>"]
 description = "Rocket async database pooling support"
-repository = "https://github.com/rwf2/Rocket/tree/master/contrib/db_pools"
+repository = "https://github.com/rwf2/Rocket/tree/v0.6-rc/contrib/db_pools"
 readme = "../README.md"
 keywords = ["rocket", "framework", "database", "pools"]
 license = "MIT OR Apache-2.0"
@@ -53,12 +53,12 @@ postgres_rustls_native_certs = [
 
 [dependencies.rocket]
 path = "../../../core/lib"
-version = "0.6.0-dev"
+version = "=0.6.0-rc.1"
 default-features = false
 
 [dependencies.rocket_db_pools_codegen]
 path = "../codegen"
-version = "=0.4.0-dev"
+version = "=0.4.0-rc.1"
 
 [dependencies.deadpool]
 version = "0.13.1"

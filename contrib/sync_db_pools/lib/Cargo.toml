@@ -1,9 +1,9 @@
 [package]
 name = "rocket_sync_db_pools"
-version = "0.3.0-dev"
+version = "0.3.0-rc.1"
 authors = ["Sergio Benitez <sb@sergio.bz>"]
 description = "Rocket async database pooling support for sync database drivers."
-repository = "https://github.com/rwf2/Rocket/tree/master/contrib/sync_db_pools"
+repository = "https://github.com/rwf2/Rocket/tree/v0.6-rc/contrib/sync_db_pools"
 readme = "../README.md"
 keywords = ["rocket", "framework", "database", "pools"]
 license = "MIT OR Apache-2.0"
@@ -39,11 +39,11 @@ r2d2_sqlite = { version = "0.37", optional = true }
 memcache = { version = "0.21", optional = true }
 
 [dependencies.rocket_sync_db_pools_codegen]
-version = "=0.3.0-dev"
+version = "=0.3.0-rc.1"
 path = "../codegen"
 
 [dependencies.rocket]
-version = "0.6.0-dev"
+version = "=0.6.0-rc.1"
 path = "../../../core/lib"
 default-features = false
 
@@ -51,7 +51,6 @@ default-features = false
 version_check = "0.9.4"
 
 [dev-dependencies.rocket]
-version = "0.6.0-dev"
 path = "../../../core/lib"
 default-features = false
 features = ["trace"]

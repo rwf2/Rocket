@@ -196,9 +196,9 @@ as we expected.
 ! note: This and other examples are on GitHub.
 
   An expanded version of this example's complete crate, ready to `cargo run`,
-  can be found on [GitHub](@git/master/examples/hello). You can find dozens of other
+  can be found on [GitHub](@git/v0.6-rc/examples/hello). You can find dozens of other
   complete examples, spanning all of Rocket's features, in the [GitHub examples
-  directory](@git/master/examples/).
+  directory](@git/v0.6-rc/examples/).
 
 The second approach uses the `#[rocket::main]` route attribute.
 `#[rocket::main]` _also_ generates a `main` function that sets up an async
@@ -227,8 +227,8 @@ async fn main() -> Result<(), rocket::Error> {
 is desired, or when the return value of [`launch()`] is to be inspected. The
 [error handling example] for instance, inspects the return value.
 
-[`launch()`]: @api/master/rocket/struct.Rocket.html#method.launch
-[error handling example]: @git/master/examples/error-handling
+[`launch()`]: @api/v0.6-rc/rocket/struct.Rocket.html#method.launch
+[error handling example]: @git/v0.6-rc/examples/error-handling
 
 ## Futures and Async
 
@@ -255,8 +255,8 @@ You can find async-ready libraries on [crates.io](https://crates.io) with the
 `async` tag.
 
 [`Future`]: @std/future/trait.Future.html
-[`Data`]: @api/master/rocket/struct.Data.html
-[`DataStream`]: @api/master/rocket/data/enum.DataStream.html
+[`Data`]: @api/v0.6-rc/rocket/struct.Data.html
+[`DataStream`]: @api/v0.6-rc/rocket/data/enum.DataStream.html
 [Routes]: ../requests/
 [Error Catchers]: ../requests/#error-catchers
 [`FromData`]: ../requests/#body-data

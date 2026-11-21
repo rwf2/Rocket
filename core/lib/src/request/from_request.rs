@@ -380,7 +380,7 @@ pub type Outcome<S, E> = outcome::Outcome<S, (Status, E), Status>;
 /// Notice that these request guards provide access to *borrowed* data (`&'a
 /// User` and `Admin<'a>`) as the data is now owned by the request's cache.
 ///
-/// [request-local state]: https://rocket.rs/master/guide/state/#request-local-state
+/// [request-local state]: https://rocket.rs/v0.6-rc/guide/state/#request-local-state
 #[crate::async_trait]
 pub trait FromRequest<'r>: Sized {
     /// The associated error to be returned if derivation fails.

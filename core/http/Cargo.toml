@@ -1,11 +1,11 @@
 [package]
 name = "rocket_http"
-version = "0.6.0-dev"
+version = "0.6.0-rc.1"
 authors = ["Sergio Benitez <sb@sergio.bz>"]
 description = """
 Types, traits, and parsers for HTTP requests, responses, and headers.
 """
-documentation = "https://api.rocket.rs/master/rocket_http/"
+documentation = "https://api.rocket.rs/v0.6-rc/rocket_http/"
 homepage = "https://rocket.rs"
 repository = "https://github.com/rwf2/Rocket"
 readme = "../../README.md"

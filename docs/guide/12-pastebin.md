@@ -56,7 +56,7 @@ Then add the usual Rocket dependencies to the `Cargo.toml` file:
 
 ```toml
 [dependencies]
-rocket = "0.6.0-dev"
+rocket = "=0.6.0-rc.1"
 ```
 
 And finally, create a skeleton Rocket application to work off of in
@@ -113,7 +113,7 @@ string with the specified contents. Rocket will take the string and return it as
 the body of a fully formed HTTP response with `Content-Type: text/plain`. You
 can read more about how Rocket formulates responses in the [responses section]
 of the guide or at the [API documentation for the Responder
-trait](@api/master/rocket/response/trait.Responder.html).
+trait](@api/v0.6-rc/rocket/response/trait.Responder.html).
 
 [responses section]: ../responses/
 
@@ -253,7 +253,7 @@ Here's a first take at implementing the `retrieve` route. The route below takes
 in an `<id>` as a dynamic path element. The handler uses the `id` to construct a
 path to the paste inside `upload/`, and then attempts to open the file at that
 path, optionally returning the `File` if it exists. Rocket treats a `None`
-[Responder](@api/master/rocket/response/trait.Responder.html#provided-implementations)
+[Responder](@api/v0.6-rc/rocket/response/trait.Responder.html#provided-implementations)
 as a **404** error, which is exactly what we want to return when the requested
 paste doesn't exist.
 
@@ -320,7 +320,7 @@ paste IDs, `PasteId`, so we'll simply need to implement `FromParam` for
 
 Here's the `FromParam` implementation for `PasteId` in `src/paste_id.rs`:
 
-[`FromParam`]: @api/master/rocket/request/trait.FromParam.html
+[`FromParam`]: @api/v0.6-rc/rocket/request/trait.FromParam.html
 
 ```rust
 use rocket::request::FromParam;
@@ -409,7 +409,7 @@ async fn upload(paste: Data<'_>) -> std::io::Result<String> {
 }
 ```
 
-[`Data`]: @api/master/rocket/data/struct.Data.html
+[`Data`]: @api/v0.6-rc/rocket/data/struct.Data.html
 [data guard]: ../requests/#body-data
 
 Your code should:
@@ -472,14 +472,14 @@ We note the following Rocket APIs being used in our implementation:
   * The [`UriDisplayPath`] derive, allowing `PasteId` to be used in [`uri!`].
   * The [`uri!`] macro to create type-safe, URL-safe URIs.
 
-[`Data::open()`]: @api/master/rocket/data/struct.Data.html#method.open
-[`Data`]: @api/master/rocket/data/struct.Data.html
-[`DataStream`]: @api/master/rocket/data/enum.DataStream.html
-[`DataStream::into_file()`]: @api/master/rocket/data/enum.DataStream.html#method.into_file
-[`uri!`]: @api/master/rocket/macro.uri.html
-[`kibibytes()`]: @api/master/rocket/data/trait.ToByteUnit.html#method.kibibytes
-[`ToByteUnit`]: @api/master/rocket/data/trait.ToByteUnit.html
-[`UriDisplayPath`]: @api/master/rocket/derive.UriDisplayPath.html
+[`Data::open()`]: @api/v0.6-rc/rocket/data/struct.Data.html#method.open
+[`Data`]: @api/v0.6-rc/rocket/data/struct.Data.html
+[`DataStream`]: @api/v0.6-rc/rocket/data/enum.DataStream.html
+[`DataStream::into_file()`]: @api/v0.6-rc/rocket/data/enum.DataStream.html#method.into_file
+[`uri!`]: @api/v0.6-rc/rocket/macro.uri.html
+[`kibibytes()`]: @api/v0.6-rc/rocket/data/trait.ToByteUnit.html#method.kibibytes
+[`ToByteUnit`]: @api/v0.6-rc/rocket/data/trait.ToByteUnit.html
+[`UriDisplayPath`]: @api/v0.6-rc/rocket/derive.UriDisplayPath.html
 
 Ensure that the route is mounted at the root path:
 
@@ -541,10 +541,10 @@ through some of them to get a better feel for Rocket. Here are some ideas:
   * Add a new route, `GET /<id>/<lang>` that syntax highlights the paste with ID
     `<id>` for language `<lang>`. If `<lang>` is not a known language, do no
     highlighting. Possibly validate `<lang>` with `FromParam`.
-  * Use the [`local` module](@api/master/rocket/local/) to write unit tests for your
+  * Use the [`local` module](@api/v0.6-rc/rocket/local/) to write unit tests for your
     pastebin.
   * Dispatch a thread before `launch`ing Rocket in `main` that periodically
     cleans up idling old pastes in `upload/`.
 
 You can find the full source code for the [completed pastebin tutorial on
-GitHub](@git/master/examples/pastebin).
+GitHub](@git/v0.6-rc/examples/pastebin).

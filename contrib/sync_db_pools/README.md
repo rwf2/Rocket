@@ -3,7 +3,7 @@
 [crates.io]: https://img.shields.io/crates/v/rocket_sync_db_pools.svg
 [crate]: https://crates.io/crates/rocket_sync_db_pools
 [docs.svg]: https://img.shields.io/badge/web-master-red.svg?style=flat&label=docs&colorB=d33847
-[crate docs]: https://api.rocket.rs/master/rocket_sync_db_pools
+[crate docs]: https://api.rocket.rs/v0.6-rc/rocket_sync_db_pools
 [ci.svg]: https://github.com/rwf2/Rocket/workflows/CI/badge.svg
 [ci]: https://github.com/rwf2/Rocket/actions
 
@@ -19,7 +19,7 @@ First, enable the feature corresponding to your database type:
 
 ```toml
 [dependencies.rocket_sync_db_pools]
-version = "0.3.0-dev"
+version = "=0.3.0-rc.1"
 features = ["diesel_sqlite_pool"]
 ```
 

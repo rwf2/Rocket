@@ -1,7 +1,7 @@
 //! Support for mutual TLS client certificates.
 //!
 //! For details on how to configure mutual TLS, see [`MtlsConfig`] and the [TLS
-//! guide](https://rocket.rs/master/guide/configuration/#tls). See
+//! guide](https://rocket.rs/v0.6-rc/guide/configuration/#tls). See
 //! [`Certificate`] for a request guard that validates, verifies, and retrieves
 //! client certificates.
 

@@ -1,11 +1,11 @@
 [package]
 name = "rocket_ws"
-version = "0.3.0-dev"
+version = "0.3.0-rc.1"
 authors = ["Sergio Benitez <sb@sergio.bz>"]
 description = "WebSocket support for Rocket."
-documentation = "https://api.rocket.rs/master/rocket_ws/"
+documentation = "https://api.rocket.rs/v0.6-rc/rocket_ws/"
 homepage = "https://rocket.rs"
-repository = "https://github.com/rwf2/Rocket/tree/master/contrib/ws"
+repository = "https://github.com/rwf2/Rocket/tree/v0.6-rc/contrib/ws"
 readme = "README.md"
 keywords = ["rocket", "web", "framework", "websocket"]
 license = "MIT OR Apache-2.0"
@@ -24,7 +24,7 @@ tokio-tungstenite = { version = "0.30", optional = true }
 data-encoding = "2.2.1"
 
 [dependencies.rocket]
-version = "0.6.0-dev"
+version = "=0.6.0-rc.1"
 path = "../../core/lib"
 default-features = false
 

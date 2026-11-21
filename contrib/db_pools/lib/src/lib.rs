@@ -7,7 +7,7 @@
 //!
 //!    ```toml
 //!    [dependencies.rocket_db_pools]
-//!    version = "0.4.0-dev"
+//!    version = "=0.4.0-rc.1"
 //!    features = ["sqlx_sqlite"]
 //!    ```
 //!
@@ -164,7 +164,7 @@
 //!
 //! ```toml
 //! [dependencies.rocket_db_pools]
-//! version = "0.4.0-dev"
+//! version = "=0.4.0-rc.1"
 //! features = ["diesel_postgres", "postgres_rustls_native_certs"]
 //! ```
 //!
@@ -194,7 +194,7 @@
 //! features = ["macros", "migrate"]
 //!
 //! [dependencies.rocket_db_pools]
-//! version = "0.4.0-dev"
+//! version = "=0.4.0-rc.1"
 //! features = ["sqlx_sqlite"]
 //! ```
 //!
@@ -353,7 +353,7 @@
 //! the [`Pool`] trait. To support customization via [`Database::custom()`],
 //! also implement [`Configurable`].
 
-#![doc(html_root_url = "https://api.rocket.rs/master/rocket_db_pools")]
+#![doc(html_root_url = "https://api.rocket.rs/v0.6-rc/rocket_db_pools")]
 #![doc(html_favicon_url = "https://rocket.rs/images/favicon.ico")]
 #![doc(html_logo_url = "https://rocket.rs/images/logo-boxed.png")]
 

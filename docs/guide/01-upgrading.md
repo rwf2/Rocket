@@ -17,7 +17,7 @@ This guide is _not_ intended to replace, but instead complement, a reading of
 the [CHANGELOG]. The [CHANGELOG] should be considered required reading for all
 developers wishing to migrate their applications to Rocket v0.6.
 
-[CHANGELOG]: @git/master/CHANGELOG.md
+[CHANGELOG]: @git/v0.6-rc/CHANGELOG.md
 
 ! warning: Some changes are invisible to the compiler.
 
@@ -29,37 +29,37 @@ developers wishing to migrate their applications to Rocket v0.6.
 
 ## Crate Versions
 
-Rocket v0.6 is in development and has not been released. Its crates carry
-`-dev` versions:
+Rocket v0.6 is available as a release candidate. Its crates carry `-rc`
+versions:
 
 | crate                    | v0.5 version | v0.6 version |
 |--------------------------|--------------|--------------|
-| [`rocket`]               | `0.5.4`      | `0.6.0-dev`  |
-| [`rocket_db_pools`]      | `0.3.0`      | `0.4.0-dev`  |
-| [`rocket_dyn_templates`] | `0.3.0`      | `0.4.0-dev`  |
-| [`rocket_sync_db_pools`] | `0.2.0`      | `0.3.0-dev`  |
-| [`rocket_ws`]            | `0.2.0`      | `0.3.0-dev`  |
+| [`rocket`]               | `0.5.4`      | `0.6.0-rc.1` |
+| [`rocket_db_pools`]      | `0.3.0`      | `0.4.0-rc.1` |
+| [`rocket_dyn_templates`] | `0.3.0`      | `0.4.0-rc.1` |
+| [`rocket_sync_db_pools`] | `0.2.0`      | `0.3.0-rc.1` |
+| [`rocket_ws`]            | `0.2.0`      | `0.3.0-rc.1` |
 
-Development versions are not published, so they must be _git_ dependencies. For
-example, to depend on `rocket` and `rocket_dyn_templates` at a given commit,
-with `######` replaced by the commit hash, make the following changes to
-`Cargo.toml`:
+Breaking changes may occur between release candidates, so a release candidate
+must be specified with an exact version requirement, prefixed with `=`. For
+example, to depend on the release candidates of `rocket` and
+`rocket_dyn_templates`, make the following changes to `Cargo.toml`:
 
 ```diff
 [dependencies]
 - rocket = { version = "0.5.4", features = ["json"] }
 - rocket_dyn_templates = { version = "0.3.0", features = ["tera"] }
-+ rocket = { git = "https://github.com/rwf2/Rocket", rev = "######", features = ["json"] }
-+ rocket_dyn_templates = { git = "https://github.com/rwf2/Rocket", rev = "######", features = ["tera"] }
++ rocket = { version = "=0.6.0-rc.1", features = ["json"] }
++ rocket_dyn_templates = { version = "=0.4.0-rc.1", features = ["tera"] }
 ```
 
 Rocket v0.6 and all of its contrib libraries require Rust **1.95** or later.
 
-[`rocket`]: @api/master/rocket/
-[`rocket_db_pools`]: @api/master/rocket_db_pools/
-[`rocket_dyn_templates`]: @api/master/rocket_dyn_templates/
-[`rocket_sync_db_pools`]: @api/master/rocket_sync_db_pools/
-[`rocket_ws`]: @api/master/rocket_ws/
+[`rocket`]: @api/v0.6-rc/rocket/
+[`rocket_db_pools`]: @api/v0.6-rc/rocket_db_pools/
+[`rocket_dyn_templates`]: @api/v0.6-rc/rocket_dyn_templates/
+[`rocket_sync_db_pools`]: @api/v0.6-rc/rocket_sync_db_pools/
+[`rocket_ws`]: @api/v0.6-rc/rocket_ws/
 
 ### Default Features
 
@@ -75,8 +75,7 @@ needed. To keep the previous defaults, enable them alongside `http2`:
 
 ```toml
 [dependencies.rocket]
-git = "https://github.com/rwf2/Rocket"
-rev = "######"
+version = "=0.6.0-rc.1"
 default-features = false
 features = ["http2", "trace", "tokio-macros"]
 ```
@@ -85,8 +84,8 @@ The reexported `tokio` also no longer enables `tokio`'s `io-std` feature.
 Applications that use `rocket::tokio::io::stdin()` or similar _must_ depend on
 `tokio` directly with the `io-std` feature enabled.
 
-[tracing subscriber]: @api/master/rocket/trace/subscriber/index.html
-[`rocket::tokio`]: @api/master/rocket/index.html#reexport.tokio
+[tracing subscriber]: @api/v0.6-rc/rocket/trace/subscriber/index.html
+[`rocket::tokio`]: @api/v0.6-rc/rocket/index.html#reexport.tokio
 
 ## Routing
 
@@ -124,7 +123,7 @@ fn foo() -> &'static str { "no slash" }
 fn foo_slash() -> &'static str { "slash" }
 ```
 
-[`FromParam`]: @api/master/rocket/request/trait.FromParam.html
+[`FromParam`]: @api/v0.6-rc/rocket/request/trait.FromParam.html
 
 ### Normalizing URIs
 
@@ -165,8 +164,8 @@ updating routes and clients. Note that:
     }
     ```
 
-[`AdHoc::uri_normalizer()`]: @api/master/rocket/fairing/struct.AdHoc.html#method.uri_normalizer
-[`FileServer`]: @api/master/rocket/fs/struct.FileServer.html
+[`AdHoc::uri_normalizer()`]: @api/v0.6-rc/rocket/fairing/struct.AdHoc.html#method.uri_normalizer
+[`FileServer`]: @api/v0.6-rc/rocket/fs/struct.FileServer.html
 
 ### Parameters
 
@@ -189,8 +188,8 @@ when parsing fails, use [`Either`]:
 + fn item(id: Either<usize, &str>) { /* .. */ }
 ```
 
-[`Empty`]: @api/master/rocket/error/struct.Empty.html
-[`Either`]: @api/master/rocket/index.html#reexport.either
+[`Empty`]: @api/v0.6-rc/rocket/error/struct.Empty.html
+[`Either`]: @api/v0.6-rc/rocket/index.html#reexport.either
 
 ### Route Attribute
 
@@ -209,7 +208,7 @@ the IANA HTTP method registry can be named, either as an identifier like
 `PROPFIND` or as a string like `"VERSION-CONTROL"`. The [methods] section of the
 guide has examples.
 
-[`route`]: @api/master/rocket/attr.route.html
+[`route`]: @api/v0.6-rc/rocket/attr.route.html
 [methods]: ../requests/#methods
 
 ### Methods
@@ -226,10 +225,10 @@ and is marked `#[non_exhaustive]`. Accordingly:
   * [`Route::method`] is now an `Option<Method>`, where `None` matches any
     method. [`Route::new()`] accepts a `Method` or an `Option<Method>`.
 
-[`Method`]: @api/master/rocket/http/enum.Method.html
-[`Method::allows_request_body()`]: @api/master/rocket/http/enum.Method.html#method.allows_request_body
-[`Route::method`]: @api/master/rocket/route/struct.Route.html#structfield.method
-[`Route::new()`]: @api/master/rocket/route/struct.Route.html#method.new
+[`Method`]: @api/v0.6-rc/rocket/http/enum.Method.html
+[`Method::allows_request_body()`]: @api/v0.6-rc/rocket/http/enum.Method.html#method.allows_request_body
+[`Route::method`]: @api/v0.6-rc/rocket/route/struct.Route.html#structfield.method
+[`Route::new()`]: @api/v0.6-rc/rocket/route/struct.Route.html#method.new
 
 ### Mount Points
 
@@ -247,10 +246,10 @@ path. Previously, a base had to be a valid origin URI.
     which routes mounted at `/a%20b` have always matched, and no longer catches
     errors from requests to `/a%20b/..`.
 
-[`Rocket::mount()`]: @api/master/rocket/struct.Rocket.html#method.mount
-[`Rocket::register()`]: @api/master/rocket/struct.Rocket.html#method.register
-[`Route::rebase()`]: @api/master/rocket/route/struct.Route.html#method.rebase
-[`Catcher::rebase()`]: @api/master/rocket/catcher/struct.Catcher.html#method.rebase
+[`Rocket::mount()`]: @api/v0.6-rc/rocket/struct.Rocket.html#method.mount
+[`Rocket::register()`]: @api/v0.6-rc/rocket/struct.Rocket.html#method.register
+[`Route::rebase()`]: @api/v0.6-rc/rocket/route/struct.Route.html#method.rebase
+[`Catcher::rebase()`]: @api/v0.6-rc/rocket/catcher/struct.Catcher.html#method.rebase
 
 ## File Server
 
@@ -294,10 +293,10 @@ For example, a v0.5 file server that serves dotfiles but no index files becomes:
 without serving index files. Custom rewrites can be written as closures or by
 implementing [`Rewriter`].
 
-[rewrites]: @api/master/rocket/fs/rewrite/index.html
-[`FileServer::new()`]: @api/master/rocket/fs/struct.FileServer.html#method.new
-[`FileServer::without_index()`]: @api/master/rocket/fs/struct.FileServer.html#method.without_index
-[`Rewriter`]: @api/master/rocket/fs/rewrite/trait.Rewriter.html
+[rewrites]: @api/v0.6-rc/rocket/fs/rewrite/index.html
+[`FileServer::new()`]: @api/v0.6-rc/rocket/fs/struct.FileServer.html#method.new
+[`FileServer::without_index()`]: @api/v0.6-rc/rocket/fs/struct.FileServer.html#method.without_index
+[`Rewriter`]: @api/v0.6-rc/rocket/fs/rewrite/trait.Rewriter.html
 
 ## Logging
 
@@ -331,8 +330,8 @@ parameter selects between `"pretty"` output, the default in debug mode, and
 `"compact"` output, the default in release mode.
 
 [`tracing`]: https://docs.rs/tracing/0.1/tracing/
-[`Level`]: @api/master/rocket/config/struct.Level.html
-[`CliColors`]: @api/master/rocket/config/enum.CliColors.html
+[`Level`]: @api/v0.6-rc/rocket/config/struct.Level.html
+[`CliColors`]: @api/v0.6-rc/rocket/config/enum.CliColors.html
 
 ### Logging Macros
 
@@ -363,8 +362,8 @@ installed. To use your own subscriber, install it before creating an instance
 of `Rocket`. Rocket's subscriber can also be used as a layer in your own
 subscriber via the [`trace::subscriber`] module.
 
-[`rocket::tracing`]: @api/master/rocket/index.html#reexport.tracing
-[`trace::subscriber`]: @api/master/rocket/trace/subscriber/index.html
+[`rocket::tracing`]: @api/v0.6-rc/rocket/index.html#reexport.tracing
+[`trace::subscriber`]: @api/v0.6-rc/rocket/trace/subscriber/index.html
 
 ## Configuration
 
@@ -419,13 +418,13 @@ fn rocket() -> _ {
 }
 ```
 
-[`Config`]: @api/master/rocket/struct.Config.html
-[connection listeners]: @api/master/rocket/listener/index.html
-[`Rocket::endpoints()`]: @api/master/rocket/struct.Rocket.html#method.endpoints
-[`Rocket::reconfigure()`]: @api/master/rocket/struct.Rocket.html#method.reconfigure
-[`ShutdownConfig`]: @api/master/rocket/shutdown/struct.ShutdownConfig.html
-[`MtlsConfig`]: @api/master/rocket/mtls/struct.MtlsConfig.html
-[`tls::CipherSuite`]: @api/master/rocket/tls/enum.CipherSuite.html
+[`Config`]: @api/v0.6-rc/rocket/struct.Config.html
+[connection listeners]: @api/v0.6-rc/rocket/listener/index.html
+[`Rocket::endpoints()`]: @api/v0.6-rc/rocket/struct.Rocket.html#method.endpoints
+[`Rocket::reconfigure()`]: @api/v0.6-rc/rocket/struct.Rocket.html#method.reconfigure
+[`ShutdownConfig`]: @api/v0.6-rc/rocket/shutdown/struct.ShutdownConfig.html
+[`MtlsConfig`]: @api/v0.6-rc/rocket/mtls/struct.MtlsConfig.html
+[`tls::CipherSuite`]: @api/v0.6-rc/rocket/tls/enum.CipherSuite.html
 
 ### Addresses
 
@@ -439,7 +438,7 @@ path prefixed with `unix:`. A `port`, if set, replaces the port in a TCP
 address = "unix:/run/app/rocket.sock"
 ```
 
-[`Endpoint`]: @api/master/rocket/listener/enum.Endpoint.html
+[`Endpoint`]: @api/v0.6-rc/rocket/listener/enum.Endpoint.html
 
 ### TLS
 
@@ -459,14 +458,14 @@ remains available as `rocket::config::TlsConfig`. Beyond the renames above:
     that use these types or depend on `x509-parser`, `der-parser`,
     `oid-registry`, or `asn1-rs` directly may need to update.
 
-[`tls`]: @api/master/rocket/tls/index.html
-[`mtls`]: @api/master/rocket/mtls/index.html
-[`TlsConfig`]: @api/master/rocket/tls/struct.TlsConfig.html
+[`tls`]: @api/v0.6-rc/rocket/tls/index.html
+[`mtls`]: @api/v0.6-rc/rocket/mtls/index.html
+[`TlsConfig`]: @api/v0.6-rc/rocket/tls/struct.TlsConfig.html
 [`CryptoProvider`]: @rustls/crypto/struct.CryptoProvider.html
 [crypto providers]: ../configuration/#crypto-providers
-[`mtls::x509`]: @api/master/rocket/mtls/x509/index.html
-[`mtls::oid`]: @api/master/rocket/mtls/oid/index.html
-[`mtls::bigint`]: @api/master/rocket/mtls/bigint/index.html
+[`mtls::x509`]: @api/v0.6-rc/rocket/mtls/x509/index.html
+[`mtls::oid`]: @api/v0.6-rc/rocket/mtls/oid/index.html
+[`mtls::bigint`]: @api/v0.6-rc/rocket/mtls/bigint/index.html
 
 ## Errors and Launch
 
@@ -498,11 +497,11 @@ changed:
   * `Liftoff` is new and indicates that liftoff failed, for instance, because a
     liftoff fairing panicked.
 
-[`rocket::Error`]: @api/master/rocket/error/struct.Error.html
-[`Error::report()`]: @api/master/rocket/error/struct.Error.html#method.report
+[`rocket::Error`]: @api/v0.6-rc/rocket/error/struct.Error.html
+[`Error::report()`]: @api/v0.6-rc/rocket/error/struct.Error.html#method.report
 [`ExitCode`]: @std/process/struct.ExitCode.html
-[`Trace::trace_error()`]: @api/master/rocket/trace/trait.Trace.html#method.trace_error
-[`ErrorKind`]: @api/master/rocket/error/enum.ErrorKind.html
+[`Trace::trace_error()`]: @api/v0.6-rc/rocket/trace/trait.Trace.html#method.trace_error
+[`ErrorKind`]: @api/v0.6-rc/rocket/error/enum.ErrorKind.html
 
 ## HTTP and Connections
 
@@ -539,10 +538,10 @@ returns an `Option<&mut dyn IoHandler>`.
   }
 ```
 
-[`Request::remote()`]: @api/master/rocket/request/struct.Request.html#method.remote
-[`Endpoint::tcp()`]: @api/master/rocket/listener/enum.Endpoint.html#method.tcp
-[`IoHandler`]: @api/master/rocket/data/trait.IoHandler.html
-[`Response::upgrade()`]: @api/master/rocket/response/struct.Response.html#method.upgrade
+[`Request::remote()`]: @api/v0.6-rc/rocket/request/struct.Request.html#method.remote
+[`Endpoint::tcp()`]: @api/v0.6-rc/rocket/listener/enum.Endpoint.html#method.tcp
+[`IoHandler`]: @api/v0.6-rc/rocket/data/trait.IoHandler.html
+[`Response::upgrade()`]: @api/v0.6-rc/rocket/response/struct.Response.html#method.upgrade
 
 ### Other API Changes
 
@@ -559,11 +558,11 @@ The following changes are less likely to affect applications:
   * The `IntoCollection` trait has been removed. APIs that accepted one,
     like `Accept::new()`, accept an `IntoIterator`.
 
-[`Client::tracked()`]: @api/master/rocket/local/blocking/struct.Client.html#method.tracked
-[`RouteUri`]: @api/master/rocket/route/struct.RouteUri.html
-[`Catcher::base()`]: @api/master/rocket/catcher/struct.Catcher.html#method.base
-[`Segments::num()`]: @api/master/rocket/http/uri/struct.Segments.html#method.num
-[`rocket::either::Either`]: @api/master/rocket/index.html#reexport.either
+[`Client::tracked()`]: @api/v0.6-rc/rocket/local/blocking/struct.Client.html#method.tracked
+[`RouteUri`]: @api/v0.6-rc/rocket/route/struct.RouteUri.html
+[`Catcher::base()`]: @api/v0.6-rc/rocket/catcher/struct.Catcher.html#method.base
+[`Segments::num()`]: @api/v0.6-rc/rocket/http/uri/struct.Segments.html#method.num
+[`rocket::either::Either`]: @api/v0.6-rc/rocket/index.html#reexport.either
 
 ## Typed URIs
 
@@ -585,7 +584,7 @@ way as route URIs:
     any prefix or suffix is added. For a route URI of `/<a>/<b>`, the values
     `""` and `"b"` now generate `/b` where they previously generated `//b`.
 
-[`uri!`]: @api/master/rocket/macro.uri.html
+[`uri!`]: @api/v0.6-rc/rocket/macro.uri.html
 
 ## Behavior Changes
 
@@ -621,9 +620,9 @@ any code changes:
 
     `MsgPack<T>` continues to deserialize both encodings.
 
-[grace period]: @api/master/rocket/shutdown/struct.ShutdownConfig.html#structfield.grace
-[`MsgPack`]: @api/master/rocket/serde/msgpack/struct.MsgPack.html
-[`Compact`]: @api/master/rocket/serde/msgpack/type.Compact.html
+[grace period]: @api/v0.6-rc/rocket/shutdown/struct.ShutdownConfig.html#structfield.grace
+[`MsgPack`]: @api/v0.6-rc/rocket/serde/msgpack/struct.MsgPack.html
+[`Compact`]: @api/v0.6-rc/rocket/serde/msgpack/type.Compact.html
 
 ## Contrib
 
@@ -674,8 +673,8 @@ The contrib libraries are largely unchanged. Note the following:
 `rocket_db_pools` also adds support for Diesel's SQLite backend via the new
 `diesel_sqlite` feature and [`diesel::SqlitePool`].
 
-[`Pool`]: @api/master/rocket_db_pools/trait.Pool.html
-[`diesel::SqlitePool`]: @api/master/rocket_db_pools/diesel/type.SqlitePool.html
+[`Pool`]: @api/v0.6-rc/rocket_db_pools/trait.Pool.html
+[`diesel::SqlitePool`]: @api/v0.6-rc/rocket_db_pools/diesel/type.SqlitePool.html
 
 ## Notable New Features
 
@@ -695,10 +694,10 @@ Rocket can launch on a listener that implements `Bind` with
 [`Rocket::launch_with()`] or on an existing listener with
 [`Rocket::launch_on()`].
 
-[`Listener`]: @api/master/rocket/listener/trait.Listener.html
-[`Bind`]: @api/master/rocket/listener/trait.Bind.html
-[`Rocket::launch_with()`]: @api/master/rocket/struct.Rocket.html#method.launch_with
-[`Rocket::launch_on()`]: @api/master/rocket/struct.Rocket.html#method.launch_on
+[`Listener`]: @api/v0.6-rc/rocket/listener/trait.Listener.html
+[`Bind`]: @api/v0.6-rc/rocket/listener/trait.Bind.html
+[`Rocket::launch_with()`]: @api/v0.6-rc/rocket/struct.Rocket.html#method.launch_with
+[`Rocket::launch_on()`]: @api/v0.6-rc/rocket/struct.Rocket.html#method.launch_on
 
 ### HTTP/3
 
@@ -707,14 +706,14 @@ enable it, enable the `http3-preview` feature and configure TLS:
 
 ```toml
 [dependencies]
-rocket = { git = "https://github.com/rwf2/Rocket", rev = "######", features = ["http3-preview"] }
+rocket = { version = "=0.6.0-rc.1", features = ["http3-preview"] }
 ```
 
 When TLS is configured, Rocket serves HTTP/3 alongside HTTP/1 and HTTP/2 on the
 same port and advertises it via the `Alt-Svc` header. HTTP/3 requires the
 `TLS_AES_128_GCM_SHA256` cipher suite to be enabled.
 
-[HTTP/3]: @api/master/rocket/listener/quic/index.html
+[HTTP/3]: @api/v0.6-rc/rocket/listener/quic/index.html
 
 ### Tracing
 
@@ -724,7 +723,7 @@ formats them in `pretty` or `compact` form. Applications can emit events with
 the reexported `tracing` macros and use any `tracing` subscriber. The [`trace`]
 module contains Rocket's tracing facilities.
 
-[`trace`]: @api/master/rocket/trace/index.html
+[`trace`]: @api/v0.6-rc/rocket/trace/index.html
 
 ### XML
 
@@ -732,7 +731,7 @@ The new `xml` feature adds [XML] support in the same style as JSON and
 MessagePack: `Xml<T>` is a data guard, a form guard, and a responder, and the
 local client provides `LocalRequest::xml()` and `LocalResponse::into_xml()`.
 
-[XML]: @api/master/rocket/serde/xml/index.html
+[XML]: @api/v0.6-rc/rocket/serde/xml/index.html
 
 ### Lint Suppression
 
@@ -748,7 +747,7 @@ unknown media type in a `format` or a `GET` route that accepts a body. The new
 fn index(body: &str) { /* .. */ }
 ```
 
-[`suppress`]: @api/master/rocket/attr.suppress.html
+[`suppress`]: @api/v0.6-rc/rocket/attr.suppress.html
 
 ### Enum Parameters
 
@@ -786,14 +785,14 @@ Rocket v0.6 includes several other additions:
   * Route introspection: `Route::matches()` and `Route::collides_with()`, and
     their `Catcher` analogs, test requests and collisions.
 
-[Fairing retrieval]: @api/master/rocket/struct.Rocket.html#method.fairing
+[Fairing retrieval]: @api/v0.6-rc/rocket/struct.Rocket.html#method.fairing
 [Proxied TLS]: ../configuration/#proxied-tls
-[Dynamic TLS]: @api/master/rocket/tls/trait.Resolver.html
-[`Resolver`]: @api/master/rocket/tls/trait.Resolver.html
+[Dynamic TLS]: @api/v0.6-rc/rocket/tls/trait.Resolver.html
+[`Resolver`]: @api/v0.6-rc/rocket/tls/trait.Resolver.html
 [Wake interval]: ../configuration/#wake-interval
-[Data transforms]: @api/master/rocket/data/struct.Data.html#method.chain_transform
-[`Request::sni()`]: @api/master/rocket/request/struct.Request.html#method.sni
-[`Request::version()`]: @api/master/rocket/request/struct.Request.html#method.version
+[Data transforms]: @api/v0.6-rc/rocket/data/struct.Data.html#method.chain_transform
+[`Request::sni()`]: @api/v0.6-rc/rocket/request/struct.Request.html#method.sni
+[`Request::version()`]: @api/v0.6-rc/rocket/request/struct.Request.html#method.version
 
 ## Getting Help
 

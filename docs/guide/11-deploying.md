@@ -92,10 +92,10 @@ The following section addresses these concerns and more for common deployment
 scenarios.
 
 [DDoS mitigation]: @github/issues/1405
-[graceful shutdown]: @api/master/rocket/shutdown/struct.ShutdownConfig.html
-[`Shutdown`]: @api/master/rocket/struct.Shutdown.html
-[shutdown fairings]: @api/master/rocket/fairing/trait.Fairing.html#method.on_shutdown
-[triggers]: @api/master/rocket/shutdown/struct.ShutdownConfig.html#triggers
+[graceful shutdown]: @api/v0.6-rc/rocket/shutdown/struct.ShutdownConfig.html
+[`Shutdown`]: @api/v0.6-rc/rocket/struct.Shutdown.html
+[shutdown fairings]: @api/v0.6-rc/rocket/fairing/trait.Fairing.html#method.on_shutdown
+[triggers]: @api/v0.6-rc/rocket/shutdown/struct.ShutdownConfig.html#triggers
 
 ## Common Scenarios
 
@@ -224,8 +224,8 @@ Our recommendation for a direct self-managed deployment is to:
     or audit attribution.
 
 [`cargo-zigbuild`]: https://github.com/rust-cross/cargo-zigbuild
-[`ip_header`]: @api/master/rocket/config/struct.Config.html#structfield.ip_header
-[`proxy_proto_header`]: @api/master/rocket/config/struct.Config.html#structfield.proxy_proto_header
+[`ip_header`]: @api/v0.6-rc/rocket/config/struct.Config.html#structfield.ip_header
+[`proxy_proto_header`]: @api/v0.6-rc/rocket/config/struct.Config.html#structfield.proxy_proto_header
 
 ### Containerization
 

@@ -1,11 +1,11 @@
 [package]
 name = "rocket"
-version = "0.6.0-dev"
+version = "0.6.0-rc.1"
 authors = ["Sergio Benitez <sb@sergio.bz>"]
 description = """
 Web framework with a focus on usability, security, extensibility, and speed.
 """
-documentation = "https://api.rocket.rs/master/rocket/"
+documentation = "https://api.rocket.rs/v0.6-rc/rocket/"
 homepage = "https://rocket.rs"
 repository = "https://github.com/rwf2/Rocket"
 readme = "../../README.md"
@@ -89,11 +89,11 @@ default-features = false
 features = ["fmt", "tracing-log", "parking_lot"]
 
 [dependencies.rocket_codegen]
-version = "0.6.0-dev"
+version = "=0.6.0-rc.1"
 path = "../codegen"
 
 [dependencies.rocket_http]
-version = "0.6.0-dev"
+version = "=0.6.0-rc.1"
 path = "../http"
 features = ["serde"]
 

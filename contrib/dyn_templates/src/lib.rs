@@ -12,7 +12,7 @@
 //!
 //!      ```toml
 //!      [dependencies.rocket_dyn_templates]
-//!      version = "0.4.0-dev"
+//!      version = "=0.4.0-rc.1"
 //!      features = ["handlebars", "tera", "minijinja"]
 //!      ```
 //!
@@ -79,7 +79,7 @@
 //! See the [configuration chapter] of the guide for more information on
 //! configuration.
 //!
-//! [configuration chapter]: https://rocket.rs/master/guide/configuration
+//! [configuration chapter]: https://rocket.rs/v0.6-rc/guide/configuration
 //!
 //! ## Template Naming and Content-Types
 //!
@@ -175,7 +175,7 @@
 //! ([`Metadata::contains_template()`]), and to render templates to `String`
 //! ([`Metadata::render()`]).
 
-#![doc(html_root_url = "https://api.rocket.rs/master/rocket_dyn_templates")]
+#![doc(html_root_url = "https://api.rocket.rs/v0.6-rc/rocket_dyn_templates")]
 #![doc(html_favicon_url = "https://rocket.rs/images/favicon.ico")]
 #![doc(html_logo_url = "https://rocket.rs/images/logo-boxed.png")]
 
