@@ -1,4 +1,4 @@
-# Version 0.6.0-rc.1 (Unreleased)
+# Version 0.6.0-rc.1 (Nov 21, 2026)
 
 ## Major Features and Improvements
 
@@ -298,6 +298,28 @@ In addition to new features and major improvements, Rocket saw the following imp
     `pin-project-lite`, `x509-parser`, or any TLS library. Its `tls`, `mtls`, `http2`,
     `private-cookies`, and `rustls-pemfile` features were removed.
 
+## Known Issues
+
+This release candidate has the following known issues:
+
+  * Over HTTP/3, when a client cancels a request whose response body is waiting for data, the
+    body is not dropped until the connection closes. HTTP/1 and HTTP/2 drop it at once. `h3` and
+    `h3-quinn` do not expose the signal that the client stopped the stream. ([h3#350])
+  * `h3` reads a request's entire HTTP/3 header frame into memory before the header size limit is
+    checked, so the memory a request's headers use is bounded only by what the client sends
+    before the 15 second header timeout. ([h3#294])
+  * `h3` 0.0.8 keeps a request registered when its headers never arrive, because they time out or
+    the client abandons the request. After the client sends `GOAWAY`, such an HTTP/3 connection
+    is not considered drained and stays open until the client closes it. This is fixed in `h3`
+    and pending a release. ([h3#365])
+  * After a client sends `GOAWAY`, `h3` replies with a `GOAWAY` that carries the ID of the last
+    request it accepted. HTTP/3 expects the ID of the first request that won't be processed.
+  * At shutdown, Rocket waits for each HTTP/3 client to close its connection, up to the grace
+    period, since only the client knows when it has received every response.
+  * With the `xml` feature, an XML declaration and whitespace written as `CDATA` or a character
+    reference are accepted after a value, since `quick-xml` hides them from the deserializer.
+    Several top-level elements deserialize as a sequence.
+
 ## Infrastructure
 
 The following changes were made to the project's infrastructure:
@@ -415,6 +437,9 @@ The following changes were made to the project's infrastructure:
 [#2969]: https://github.com/rwf2/Rocket/issues/2969
 [#2989]: https://github.com/rwf2/Rocket/issues/2989
 [#3015]: https://github.com/rwf2/Rocket/issues/3015
+[h3#294]: https://github.com/hyperium/h3/issues/294
+[h3#350]: https://github.com/hyperium/h3/issues/350
+[h3#365]: https://github.com/hyperium/h3/pull/365
 
 # Version 0.5.4 (Nov 19, 2026)
 
