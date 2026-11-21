@@ -48,19 +48,28 @@ CORE_CODEGEN_ROOT=$(relative "core/codegen") || exit $?
 CORE_HTTP_ROOT=$(relative "core/http") || exit $?
 
 CORE_CRATE_ROOTS=(
-    "${CORE_LIB_ROOT}"
-    "${CORE_CODEGEN_ROOT}"
     "${CORE_HTTP_ROOT}"
+    "${CORE_CODEGEN_ROOT}"
+    "${CORE_LIB_ROOT}"
 )
 
 CONTRIB_SYNC_DB_POOLS_CRATE_ROOTS=(
-    "${CONTRIB_ROOT}/sync_db_pools/lib"
     "${CONTRIB_ROOT}/sync_db_pools/codegen"
+    "${CONTRIB_ROOT}/sync_db_pools/lib"
 )
 
 CONTRIB_DB_POOLS_CRATE_ROOTS=(
-    "${CONTRIB_ROOT}/db_pools/lib"
     "${CONTRIB_ROOT}/db_pools/codegen"
+    "${CONTRIB_ROOT}/db_pools/lib"
+)
+
+# All publishable crates, in the order they must be published.
+ALL_CRATE_ROOTS=(
+    "${CORE_CRATE_ROOTS[@]}"
+    "${CONTRIB_SYNC_DB_POOLS_CRATE_ROOTS[@]}"
+    "${CONTRIB_DB_POOLS_CRATE_ROOTS[@]}"
+    "${CONTRIB_ROOT}/dyn_templates"
+    "${CONTRIB_ROOT}/ws"
 )
 
 # Root of infrastructure directories.
@@ -96,6 +105,7 @@ function print_environment() {
   echo "  CONTRIB_DB_POOLS_CRATE_ROOTS: ${CONTRIB_DB_POOLS_CRATE_ROOTS[*]}"
   echo "  EXAMPLES_DIR: ${EXAMPLES_DIR}"
   echo "  DOC_DIR: ${DOC_DIR}"
+  echo "  ALL_CRATE_ROOTS: ${ALL_CRATE_ROOTS[*]}"
   echo "  date(): $(future_date)"
 }
 
