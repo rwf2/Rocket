@@ -23,8 +23,9 @@ values:
 
 | key                  | kind               | description                                     | debug/release default         |
 |----------------------|--------------------|-------------------------------------------------|-------------------------------|
-| `address`            | `IpAddr`           | IP address to serve on.                         | `127.0.0.1`                   |
+| `address`            | [`Endpoint`]       | Address or `unix:` path to serve on.            | `127.0.0.1`                   |
 | `port`               | `u16`              | Port to serve on.                               | `8000`                        |
+| `reuse`              | `bool`             | Whether to reuse an existing Unix socket file.  | `true`                        |
 | `workers`*           | `usize`            | Number of threads to use for executing futures. | cpu core count                |
 | `max_blocking`*      | `usize`            | Limit on threads to start for blocking tasks.   | `512`                         |
 | [`wake_interval`]    | `u32`              | Runtime wake interval in ms; disabled when `0`. | `250`                         |
@@ -33,7 +34,9 @@ values:
 | `proxy_proto_header` | `string`, `false`  | Header identifying [client to proxy protocol].  | `None`                        |
 | `keep_alive`         | `u32`              | Keep-alive timeout seconds; disabled when `0`.  | `5`                           |
 | `linger`             | `u32`              | Linger time seconds; disabled when `0`.         | `10`                          |
+| `temp_dir`           | `string`           | Directory to store temporary files in.          | [`std::env::temp_dir()`]      |
 | `log_level`          | [`Level`]          | Max level to log; disabled when `off`.          | `info`/`error`                |
+| `log_format`         | [`TraceFormat`]    | Format to use when logging.                     | `pretty`/`compact`            |
 | `cli_colors`         | [`CliColors`]      | Whether to use colors and emoji when logging.   | `"auto"`                      |
 | `secret_key`         | [`SecretKey`]      | Secret key for signing and encrypting values.   | `None`                        |
 | `tls`                | [`TlsConfig`]      | TLS configuration, if any.                      | `None`                        |
@@ -46,7 +49,16 @@ values:
 <small>* Note: the `workers`, `max_blocking`, and `shutdown.force` configuration
 parameters are only read from the [default provider](#default-provider).</small>
 
+The `address`, `port`, `reuse`, and `tls` parameters are read by the default
+connection listener. An `address` may be an IP address, a socket address with
+a port, or a Unix domain socket path prefixed with `unix:`, as in
+`unix:/run/rocket.sock`. If set, `port` replaces the port in a TCP `address`.
+The `reuse` parameter only applies to Unix domain sockets.
+
 [client's real IP]: @api/master/rocket/request/struct.Request.html#method.real_ip
+[`Endpoint`]: @api/master/rocket/listener/enum.Endpoint.html
+[`TraceFormat`]: @api/master/rocket/trace/enum.TraceFormat.html
+[`std::env::temp_dir()`]: @std/env/fn.temp_dir.html
 [client to proxy protocol]: @api/master/rocket/request/struct.Request.html#method.proxy_proto
 [`wake_interval`]: #wake-interval
 
@@ -97,10 +109,11 @@ sources in ascending priority order:
 
 The selected profile is the value of the `ROCKET_PROFILE` environment variable,
 or if it is not set, "debug" when compiled in debug mode and "release" when
-compiled in release mode. With the exception of `log_level`, which changes from
-`info` in debug to `error` in release, all of the default configuration
-values are the same in all profiles. What's more, all configuration values
-_have_ defaults, so no configuration is needed to get started.
+compiled in release mode. With the exception of `log_level` and `log_format`,
+which change from `info` and `pretty` in debug to `error` and `compact` in
+release, all of the default configuration values are the same in all profiles.
+What's more, all configuration values _have_ defaults, so no configuration is
+needed to get started.
 
 As a result of `Config::figment()`, without any effort, Rocket can be configured
 via a `Rocket.toml` file and/or via environment variables, the latter of which
@@ -164,6 +177,7 @@ ident = "Rocket"
 ip_header = "X-Real-IP" # set to `false` to disable
 proxy_proto_header = false # set to `false` (the default) to disable
 log_level = "info"
+log_format = "pretty"
 temp_dir = "/tmp"
 cli_colors = true
 # NOTE: Don't (!) use this key! Generate your own and keep it private!
