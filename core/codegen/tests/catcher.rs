@@ -58,3 +58,15 @@ fn test_status_param() {
         assert_eq!(response.into_string().unwrap(), code.to_string());
     }
 }
+
+macro_rules! macro_catcher {
+    ($name:ident, $code:literal) => {
+        #[allow(dead_code)]
+        #[catch($code)]
+        fn $name(status: Status, req: &Request<'_>) -> String {
+            format!("{} {}", status, req.uri())
+        }
+    }
+}
+
+macro_catcher!(in_macro, 404);

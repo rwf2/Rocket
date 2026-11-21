@@ -347,3 +347,35 @@ fn test_inclusive_segments() {
     assert_eq!(get("//a//b////c/d/e"), "nonempty+c/d/e");
     assert_eq!(get("//a//b////c/d/e/"), "nonempty+c/d/e/");
 }
+
+// Routes may be declared by macros, with their tokens coming from different
+// macro expansions.
+macro_rules! empty_get {
+    ($name:ident) => {
+        #[allow(dead_code)]
+        #[get("/")]
+        async fn $name() {}
+    }
+}
+
+empty_get!(test);
+
+macro_rules! full_post {
+    ($name:ident, $id:ident: $id_ty:ty, $guard_ty:ty, $ret:ty) => {
+        #[allow(dead_code)]
+        #[post("/<id>/<rest..>?<q>&<form..>", data = "<data>")]
+        async fn $name(
+            $id: $id_ty,
+            rest: std::path::PathBuf,
+            q: Option<u8>,
+            form: Option<Inner<'_>>,
+            guard: $guard_ty,
+            data: String,
+        ) -> $ret {
+            let _ = ($id, rest, q, form, guard, data);
+            Default::default()
+        }
+    }
+}
+
+full_post!(full, id: usize, &rocket::State<u8>, String);

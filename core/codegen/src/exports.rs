@@ -108,6 +108,14 @@ macro_rules! define_spanned_export {
     ($span:expr => $($name:ident),*) => ($(define!($span => $name $name);)*)
 }
 
+/// Returns a span located at `span` that resolves at the macro's call site, as
+/// the identifiers of a route's generated function do. Tokens in a route may
+/// come from different macro expansions, and thus resolve differently.
+#[inline(always)]
+pub fn local(span: Span) -> Span {
+    Span::call_site().located_at(span)
+}
+
 /// Convenience: returns a "mixed site" span located at `span`.
 #[inline(always)]
 pub fn mixed(span: Span) -> Span {

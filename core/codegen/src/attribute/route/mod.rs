@@ -10,7 +10,7 @@ use crate::proc_macro_ext::StringLit;
 use crate::syn_ext::{IdentExt, TypeExt as _};
 use crate::http_codegen::{Method, Optional};
 use crate::attribute::param::Guard;
-use crate::exports::mixed;
+use crate::exports::{mixed, local};
 
 use self::parse::{Route, Attribute, MethodAttribute};
 
@@ -124,9 +124,8 @@ fn query_decls(route: &Route) -> Option<TokenStream> {
 
 fn request_guard_decl(guard: &Guard) -> TokenStream {
     let (ident, ty) = (guard.fn_ident.rocketized(), &guard.ty);
-    define_spanned_export!(ty.span() =>
-        __req, __data, _request, display_hack, FromRequest, Outcome
-    );
+    define_spanned_export!(local(ty.span()) => __req, __data);
+    define_spanned_export!(ty.span() => _request, display_hack, FromRequest, Outcome);
 
     quote_spanned! { ty.span() =>
         let #ident: #ty = match <#ty as #FromRequest>::from_request(#__req).await {
@@ -162,9 +161,9 @@ fn request_guard_decl(guard: &Guard) -> TokenStream {
 
 fn param_guard_decl(guard: &Guard) -> TokenStream {
     let (i, name, ty) = (guard.index, &guard.name, &guard.ty);
+    define_spanned_export!(local(ty.span()) => __req, __data);
     define_spanned_export!(ty.span() =>
-        __req, __data, _None, _Some, _Ok, _Err,
-        Outcome, FromSegments, FromParam, Status, display_hack
+        _None, _Some, _Ok, _Err, Outcome, FromSegments, FromParam, Status, display_hack
     );
 
     // Returned when a dynamic parameter fails to parse.
@@ -219,7 +218,8 @@ fn param_guard_decl(guard: &Guard) -> TokenStream {
 
 fn data_guard_decl(guard: &Guard) -> TokenStream {
     let (ident, ty) = (guard.fn_ident.rocketized(), &guard.ty);
-    define_spanned_export!(ty.span() => __req, __data, display_hack, FromData, Outcome);
+    define_spanned_export!(local(ty.span()) => __req, __data);
+    define_spanned_export!(ty.span() => display_hack, FromData, Outcome);
 
     quote_spanned! { ty.span() =>
         let #ident: #ty = match <#ty as #FromData>::from_data(#__req, #__data).await {
@@ -307,7 +307,8 @@ fn responder_outcome_expr(route: &Route) -> TokenStream {
     let _await = route.handler.sig.asyncness
         .map(|a| quote_spanned!(a.span() => .await));
 
-    define_spanned_export!(ret_span => __req, _route);
+    define_spanned_export!(local(ret_span) => __req);
+    define_spanned_export!(ret_span => _route);
     quote_spanned! { mixed(ret_span) =>
         let ___responder = #user_handler_fn_name(#(#parameter_names),*) #_await;
         #_route::Outcome::from(#__req, ___responder)
