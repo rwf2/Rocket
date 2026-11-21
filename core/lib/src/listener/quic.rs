@@ -55,7 +55,6 @@ pub(crate) struct QuicTx {
 pub(crate) async fn bind(addr: SocketAddr, tls: &TlsConfig) -> Result<quinn::Endpoint, Error> {
     let mut tls_config = tls.server_config().await?;
     tls_config.alpn_protocols = vec![b"h3".to_vec()];
-    tls_config.max_early_data_size = u32::MAX;
 
     let quic_config = QuicServerConfig::try_from(tls_config)
         .map_err(|e| Error::Bind(Box::new(e)))?;
