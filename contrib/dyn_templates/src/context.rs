@@ -57,8 +57,8 @@ impl Context {
                 if let Some(info) = templates.get(&*template) {
                     warn!(
                         %template,
-                        first_path = %entry.path().display(),
-                        second_path = info.path.as_ref().map(|p| display(p.display())),
+                        first_path = info.path.as_ref().map(|p| display(p.display())),
+                        second_path = %entry.path().display(),
                         data_type = %info.data_type,
                         "Template name '{template}' can refer to multiple templates.\n\
                          First path will be used. Second path is ignored."
