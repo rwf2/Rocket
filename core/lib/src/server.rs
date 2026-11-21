@@ -258,7 +258,12 @@ impl Rocket<Orbit> {
                 loop {
                     let resolver = match h3.accept().race(rocket.shutdown()).await {
                         Either::Left(Ok(Some(resolver))) => resolver,
-                        Either::Left(Ok(None)) => break,
+                        // The client sent `GOAWAY` and every request is done here.
+                        // As at shutdown, wait for it to close the connection.
+                        Either::Left(Ok(None)) => {
+                            conn.closed().race(rocket.shutdown.grace.clone()).await;
+                            break;
+                        }
                         Either::Left(Err(e)) if e.is_h3_no_error() => break,
                         Either::Left(Err(e)) => return Err(io::Error::other(e)),
                         Either::Right(_) => {

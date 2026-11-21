@@ -502,7 +502,7 @@ async fn read_varint(recv: &mut quinn::RecvStream) -> u64 {
 struct RawClient {
     endpoint: quinn::Endpoint,
     conn: quinn::Connection,
-    _control: quinn::SendStream,
+    control: quinn::SendStream,
 }
 
 impl RawClient {
@@ -512,7 +512,7 @@ impl RawClient {
         // a connection error, so it lives as long as the client.
         let mut control = conn.open_uni().await.unwrap();
         control.write_all(&[0x00, 0x04, 0x00]).await.unwrap();
-        RawClient { endpoint, conn, _control: control }
+        RawClient { endpoint, conn, control }
     }
 
     /// Sends a GET request for `path`.
@@ -526,6 +526,11 @@ impl RawClient {
         send.write_all(&headers_frame(&request)).await.unwrap();
         send.finish().unwrap();
         recv
+    }
+
+    /// Sends a GOAWAY frame with push ID 0 on the control stream.
+    async fn send_goaway(&mut self) {
+        self.control.write_all(&[0x07, 0x01, 0x00]).await.unwrap();
     }
 
     /// Returns the stream ID in the first GOAWAY frame the server sends.
@@ -763,6 +768,25 @@ async fn goaway_follows_last_request() {
     assert_eq!(timeout(Duration::from_secs(5), client.goaway()).await.unwrap(), 8);
     client.close().await;
     timeout(Duration::from_secs(5), server.task).await.unwrap().unwrap();
+}
+
+#[get("/large")]
+fn large() -> Vec<u8> {
+    vec![b'a'; 200_000]
+}
+
+#[rocket::async_test]
+async fn client_goaway_lets_responses_finish() {
+    let server = Server::launch(rocket().mount("/", routes![large])).await;
+    let mut client = RawClient::connect(server.addr).await;
+    let mut recv = client.get("/large").await;
+    client.send_goaway().await;
+
+    let frames = timeout(Duration::from_secs(5), raw_frames(&mut recv)).await.unwrap().unwrap();
+    let body: usize = frames.iter().filter(|(kind, _)| *kind == 0x00).map(|(_, d)| d.len()).sum();
+    assert_eq!(body, 200_000);
+    client.close().await;
+    server.shutdown().await;
 }
 
 #[rocket::async_test]
