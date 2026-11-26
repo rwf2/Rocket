@@ -23,8 +23,7 @@ fn test_root(kind: &str) {
             format!("{}/error/404.html", kind), &context);
 
         let response = client.req(*method, format!("/{}", kind)).dispatch();
-        assert_eq!(response.status(), Status::NotFound);
-        assert_eq!(response.into_string(), expected);
+        assert_eq!(response.status(), Status::MethodNotAllowed);
     }
 }
 

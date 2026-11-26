@@ -61,7 +61,7 @@ fn test_formats() {
     assert_eq!(response.into_string().unwrap(), "plain");
 
     let response = client.put("/").header(ContentType::HTML).dispatch();
-    assert_eq!(response.status(), Status::NotFound);
+    assert_eq!(response.status(), Status::MethodNotAllowed);
 }
 
 // Test custom formats.
@@ -109,9 +109,12 @@ fn test_custom_formats() {
     let response = client.get("/").dispatch();
     assert_eq!(response.into_string().unwrap(), "get_foo");
 
+    let response = client.get("/").header(Accept::JPEG).dispatch();
+    assert_eq!(response.status(), Status::NotAcceptable); // Route can't produce JPEG
+
     let response = client.put("/").header(ContentType::HTML).dispatch();
-    assert_eq!(response.status(), Status::NotFound);
+    assert_eq!(response.status(), Status::UnsupportedMediaType); // Route expects "bar/baz"
 
     let response = client.post("/").header(ContentType::HTML).dispatch();
-    assert_eq!(response.status(), Status::NotFound);
+    assert_eq!(response.status(), Status::UnsupportedMediaType); // Route expects "foo"
 }

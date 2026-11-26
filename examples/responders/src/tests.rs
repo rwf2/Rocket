@@ -126,8 +126,7 @@ fn test_xml() {
     assert_eq!(r.into_string().unwrap(), r#"{ "payload": "I'm here" }"#);
 
     let r = client.get(uri!(super::xml)).header(Accept::CSV).dispatch();
-    assert_eq!(r.status(), Status::NotFound);
-    assert!(r.into_string().unwrap().contains("not supported"));
+    assert_eq!(r.status(), Status::NotAcceptable);
 
     let r = client.get("/content/i/dont/exist").header(Accept::HTML).dispatch();
     assert_eq!(r.content_type().unwrap(), ContentType::HTML);
