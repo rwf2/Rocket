@@ -113,7 +113,9 @@ impl EntryAttr for Launch {
             #[allow(dead_code)] #f
 
             #vis #sig {
-                #_error::Error::report(::rocket::async_main(#launch))
+                ::rocket::async_main(async move {
+                    #_error::Error::report(#launch.await)
+                })
             }
         ))
     }
